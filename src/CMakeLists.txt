@@ -10,6 +10,7 @@ add_subdirectory(core)
 add_subdirectory(io)
 add_subdirectory(lapack_like)
 add_subdirectory(matrices)
+add_subdirectory(hydrogen)
 
 # Propagate the files up the tree
 set(HYDROGEN_SOURCES "${SOURCES}" "${THIS_DIR_SOURCES}" PARENT_SCOPE)

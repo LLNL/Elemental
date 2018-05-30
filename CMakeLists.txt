@@ -44,6 +44,13 @@ elseif (CXX_COMPILER_HAS_WPEDANTIC_FLAG)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wpedantic")
 endif ()
 
+if(USE_ALUMINUM)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHYDROGEN_USES_ALUMINUM")
+  if(USE_NCCL)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHYDROGEN_USES_NCCL2")
+  endif ()
+endif ()
+  
 # Configuration options
 option(${PROJECT_NAME}_EXPORT_PACKAGE_REGISTRY
   "Export the build directory to the user's CMake package registry." OFF)
@@ -276,6 +283,23 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/El>
   $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:include>)
+
+set(ALUMINUM_HOME /usr/workspace/wsb/brain/aluminum)
+set(ALUMINUM_INC ${ALUMINUM_HOME}/include)
+set(ALUMINUM_LIB ${ALUMINUM_HOME}/lib)
+include_directories(${ALUMINUM_INC})
+
+set(NCCLINC ${NCCL_HOME}/include)
+set(NCCLLIB ${NCCL_HOME}/lib)
+include_directories(${NCCLINC})
+
+#link_directories(/usr/workspace/wsb/brain/aluminum/lib)
+# Your-external "mylib", add GLOBAL if the imported library is located in directories above the current.
+add_library( Al SHARED IMPORTED )
+# You can define two import-locations: one for debug and one for release.
+set_target_properties( Al  PROPERTIES IMPORTED_LOCATION ${ALUMINUM_LIB}/libAl.so)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE Al )
 
 if (TARGET OpenMP::OpenMP_CXX)
   target_link_libraries(${PROJECT_NAME} PUBLIC OpenMP::OpenMP_CXX)
