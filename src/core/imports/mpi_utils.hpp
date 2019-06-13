@@ -17,7 +17,14 @@
 #ifndef EL_IMPORTS_MPIUTILS_HPP
 #define EL_IMPORTS_MPIUTILS_HPP
 
-namespace {
+#include <El/hydrogen_config.h>
+
+#ifdef HYDROGEN_HAVE_GPU
+#include <hydrogen/device/gpu/BasicCopy.hpp>
+#endif
+
+namespace
+{
 
 template<typename T>
 MPI_Op NativeOp( const El::mpi::Op& op )
@@ -83,7 +90,7 @@ private:
 template <typename T, Device D>
 class ManagedHostMemoryWrapper;
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 template <typename T>
 class ManagedHostMemoryWrapper<T,Device::GPU>
 {
@@ -101,22 +108,31 @@ public:
           final_xfer_size_{final_xfer_size}
     {
         if ((host_data_.size() > 0) && (initial_xfer_size > 0))
-            InterDeviceCopy<Device::GPU, Device::CPU>::MemCopy1DAsync(
-                host_data_.data()+initial_xfer_offset,
+        {
+            gpu::Copy1DToHost(
                 device_data_+initial_xfer_offset,
-                initial_xfer_size, syncInfo_.stream_);
+                host_data_.data()+initial_xfer_offset,
+                initial_xfer_size, syncInfo_);
+        }
     }
 
     ~ManagedHostMemoryWrapper()
     {
         // Transfer stuff back to device
-        if ((host_data_.size() > 0) && (final_xfer_size_ > 0))
+        try
         {
-            InterDeviceCopy<Device::CPU, Device::GPU>::MemCopy1DAsync(
-                device_data_+final_xfer_offset_,
-                host_data_.data()+final_xfer_offset_,
-                final_xfer_size_, syncInfo_.stream_);
+            if ((host_data_.size() > 0) && (final_xfer_size_ > 0))
+            {
+                gpu::Copy1DToDevice(
+                    host_data_.data()+final_xfer_offset_,
+                    device_data_+final_xfer_offset_,
+                    final_xfer_size_, syncInfo_);
+            }
             Synchronize(syncInfo_);
+        }
+        catch (std::exception const& e)
+        {
+            H_REPORT_DTOR_EXCEPTION_AND_TERMINATE(e);
         }
     }
 
@@ -135,7 +151,7 @@ private:
     size_t final_xfer_offset_;
     size_t final_xfer_size_;
 };// class ManagedHostMemoryWrapper<T,Device::GPU>
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 template <typename T>
 auto MakeHostBuffer(T* buf, size_t const& size,
@@ -158,7 +174,7 @@ MakeManagedHostBuffer(T* buf, size_t const&, size_t const&, size_t const&,
 template <typename T>
 struct type_check;
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 // This can't (shouldn't) just be std::vector<T> because we want
 // pinned memory for GPUs. And I don't want to write a new Allocator
 // for std::vector that uses pinned memory through CUDA. We can access
@@ -170,11 +186,10 @@ auto MakeHostBuffer(T const* buf, size_t const& size,
 {
     simple_buffer<T,Device::CPU> locbuf(
         size, SyncInfo<Device::CPU>{}, /*mode=*/ 1);
-    InterDeviceCopy<Device::GPU, Device::CPU>::MemCopy1DAsync(
-        locbuf.data(), buf, size, syncInfo.stream_);
+    gpu::Copy1DToHost(buf, locbuf.data(), size, syncInfo);
     return locbuf;
 }
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 template <typename T, Device D>
 auto MakeManagedHostBuffer(

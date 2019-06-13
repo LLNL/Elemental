@@ -55,4 +55,7 @@
 
 #cmakedefine HYDROGEN_DO_BOUNDS_CHECKING
 
+#define H_RESTRICT __restrict__
+#define H_PRETTY_FUNCTION __PRETTY_FUNCTION__
+
 #endif /* HYDROGEN_CONFIG_H */

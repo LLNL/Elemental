@@ -9,7 +9,14 @@
 #ifndef EL_MATRIX_DECL_HPP
 #define EL_MATRIX_DECL_HPP
 
+#include <El/hydrogen_config.h>
+
 #include <hydrogen/Device.hpp>
+
+#ifdef HYDROGEN_HAVE_GPU
+#include <hydrogen/device/GPU.hpp>
+#endif // HYDROGEN_HAVE_GPU
+
 #include <El/core/Grid.hpp>
 #include <El/core/Memory.hpp>
 
@@ -95,7 +102,7 @@ public:
      */
     Matrix<T, Device::CPU>& operator=(Matrix<T, Device::CPU>&& A);
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     /** @brief Create a copy of a matrix from a GPU matrix */
     Matrix(Matrix<T, Device::GPU> const& A);
 
@@ -270,7 +277,7 @@ SyncInfo<Device::CPU> SyncInfoFromMatrix(Matrix<T,Device::CPU> const& mat)
     return SyncInfo<Device::CPU>{};
 }
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 // GPU version
 template <typename T>
 class Matrix<T, Device::GPU> : public AbstractMatrix<T>
@@ -435,11 +442,8 @@ public:
     /** @name Synchronization semantics */
     ///@{
 
-    cudaStream_t Stream() const EL_NO_EXCEPT;
-    cudaEvent_t Event() const EL_NO_EXCEPT;
-
-    void SetStream(cudaStream_t stream) EL_NO_EXCEPT;
-    void SetEvent(cudaEvent_t event) EL_NO_EXCEPT;
+    SyncInfo<Device::GPU> GetSyncInfo() const EL_NO_EXCEPT;
+    void SetSyncInfo(SyncInfo<Device::GPU> const&) EL_NO_EXCEPT;
 
     ///@}
 
@@ -475,27 +479,23 @@ private:
 
     T* data_=nullptr;
 
-    cudaStream_t stream_ = GPUManager::Stream();
-    cudaEvent_t event_ = GPUManager::Event();
+    SyncInfo<Device::GPU> sync_info_ = gpu::DefaultSyncInfo();
 
 };// class Matrix<T,Device::GPU>
 
 template <typename T>
 SyncInfo<Device::GPU> SyncInfoFromMatrix(Matrix<T,Device::GPU> const& mat)
 {
-    return SyncInfo<Device::GPU>{mat.Stream(), mat.Event()};
+    return mat.GetSyncInfo();
 }
 
 template <typename T>
 void SetSyncInfo(
     Matrix<T,Device::GPU>& mat, SyncInfo<Device::GPU> const& syncInfo)
 {
-    if (syncInfo.stream_ != nullptr)
-        mat.SetStream(syncInfo.stream_);
-    if (syncInfo.event_ != nullptr)
-        mat.SetEvent(syncInfo.event_);
+    mat.SetSyncInfo(syncInfo);
 }
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 } // namespace El
 

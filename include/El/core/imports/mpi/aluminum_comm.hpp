@@ -76,7 +76,7 @@ inline bool SyncInfoEquiv(SyncInfo<Device::CPU> const&,
 inline bool SyncInfoEquiv(SyncInfo<Device::GPU> const& a,
                           SyncInfo<Device::GPU> const& b) EL_NO_EXCEPT
 {
-    return a.stream_ == b.stream_;
+    return a.Stream() == b.Stream();
 }
 #endif
 
@@ -203,7 +203,7 @@ private:
     std::shared_ptr<CommT> MakeWithSyncInfo(
         MPI_Comm comm, SyncInfo<Device::GPU> const& syncinfo) const
     {
-        return std::make_shared<CommT>(comm, syncinfo.stream_);
+        return std::make_shared<CommT>(comm, syncinfo.Stream());
     }
 #endif // HYDROGEN_HAVE_CUDA
 }; // class AluminumComm

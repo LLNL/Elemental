@@ -106,7 +106,7 @@ void Zero( AbstractMatrix<T>& A )
         hydrogen::Fill_GPU_impl(
             height, width, TypeTraits<T>::Zero(), ABuf, ALDim,
             SyncInfoFromMatrix(
-                static_cast<Matrix<T,Device::GPU>&>(A)).stream_);
+                static_cast<Matrix<T,Device::GPU>&>(A)).Stream());
         break;
 #endif // HYDROGEN_HAVE_CUDA
     default:

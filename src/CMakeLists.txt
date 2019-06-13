@@ -15,5 +15,5 @@ add_subdirectory(hydrogen)
 # Propagate the files up the tree
 set(HYDROGEN_SOURCES "${SOURCES}" "${THIS_DIR_SOURCES}" PARENT_SCOPE)
 if (HYDROGEN_HAVE_CUDA)
-  set(HYDROGEN_CUDA_SOURCES "${CUDA_SOURCES}" PARENT_SCOPE)
+  set(HYDROGEN_GPU_SOURCES "${GPU_SOURCES}" PARENT_SCOPE)
 endif ()

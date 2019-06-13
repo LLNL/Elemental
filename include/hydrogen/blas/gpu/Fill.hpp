@@ -30,5 +30,13 @@ void Fill_GPU_impl(size_t const&, size_t const&,
     throw std::logic_error("Fill: Type not valid on GPU.");
 }
 
+template <typename T, typename=EnableWhen<IsStorageType<T,Device::GPU>>>
+void Fill_GPU_1D_impl(T* buffer, size_t const& size,
+                      T const& alpha,
+                      cudaStream_t stream)
+{
+    Fill_GPU_impl(size, 1, alpha, buffer, size, stream);
+}
+
 }// namespace hydrogen
 #endif // HYDROGEN_BLAS_GPU_FILL_HPP_

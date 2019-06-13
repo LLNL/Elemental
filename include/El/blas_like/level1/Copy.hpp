@@ -13,9 +13,15 @@
 #include <omp.h>
 #endif
 
+#include <El/hydrogen_config.h>
+
 #include <El/blas_like/level1/Copy/internal_decl.hpp>
 #include <El/blas_like/level1/Copy/GeneralPurpose.hpp>
 #include <El/blas_like/level1/Copy/util.hpp>
+
+#ifdef HYDROGEN_HAVE_GPU
+#include <hydrogen/device/gpu/BasicCopy.hpp>
+#endif
 
 namespace El {
 
@@ -31,17 +37,17 @@ void Copy(AbstractMatrix<T> const& A, AbstractMatrix<T>& B)
             Copy(static_cast<Matrix<T,Device::CPU> const&>(A),
                  static_cast<Matrix<T,Device::CPU>&>(B));
             break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
         case Device::GPU:
             Copy(static_cast<Matrix<T,Device::CPU> const&>(A),
                  static_cast<Matrix<T,Device::GPU>&>(B));
             break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
         default:
             LogicError("Copy: Bad device.");
         }
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         switch (B.GetDevice())
         {
@@ -57,7 +63,7 @@ void Copy(AbstractMatrix<T> const& A, AbstractMatrix<T>& B)
             LogicError("Copy: Bad device.");
         }
         break;
-#endif //  HYDROGEN_HAVE_CUDA
+#endif //  HYDROGEN_HAVE_GPU
     default:
         LogicError("Copy: Bad device.");
     }
@@ -109,7 +115,7 @@ void Copy( const Matrix<T>& A, Matrix<T>& B )
     }
 }
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 template<typename T>
 void Copy(const Matrix<T,Device::GPU>& A, Matrix<T,Device::GPU>& B)
 {
@@ -122,16 +128,14 @@ void Copy(const Matrix<T,Device::GPU>& A, Matrix<T,Device::GPU>& B)
     const T* ABuf = A.LockedBuffer();
     T* BBuf = B.Buffer();
 
-    SyncInfo<Device::GPU> syncInfoA = SyncInfoFromMatrix(A), syncInfoB = SyncInfoFromMatrix(B);
+    SyncInfo<Device::GPU> syncInfoA = SyncInfoFromMatrix(A),
+        syncInfoB = SyncInfoFromMatrix(B);
     auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
 
-    // Launch the copy
-    H_CHECK_CUDA(
-        cudaMemcpy2DAsync(BBuf, ldB*sizeof(T),
-                          ABuf, ldA*sizeof(T),
-                          height*sizeof(T), width,
-                          cudaMemcpyDeviceToDevice,
-                          syncInfoB.stream_));
+    gpu::Copy2DIntraDevice(
+        ABuf, ldA,
+        BBuf, ldB,
+        height, width, syncInfoB);
 }
 
 // These inter-device copy functions are SYNCHRONOUS with respect to
@@ -148,9 +152,10 @@ void Copy(Matrix<T,Device::CPU> const& A, Matrix<T,Device::GPU>& B)
     const T* EL_RESTRICT ABuf = A.LockedBuffer();
     T* EL_RESTRICT BBuf = B.Buffer();
 
-    SyncInfo<Device::GPU> syncInfoB = SyncInfoFromMatrix(B);
-    InterDeviceCopy<Device::CPU,Device::GPU>::MemCopy2DAsync(
-        BBuf, ldB, ABuf, ldA, height, width, syncInfoB.stream_);
+    SyncInfo<Device::GPU> syncInfoB = B.GetSyncInfo();SyncInfoFromMatrix(B);
+    gpu::Copy2DToDevice(
+        ABuf, ldA, BBuf, ldB,
+        height, width, syncInfoB);
     Synchronize(syncInfoB); // Is this necessary??
 }
 
@@ -166,10 +171,10 @@ void Copy(Matrix<T,Device::GPU> const& A, Matrix<T,Device::CPU>& B)
     const T* EL_RESTRICT ABuf = A.LockedBuffer();
     T* EL_RESTRICT BBuf = B.Buffer();
 
-    SyncInfo<Device::GPU> syncInfoA = SyncInfoFromMatrix(A);
-    InterDeviceCopy<Device::GPU,Device::CPU>::MemCopy2DAsync(
-        BBuf, ldB, ABuf, ldA, height, width, syncInfoA.stream_);
-    Synchronize(syncInfoA); // Is this necessary??
+    gpu::Copy2DToHost(
+        ABuf, ldA, BBuf, ldB,
+        height, width, A.GetSyncInfo());
+    Synchronize(A.GetSyncInfo()); // Is this necessary??
 }
 
 // These inter-device copy functions are ASYNCHRONOUS with respect to
@@ -186,8 +191,9 @@ void CopyAsync(Matrix<T,Device::CPU> const& A, Matrix<T,Device::GPU>& B)
     const T* EL_RESTRICT ABuf = A.LockedBuffer();
     T* EL_RESTRICT BBuf = B.Buffer();
 
-    InterDeviceCopy<Device::CPU, Device::GPU>::MemCopy2DAsync(
-        BBuf, ldB, ABuf, ldA, height, width, B.Stream());
+    gpu::Copy2DToDevice(
+        ABuf, ldA, BBuf, ldB,
+        height, width, B.GetSyncInfo());
 }
 
 template <typename T>
@@ -202,11 +208,12 @@ void CopyAsync(Matrix<T,Device::GPU> const& A, Matrix<T,Device::CPU>& B)
     const T* EL_RESTRICT ABuf = A.LockedBuffer();
     T* EL_RESTRICT BBuf = B.Buffer();
 
-    InterDeviceCopy<Device::GPU, Device::CPU>::MemCopy2DAsync(
-        BBuf, ldB, ABuf, ldA, height, width, A.Stream());
+    gpu::Copy2DToDevice(
+        ABuf, ldA, BBuf, ldB,
+        height, width, A.GetSyncInfo());
 }
 
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 template<typename S,typename T,
          typename/*=EnableIf<CanCast<S,T>>*/>
@@ -397,13 +404,13 @@ void CopyAsync(ElementalMatrix<T> const& A, DistMatrix<T,U,V,ELEMENT,D>& B)
                 static_cast<DistMatrix<T,U,V,ELEMENT,Device::CPU> const&>(A),
                 B);
             break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
         case Device::GPU:
             CopyAsync(
                 static_cast<DistMatrix<T,U,V,ELEMENT,Device::GPU> const&>(A),
                 B);
             break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
         default:
             LogicError("CopyAsync: Unknown device type.");
         }
@@ -550,7 +557,7 @@ void CopyFromNonRoot
   ( const AbstractDistMatrix<T>& A, AbstractDistMatrix<T>& B ); \
 
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 #ifdef HYDROGEN_GPU_USE_FP16
 EL_EXTERN template void Copy(
     const AbstractMatrix<gpu_half_type>& A, AbstractMatrix<gpu_half_type>& B );
@@ -585,7 +592,7 @@ EL_EXTERN template void CopyAsync
 ( const Matrix<double,Device::GPU>& A, Matrix<double,Device::CPU>& B );
 EL_EXTERN template void CopyAsync
 ( const Matrix<double,Device::CPU>& A, Matrix<double,Device::GPU>& B );
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 #ifdef HYDROGEN_HAVE_HALF
 EL_EXTERN template void Copy(

@@ -5,9 +5,10 @@
 
 #include <hydrogen/Device.hpp>
 #include <hydrogen/SyncInfo.hpp>
-#ifdef HYDROGEN_HAVE_CUDA
-#include <hydrogen/device/gpu/CUDA.hpp>
-#endif // HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
+#include <hydrogen/device/GPU.hpp>
+#include <hydrogen/device/gpu/BasicCopy.hpp>
+#endif // HYDROGEN_HAVE_GPU
 
 #include <El/core/Memory/decl.hpp>
 
@@ -66,25 +67,12 @@ void setBufferToValue(T* buffer, size_t size, T const& value,
     std::fill_n(buffer, size, value);
 }
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 template <typename T>
 void setBufferToValue(T* buffer, size_t size, T const& value,
-                      SyncInfo<Device::GPU> syncInfo = SyncInfo<Device::GPU>{})
+                      SyncInfo<Device::GPU> const& syncInfo)
 {
-    if( value == TypeTraits<T>::Zero() )
-    {
-        H_CHECK_CUDA(cudaMemsetAsync(buffer, 0x0, size*sizeof(T),
-                                      syncInfo.stream_));
-    }
-    else
-    {
-        std::vector<T> tmp(size, value);
-        H_CHECK_CUDA(
-            cudaMemcpyAsync(
-                buffer, tmp.data(), size*sizeof(T),
-                CUDAMemcpyKind<Device::CPU,Device::GPU>(),
-                syncInfo.stream_));
-    }
+    gpu::Fill1DBuffer(buffer, size, value, syncInfo);
     AddSynchronizationPoint(syncInfo);
 }
 #endif // HYDROGEN_HAVE_CUDA

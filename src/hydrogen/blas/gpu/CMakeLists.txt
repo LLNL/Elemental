@@ -1,4 +1,4 @@
-set_full_path(THIS_DIR_CUDA_SOURCES
+set_full_path(THIS_DIR_GPU_SOURCES
   Axpy.cu
   Copy.cu
   Fill.cu
@@ -8,4 +8,4 @@ set_full_path(THIS_DIR_CUDA_SOURCES
   )
 
 # Propagate the files up the tree
-set(CUDA_SOURCES "${CUDA_SOURCES}" "${THIS_DIR_CUDA_SOURCES}" PARENT_SCOPE)
+set(GPU_SOURCES "${GPU_SOURCES}" "${THIS_DIR_GPU_SOURCES}" PARENT_SCOPE)

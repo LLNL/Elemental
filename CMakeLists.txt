@@ -529,7 +529,7 @@ endif ()
 set(HYDROGEN_LIBRARIES Hydrogen_CXX)
 
 if (HYDROGEN_HAVE_CUDA)
-  add_library(Hydrogen_CUDA "${HYDROGEN_CUDA_SOURCES}")
+  add_library(Hydrogen_CUDA "${HYDROGEN_GPU_SOURCES}")
   target_include_directories(Hydrogen_CUDA PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>

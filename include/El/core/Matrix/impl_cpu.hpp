@@ -9,6 +9,12 @@
 #ifndef EL_MATRIX_IMPL_CPU_HPP_
 #define EL_MATRIX_IMPL_CPU_HPP_
 
+#include <El/hydrogen_config.h>
+
+#ifdef HYDROGEN_HAVE_GPU
+#include <hydrogen/device/GPU.hpp>
+#endif // HYDROGEN_HAVE_GPU
+
 namespace El
 {
 
@@ -62,7 +68,7 @@ Matrix<T, Device::CPU>::Matrix(Matrix<T, Device::GPU> const& A)
     : Matrix{A.Height(), A.Width(), A.LDim()}
 {
     EL_DEBUG_CSE;
-    auto stream = GPUManager::Stream();
+    auto stream = gpu::DefaultSyncInfo().Stream();
     H_CHECK_CUDA(cudaMemcpy2DAsync(data_, this->LDim()*sizeof(T),
                                     A.LockedBuffer(), A.LDim()*sizeof(T),
                                     A.Height()*sizeof(T), A.Width(),
@@ -70,7 +76,7 @@ Matrix<T, Device::CPU>::Matrix(Matrix<T, Device::GPU> const& A)
                                     stream));
     H_CHECK_CUDA(cudaStreamSynchronize(stream));
 }
-#endif
+#endif // HYDROGEN_HAVE_CUDA
 
 template <typename T>
 Matrix<T, Device::CPU>::Matrix(Matrix<T, Device::CPU>&& A) EL_NO_EXCEPT

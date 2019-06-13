@@ -48,14 +48,14 @@ void TestAssociativity
 #ifdef HYDROGEN_HAVE_CUDA
 #define START_CUDA_TIMER                                  \
     if (D == Device::GPU)                                 \
-        cudaEventRecord(start, GPUManager::Stream());
+        cudaEventRecord(start, cuda::GetDefaultStream());
 
-#define STOP_CUDA_TIMER                                 \
-    if (D == Device::GPU)                               \
-    {                                                   \
-        cudaEventRecord(stop, GPUManager::Stream());    \
-        cudaEventSynchronize(stop);                     \
-        cudaEventElapsedTime(&cudaTime, start, stop);   \
+#define STOP_CUDA_TIMER                                         \
+    if (D == Device::GPU)                                       \
+    {                                                           \
+        cudaEventRecord(stop, cuda::GetDefaultStream());        \
+        cudaEventSynchronize(stop);                             \
+        cudaEventElapsedTime(&cudaTime, start, stop);           \
     }
 
 #define SUMMARIZE_CUDA_TIMER                                            \
@@ -230,6 +230,7 @@ void TestGemm
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
 #endif
+    flush(std::cout);
 }
 
 int

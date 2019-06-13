@@ -149,5 +149,23 @@ using SameDevice = EnumSame<Device,D1,D2>;
  */
 template <Device SrcD, Device DestD> struct InterDeviceCopy;
 
+// These should replace the InterDeviceCopy struct.
+#if 0
+template <typename T, Device SrcD, Device TgtD>
+void MemCopy1DAsync(
+    T const* __restrict__ const src,
+    T * __restrict__ const dest,
+    size_t const size,
+    SyncInfo<SrcD> const& srcSyncInfo,
+    SyncInfo<TgtD> const& destSyncInfo);
+
+template <typename T, Device SrcD, Device TgtD>
+void MemCopy2DAsync(
+    T const* __restrict__ const src, size_t const src_ldim,
+    T * __restrict__ const dest, size_t const dest_ldim,
+    size_t const height, size_t const width,
+    SyncInfo<SrcD> const& srcSyncInfo,
+    SyncInfo<TgtD> const& destSyncInfo);
+#endif // 0
 }// namespace hydrogen
 #endif // EL_CORE_DEVICE_HPP_

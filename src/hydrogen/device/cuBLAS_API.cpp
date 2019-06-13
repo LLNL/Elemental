@@ -3,43 +3,17 @@
 
 #include <cuda.h>
 #include <cuda_runtime.h>
+
 #ifdef HYDROGEN_GPU_USE_FP16
 #include <cuda_fp16.h>
 #endif // HYDROGEN_GPU_USE_FP16
+
 #include <cublas_v2.h>
 
 namespace hydrogen
 {
 namespace cublas
 {
-
-cublasHandle_t GetLibraryHandle() noexcept
-{
-    return GPUManager::cuBLASHandle();
-}
-
-void Initialize()
-{
-    GPUManager::InitializeCUBLAS();
-#ifdef HYDROGEN_CUBLAS_USE_TENSOR_OP_MATH
-    H_CHECK_CUBLAS(
-        cublasSetMathMode(GetLibraryHandle(), CUBLAS_TENSOR_OP_MATH));
-#endif // HYDROGEN_CUBLAS_USE_TENSOR_OP_MATH
-}
-
-SyncManager::SyncManager(cublasHandle_t handle,
-                         SyncInfo<Device::GPU> const& si)
-{
-    H_CHECK_CUBLAS(
-        cublasGetStream(handle, &orig_stream_));
-    H_CHECK_CUBLAS(
-        cublasSetStream(handle, si.stream_));
-}
-
-SyncManager::~SyncManager()
-{
-    cublasSetStream(GPUManager::cuBLASHandle(), orig_stream_);
-}
 
 //
 // BLAS 1
