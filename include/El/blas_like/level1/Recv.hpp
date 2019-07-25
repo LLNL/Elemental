@@ -49,11 +49,11 @@ void Recv(AbstractMatrix<T>& A, mpi::Comm const& comm, int source)
     case Device::CPU:
         Recv(static_cast<Matrix<T,Device::CPU>&>(A), std::move(comm), source);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         Recv(static_cast<Matrix<T,Device::GPU>&>(A), std::move(comm), source);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("Recv: Bad device.");
     }

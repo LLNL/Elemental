@@ -133,14 +133,14 @@ void AllGather(
     template void AllGather(const T* sbuf, int sc, T* rbuf, int rc, Comm const& comm, \
                             SyncInfo<D> const&)
 
-#ifndef HYDROGEN_HAVE_CUDA
+#ifndef HYDROGEN_HAVE_GPU
 #define MPI_ALLGATHER_PROTO(T) \
     MPI_ALLGATHER_PROTO_DEV(T,Device::CPU)
 #else
 #define MPI_ALLGATHER_PROTO(T)             \
     MPI_ALLGATHER_PROTO_DEV(T,Device::CPU);     \
     MPI_ALLGATHER_PROTO_DEV(T,Device::GPU)
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 MPI_ALLGATHER_PROTO(byte);
 MPI_ALLGATHER_PROTO(int);

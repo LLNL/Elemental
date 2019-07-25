@@ -5,7 +5,11 @@
 #include <hydrogen/blas/BLAS_Common.hpp>
 #include <hydrogen/meta/MetaUtilities.hpp>
 
-#include <cuda_runtime.h>
+#ifdef HYDROGEN_HAVE_CUDA
+#include <hydrogen/device/gpu/CUDA.hpp>
+#elif defined(HYDROGEN_HAVE_ROCM)
+#include <hydrogen/device/gpu/ROCm.hpp>
+#endif
 
 #include <stdexcept>
 
@@ -48,7 +52,7 @@ void Axpy_GPU_impl(
     SizeT num_rows, SizeT num_cols, T alpha,
     T const* src, SizeT src_row_stride, SizeT src_col_stride,
     T* dest, SizeT dest_row_stride, SizeT dest_col_stride,
-    cudaStream_t stream);
+    gpuStream_t stream);
 
 template <typename T, typename SizeT,
           typename=EnableUnless<IsComputeType<T,Device::GPU>>,
@@ -56,7 +60,7 @@ template <typename T, typename SizeT,
 void Axpy_GPU_impl(
     SizeT, SizeT, T,
     T const*, SizeT, SizeT, T*, SizeT, SizeT,
-    cudaStream_t)
+    gpuStream_t)
 {
     throw std::logic_error("Axpy: Type not valid on GPU.");
 }
@@ -89,7 +93,7 @@ void Axpy_GPU_impl(
     TransposeMode transpA,
     SizeT num_rows, SizeT num_cols,
     T alpha, T const* A, SizeT lda, T* B, SizeT ldb,
-    cudaStream_t stream);
+    gpuStream_t stream);
 
 }// namespace hydrogen
 #endif // HYDROGEN_BLAS_GPU_AXPY_HPP_

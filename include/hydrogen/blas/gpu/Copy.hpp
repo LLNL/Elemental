@@ -4,7 +4,11 @@
 #include <hydrogen/Device.hpp>
 #include <hydrogen/meta/MetaUtilities.hpp>
 
-#include <cuda_runtime.h>
+#ifdef HYDROGEN_HAVE_CUDA
+#include <hydrogen/device/gpu/CUDA.hpp>
+#elif defined(HYDROGEN_HAVE_ROCM)
+#include <hydrogen/device/gpu/ROCm.hpp>
+#endif
 
 #include <stdexcept>
 
@@ -41,7 +45,7 @@ void Copy_GPU_impl(
     SizeT num_entries,
     SrcT const* src, SizeT src_stride,
     DestT* dest, SizeT dest_stride,
-    cudaStream_t stream);
+    gpuStream_t stream);
 
 template <typename SrcT, typename DestT, typename SizeT,
           typename=EnableUnless<IsStorageType<SrcT,Device::GPU>>,
@@ -51,7 +55,7 @@ void Copy_GPU_impl(
     SizeT const&,
     SrcT const* const&, SizeT const&,
     DestT* const&, SizeT const&,
-    cudaStream_t const&)
+    gpuStream_t const&)
 {
     throw std::logic_error("Type not valid on GPU");
 }
@@ -95,7 +99,7 @@ void Copy_GPU_impl(
     SizeT num_rows, SizeT num_cols,
     SrcT const* src, SizeT src_row_stride, SizeT src_col_stride,
     DestT* dest, SizeT dest_row_stride, SizeT dest_col_stride,
-    cudaStream_t stream);
+    gpuStream_t stream);
 
 template <typename SrcT, typename DestT, typename SizeT,
           typename=EnableUnless<IsStorageType<SrcT,Device::GPU>>,
@@ -104,7 +108,7 @@ template <typename SrcT, typename DestT, typename SizeT,
 void Copy_GPU_impl(SizeT const&, SizeT const&,
                    SrcT const* const&, SizeT const&, SizeT const&,
                    DestT* const&, SizeT const&, SizeT const&,
-                   cudaStream_t const&)
+                   gpuStream_t const&)
 {
     throw std::logic_error("Copy: Type not valid on GPU.");
 }

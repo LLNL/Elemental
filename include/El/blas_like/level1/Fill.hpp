@@ -9,7 +9,7 @@
 #ifndef EL_BLAS_FILL_HPP
 #define EL_BLAS_FILL_HPP
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 #include <hydrogen/blas/gpu/Fill.hpp>
 #endif
 
@@ -49,14 +49,14 @@ void Fill( AbstractMatrix<T>& A, T alpha )
             }
         }
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         hydrogen::Fill_GPU_impl(
             m, n, alpha, ABuf, ALDim,
             SyncInfoFromMatrix(
                 static_cast<Matrix<T,Device::GPU>&>(A)).Stream());
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("Bad device type in Fill");
     }

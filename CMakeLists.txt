@@ -168,6 +168,10 @@ if (Hydrogen_ENABLE_CUDA)
     ON)
 endif ()
 
+option(Hydrogen_ENABLE_ROCM
+  "Search for ROCm/HIP support and enable related features if found."
+  OFF)
+
 #
 # MEMORY-RELATED OPTIONS
 #
@@ -387,10 +391,24 @@ if (Hydrogen_ENABLE_CUDA)
     set(HYDROGEN_HAVE_CUDA FALSE)
 
   endif ()
-
 endif (Hydrogen_ENABLE_CUDA)
 
-set(HYDROGEN_HAVE_GPU ${HYDROGEN_HAVE_CUDA})
+if (Hydrogen_ENABLE_ROCM)
+  set(CMAKE_MODULE_PATH "/opt/rocm/hip/cmake" ${CMAKE_MODULE_PATH})
+  find_package(HIP REQUIRED)
+  if (HIP_FOUND)
+    set(CMAKE_CXX_EXTENSIONS FALSE)
+    find_package(ROCBLAS REQUIRED)
+    set(HYDROGEN_HAVE_ROCM TRUE)
+    message(STATUS "Found ROCm/HIP toolchain. Using HIP/ROCm.")
+  else ()
+    message(FATAL_ERROR "ROCm requested but not found.")
+  endif ()
+endif (Hydrogen_ENABLE_ROCM)
+
+if (HYDROGEN_HAVE_CUDA OR HYDROGEN_HAVE_ROCM)
+  set(HYDROGEN_HAVE_GPU TRUE)
+endif ()
 
 if (Hydrogen_ENABLE_ALUMINUM)
   find_package(Aluminum 0.2.0 NO_MODULE QUIET
@@ -497,7 +515,12 @@ configure_file("${PROJECT_SOURCE_DIR}/cmake/configure_files/hydrogen_config.h.in
 configure_file("${PROJECT_SOURCE_DIR}/doxy/Doxyfile.in"
   "${PROJECT_BINARY_DIR}/doxy/Doxyfile")
 
-add_library(Hydrogen_CXX "${HYDROGEN_SOURCES}" "${HYDROGEN_HEADERS}")
+if (HYDROGEN_HAVE_ROCM)
+  hip_add_library(Hydrogen_CXX "${HYDROGEN_SOURCES}" "${HYDROGEN_HEADERS}")
+else ()
+  add_library(Hydrogen_CXX "${HYDROGEN_SOURCES}" "${HYDROGEN_HEADERS}")
+endif ()
+
 target_include_directories(Hydrogen_CXX PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/El>
@@ -509,21 +532,19 @@ target_include_directories(Hydrogen_CXX PUBLIC
 # be forced to build with that (even though they maybe should)...
 target_compile_options(Hydrogen_CXX PRIVATE ${EXTRA_CXX_FLAGS})
 
-target_link_libraries(Hydrogen_CXX PUBLIC ${Aluminum_LIBRARIES})
-target_link_libraries(Hydrogen_CXX PUBLIC ${HALF_LIBRARIES})
-
-if (TARGET OpenMP::OpenMP_CXX)
-  target_link_libraries(Hydrogen_CXX PUBLIC OpenMP::OpenMP_CXX)
-endif ()
-target_link_libraries(Hydrogen_CXX PUBLIC MPI::MPI_CXX)
-target_link_libraries(Hydrogen_CXX PUBLIC LAPACK::lapack)
-target_link_libraries(Hydrogen_CXX PUBLIC EP::extended_precision)
-
-target_link_libraries(Hydrogen_CXX PUBLIC ${VTUNE_LIBRARIES})
-target_link_libraries(Hydrogen_CXX PUBLIC ${NVTX_LIBRARIES})
-if (HYDROGEN_HAVE_CUDA)
-  target_link_libraries(Hydrogen_CXX PUBLIC cuda::toolkit)
-endif ()
+target_link_libraries(
+  Hydrogen_CXX PUBLIC
+  ${Aluminum_LIBRARIES}
+  ${HALF_LIBRARIES}
+  ${VTUNE_LIBRARIES}
+  ${NVTX_LIBRARIES}
+  ${ROCBLAS_LIBRARIES}
+  $<TARGET_NAME_IF_EXISTS:OpenMP::OpenMP_CXX>
+  $<TARGET_NAME_IF_EXISTS:MPI::MPI_CXX>
+  $<TARGET_NAME_IF_EXISTS:LAPACK::lapack>
+  $<TARGET_NAME_IF_EXISTS:EP::extended_precision>
+  $<TARGET_NAME_IF_EXISTS:cuda::toolkit>
+  )
 
 # Add the CXX library to "Hydrogen"
 set(HYDROGEN_LIBRARIES Hydrogen_CXX)
@@ -535,11 +556,29 @@ if (HYDROGEN_HAVE_CUDA)
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
-  target_link_libraries(Hydrogen_CUDA PUBLIC ${HALF_LIBRARIES})
-  target_link_libraries(Hydrogen_CUDA PUBLIC ${NVTX_LIBRARIES})
-  target_link_libraries(Hydrogen_CUDA PUBLIC cuda::toolkit)
+  target_link_libraries(
+    Hydrogen_CUDA PUBLIC
+    ${HALF_LIBRARIES}
+    ${NVTX_LIBRARIES}
+    $<TARGET_NAME_IF_EXISTS:cuda::toolkit>
+    )
 
   list(APPEND HYDROGEN_LIBRARIES Hydrogen_CUDA)
+endif ()
+
+if (HYDROGEN_HAVE_ROCM)
+  hip_add_library(Hydrogen_ROCM STATIC "${HYDROGEN_GPU_SOURCES}")
+  target_include_directories(Hydrogen_ROCM PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
+
+  target_link_libraries(Hydrogen_ROCM PUBLIC
+    ${HALF_LIBRARIES}
+    ${ROCBLAS_LIBRARIES}
+    )
+
+  #set_target_properties(Hydrogen_ROCM PROPERTIES LINKER_LANGUAGE CXX)
 endif ()
 
 # Setup the tests

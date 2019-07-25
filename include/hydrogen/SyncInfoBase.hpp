@@ -6,6 +6,8 @@
 #include <hydrogen/Device.hpp>
 #include <hydrogen/meta/IndexSequence.hpp>
 
+#include <tuple>
+
 namespace hydrogen
 {
 

@@ -256,7 +256,7 @@ int DM::PartialUnionRowRank() const EL_NO_EXCEPT
   BOTH(T,VC,  STAR); \
   BOTH(T,VR,  STAR);
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 // Inter-device copy ctors
 #ifdef HYDROGEN_GPU_USE_FP16
 template DistMatrix<gpu_half_type,COLDIST,ROWDIST,ELEMENT,Device::CPU>::DistMatrix(
@@ -353,7 +353,7 @@ DistMatrix<double,COLDIST,ROWDIST,ELEMENT,Device::GPU>::operator=(
 template DistMatrix<double,COLDIST,ROWDIST,ELEMENT,Device::CPU>&
 DistMatrix<double,COLDIST,ROWDIST,ELEMENT,Device::CPU>::operator=(
     DistMatrix<double,COLDIST,ROWDIST,ELEMENT,Device::GPU> const&);
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

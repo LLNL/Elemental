@@ -26,13 +26,13 @@ void Axpy(S alphaS, AbstractMatrix<T> const& X, AbstractMatrix<T>& Y)
              static_cast<Matrix<T,Device::CPU> const&>(X),
              static_cast<Matrix<T,Device::CPU>&>(Y));
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         Axpy(alphaS,
              static_cast<Matrix<T,Device::GPU> const&>(X),
              static_cast<Matrix<T,Device::GPU>&>(Y));
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("Axpy: Bad device.");
     }
@@ -95,7 +95,7 @@ void Axpy(S alphaS, const Matrix<T,Device::CPU>& X, Matrix<T,Device::CPU>& Y)
     }
 }
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 template<typename T,typename S,
          typename=DisableIf<IsDeviceValidType<T,Device::GPU>>,
          typename=void>
@@ -146,7 +146,7 @@ void Axpy(S alphaS, Matrix<T,Device::GPU> const& X, Matrix<T,Device::GPU>& Y)
             mX, nX, alpha, XBuf, ldX, YBuf, ldY, syncInfoY);
     }
 }
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 template<typename T,typename S>
 void Axpy(S alphaS, const ElementalMatrix<T>& X, ElementalMatrix<T>& Y)

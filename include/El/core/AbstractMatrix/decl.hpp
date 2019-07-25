@@ -256,7 +256,7 @@ public:
         return static_cast<const Matrix<T, Device::CPU>&>(*this);
     }
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     H_DEPRECATED("Extremely dangerous. Will be removed soon.")
     operator Matrix<T, Device::GPU>& ()
     {
@@ -277,7 +277,7 @@ public:
         }
         return static_cast<const Matrix<T, Device::GPU>&>(*this);
     }
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
     // Single-entry manipulation
     // =========================

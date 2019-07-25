@@ -72,7 +72,7 @@ inline bool SyncInfoEquiv(SyncInfo<Device::CPU> const&,
     return true;
 }
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 inline bool SyncInfoEquiv(SyncInfo<Device::GPU> const& a,
                           SyncInfo<Device::GPU> const& b) EL_NO_EXCEPT
 {
@@ -198,14 +198,14 @@ private:
         return std::make_shared<CommT>(comm);
     }
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     template <typename CommT>
     std::shared_ptr<CommT> MakeWithSyncInfo(
         MPI_Comm comm, SyncInfo<Device::GPU> const& syncinfo) const
     {
         return std::make_shared<CommT>(comm, syncinfo.Stream());
     }
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 }; // class AluminumComm
 
 }// namespace mpi

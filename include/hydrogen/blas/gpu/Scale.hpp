@@ -4,7 +4,11 @@
 #include <hydrogen/Device.hpp>
 #include <hydrogen/meta/MetaUtilities.hpp>
 
-#include <cuda_runtime.h>
+#ifdef HYDROGEN_HAVE_CUDA
+#include <hydrogen/device/gpu/CUDA.hpp>
+#elif defined(HYDROGEN_HAVE_ROCM)
+#include <hydrogen/device/gpu/ROCm.hpp>
+#endif
 
 #include <stdexcept>
 
@@ -36,7 +40,7 @@ void Scale_GPU_impl(
     SizeT num_entries,
     T const& alpha,
     T* buffer, SizeT stride,
-    cudaStream_t stream);
+    gpuStream_t stream);
 
 template <typename T, typename SizeT,
           typename=EnableUnless<IsStorageType<T,Device::GPU>>,
@@ -45,7 +49,7 @@ void Scale_GPU_impl(
     SizeT const&,
     T const&,
     T const* const&, SizeT const&,
-    cudaStream_t const&)
+    gpuStream_t const&)
 {
     throw std::logic_error("Scale: Type not valid on GPU");
 }
@@ -75,14 +79,14 @@ void Scale_GPU_impl(
     SizeT num_rows, SizeT num_cols,
     T const& alpha,
     T* buffer, SizeT ldim,
-    cudaStream_t stream);
+    gpuStream_t stream);
 
 template <typename T, typename SizeT,
           typename=EnableUnless<IsStorageType<T,Device::GPU>>,
           typename=void>
 void Scale_GPU_impl(SizeT const&, SizeT const&,
                     T const&, T const* const&, SizeT const&,
-                    cudaStream_t const&)
+                    gpuStream_t const&)
 {
     throw std::logic_error("Scale: Type not valid on GPU.");
 }

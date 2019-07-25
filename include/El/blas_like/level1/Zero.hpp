@@ -13,7 +13,7 @@
 #include <omp.h>
 #endif
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 #include <hydrogen/blas/gpu/Fill.hpp>
 #endif
 
@@ -101,14 +101,14 @@ void Zero( AbstractMatrix<T>& A )
             }
         }
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         hydrogen::Fill_GPU_impl(
             height, width, TypeTraits<T>::Zero(), ABuf, ALDim,
             SyncInfoFromMatrix(
                 static_cast<Matrix<T,Device::GPU>&>(A)).Stream());
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("Bad device type in Zero");
     }

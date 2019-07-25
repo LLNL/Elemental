@@ -14,10 +14,13 @@
 
 #include <El/hydrogen_config.h>
 
-#ifdef HYDROGEN_HAVE_CUDA
+#if defined(HYDROGEN_HAVE_CUDA)
 #include <cuda_runtime.h>
 #include <hydrogen/device/gpu/CUDA.hpp>
-#endif // HYDROGEN_HAVE_CUDA
+#elif defined(HYDROGEN_HAVE_ROCM)
+#include <hip/hip_runtime.h>
+#include <hydrogen/device/gpu/ROCm.hpp>
+#endif // HYDROGEN_HAVE_GPU
 
 #ifdef HYDROGEN_HAVE_CUB
 #include <hydrogen/device/gpu/cuda/CUB.hpp>
@@ -39,25 +42,29 @@ G* New(size_t size, unsigned int mode, SyncInfo<Device::CPU> const&)
     case 0:
         ptr = static_cast<G*>(HostMemoryPool().Allocate(size * sizeof(G)));
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case 1:
         ptr = static_cast<G*>(PinnedHostMemoryPool().Allocate(size * sizeof(G)));
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     case 2: ptr = new G[size]; break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case 3:
     {
         // Pinned memory
+#ifdef HYDROGEN_HAVE_CUDA
         auto error = cudaMallocHost(&ptr, size * sizeof(G));
         if (error != cudaSuccess)
         {
             RuntimeError("Failed to allocate pinned memory with message: ",
                          "\"", cudaGetErrorString(error), "\"");
         }
+#elif defined(HYDROGEN_HAVE_ROCM)
+        H_CHECK_HIP(hipHostMalloc(&ptr, size * sizeof(G)));
+#endif
     }
     break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default: RuntimeError("Invalid CPU memory allocation mode");
     }
     return ptr;
@@ -68,23 +75,27 @@ void Delete( G*& ptr, unsigned int mode, SyncInfo<Device::CPU> const& )
 {
     switch (mode) {
     case 0: HostMemoryPool().Free(ptr); break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case 1: PinnedHostMemoryPool().Free(ptr); break;
-#endif  // HYDROGEN_HAVE_CUDA
+#endif  // HYDROGEN_HAVE_GPU
     case 2: delete[] ptr; break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case 3:
     {
         // Pinned memory
+#if defined(HYDROGEN_HAVE_CUDA)
         auto error = cudaFreeHost(ptr);
         if (error != cudaSuccess)
         {
             RuntimeError("Failed to free pinned memory with message: ",
                          "\"", cudaGetErrorString(error), "\"");
         }
+#elif defined(HYDROGEN_HAVE_ROCM)
+        H_CHECK_HIP(hipHostFree(ptr));
+#endif
     }
     break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default: RuntimeError("Invalid CPU memory deallocation mode");
     }
     ptr = nullptr;
@@ -97,16 +108,26 @@ void MemZero( G* buffer, size_t numEntries, unsigned int mode,
     MemZero(buffer, numEntries);
 }
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 
 template <typename G>
 G* New( size_t size, unsigned int mode, SyncInfo<Device::GPU> const& syncInfo_ )
 {
     // Allocate memory
     G* ptr = nullptr;
+#if defined(HYDROGEN_HAVE_CUDA)
     cudaError_t status = cudaSuccess;
+    cudaError_t const success = cudaSuccess;
+#elif defined(HYDROGEN_HAVE_ROCM)
+    hipError_t status = hipSuccess;
+    hipError_t const success = hipSuccess;
+#endif
     switch (mode) {
+#if defined(HYDROGEN_HAVE_CUDA)
     case 0: status = cudaMalloc(&ptr, size * sizeof(G)); break;
+#elif defined(HYDROGEN_HAVE_ROCM)
+    case 0: status = hipMalloc(&ptr, size * sizeof(G)); break;
+#endif
 #ifdef HYDROGEN_HAVE_CUB
     case 1:
         status = hydrogen::cub::MemoryPool().DeviceAllocate(
@@ -119,13 +140,19 @@ G* New( size_t size, unsigned int mode, SyncInfo<Device::GPU> const& syncInfo_ )
     }
 
     // Check for errors
-    if (status != cudaSuccess)
+    if (status != success)
     {
         size_t freeMemory = 0;
         size_t totalMemory = 0;
+#if defined(HYDROGEN_HAVE_CUDA)
         cudaMemGetInfo(&freeMemory, &totalMemory);
+        std::string error_string = cudaGetErrorString(status);
+#elif defined(HYDROGEN_HAVE_ROCM)
+        hipMemGetInfo(&freeMemory, &totalMemory);
+        std::string error_string = hipGetErrorString(status);
+#endif
         RuntimeError("Failed to allocate GPU memory with message: ",
-                     "\"", cudaGetErrorString(status), "\" ",
+                     "\"", error_string, "\" ",
                      "(",size*sizeof(G)," bytes requested, ",
                      freeMemory," bytes available, ",
                      totalMemory," bytes total)");
@@ -138,7 +165,11 @@ template <typename G>
 void Delete( G*& ptr, unsigned int mode, SyncInfo<Device::GPU> const& )
 {
     switch (mode) {
+#if defined(HYDROGEN_HAVE_CUDA)
     case 0: H_CHECK_CUDA(cudaFree(ptr)); break;
+#elif defined(HYDROGEN_HAVE_ROCM)
+    case 0: H_CHECK_HIP(hipFree(ptr)); break;
+#endif
 #ifdef HYDROGEN_HAVE_CUB
     case 1:
         H_CHECK_CUDA(
@@ -154,12 +185,18 @@ template <typename G>
 void MemZero( G* buffer, size_t numEntries, unsigned int mode,
                      SyncInfo<Device::GPU> const& syncInfo_ )
 {
+#if defined(HYDROGEN_HAVE_CUDA)
     H_CHECK_CUDA(
         cudaMemsetAsync(buffer, 0x0, numEntries * sizeof(G),
                         syncInfo_.Stream()));
+#elif defined(HYDROGEN_HAVE_ROCM)
+    H_CHECK_HIP(
+        hipMemsetAsync(buffer, 0x0, numEntries * sizeof(G),
+                       syncInfo_.Stream()));
+#endif
 }
 
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 } // namespace <anonymous>
 
@@ -262,7 +299,7 @@ void Memory<G,D>::Empty()
 template <typename G, Device D>
 void Memory<G,D>::ResetSyncInfo(SyncInfo<D> const& syncInfo)
 {
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     // FIXME: This treats this case as an error. Alternatively, this
     // could reallocate memory. See SetMode() below.
     if ((size_ > 0) && (D == Device::GPU) && (mode_ == 1))
@@ -270,7 +307,7 @@ void Memory<G,D>::ResetSyncInfo(SyncInfo<D> const& syncInfo)
         LogicError("Cannot assign new SyncInfo object to "
                    "already-allocated CUB memory.");
     }
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
     syncInfo_ = syncInfo;
 }
@@ -316,7 +353,7 @@ unsigned int Memory<G,D>::Mode() const
 EL_EXTERN template class Memory<double, Device::CPU>;
 
 // GPU instantiations
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 EL_EXTERN template class Memory<float, Device::GPU>;
 EL_EXTERN template class Memory<double, Device::GPU>;
 #endif

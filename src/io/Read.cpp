@@ -25,7 +25,7 @@ void Read(AbstractMatrix<T>& A,
     case Device::CPU:
         Read(static_cast<Matrix<T,Device::CPU>&>(A), filename, format);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
     {
         Matrix<T,Device::CPU> A_CPU;
@@ -33,7 +33,7 @@ void Read(AbstractMatrix<T>& A,
         static_cast<Matrix<T,Device::GPU>&>(A) = A_CPU;
     }
     break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("Read: Bad device type.");
     }

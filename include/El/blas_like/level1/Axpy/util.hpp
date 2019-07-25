@@ -9,7 +9,7 @@
 #ifndef EL_BLAS_AXPY_UTIL_HPP
 #define EL_BLAS_AXPY_UTIL_HPP
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 #include <hydrogen/blas/gpu/Axpy.hpp>
 #endif
 
@@ -35,7 +35,7 @@ void InterleaveMatrixUpdate(
             &B[rowStrideB*j], colStrideB);
 }
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 template <typename T>
 void InterleaveMatrixUpdate(
     T alpha, Int height, Int width,
@@ -49,7 +49,7 @@ void InterleaveMatrixUpdate(
                             B, colStrideB, rowStrideB,
                             syncInfo.Stream());
 }
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 template<typename T, Device D>
 void UpdateWithLocalData(

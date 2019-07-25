@@ -49,12 +49,12 @@ void Send(AbstractMatrix<T> const& A, mpi::Comm const& comm, int destination)
         Send(static_cast<Matrix<T,Device::CPU> const&>(A),
              std::move(comm), destination);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         Send(static_cast<Matrix<T,Device::GPU> const&>(A),
              std::move(comm), destination);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("Send: Bad Device.");
     }

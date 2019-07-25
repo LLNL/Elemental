@@ -27,14 +27,14 @@ void SendRecv(
             static_cast<Matrix<T,Device::CPU>&>(B),
             comm, sendRank, recvRank);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         SendRecv(
             static_cast<Matrix<T,Device::GPU> const&>(A),
             static_cast<Matrix<T,Device::GPU>&>(B),
             comm, sendRank, recvRank);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("SendRecv: Unsupported device.");
     }
@@ -108,14 +108,14 @@ void SendRecv
   ( const Matrix<T,Device::CPU>& A, Matrix<T,Device::CPU>& B, mpi::Comm const& comm, \
     int sendRank, int recvRank );
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 EL_EXTERN template void SendRecv(
     Matrix<float,Device::GPU> const&, Matrix<float,Device::GPU>&,
     mpi::Comm const&, int, int);
 EL_EXTERN template void SendRecv(
     Matrix<double,Device::GPU> const&, Matrix<double,Device::GPU>&,
     mpi::Comm const&, int, int);
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

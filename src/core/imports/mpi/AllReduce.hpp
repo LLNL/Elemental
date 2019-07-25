@@ -254,14 +254,14 @@ void AllReduce(T* buf, int count, Comm const& comm, SyncInfo<D> const& syncInfo)
     template T AllReduce(T, Comm const&, SyncInfo<D> const&);                  \
     template void AllReduce(T*, int, Comm const&, SyncInfo<D> const&)
 
-#ifndef HYDROGEN_HAVE_CUDA
+#ifndef HYDROGEN_HAVE_GPU
 #define MPI_ALLREDUCE_PROTO(T)             \
     MPI_ALLREDUCE_PROTO_DEV(T,Device::CPU)
 #else
 #define MPI_ALLREDUCE_PROTO(T)             \
     MPI_ALLREDUCE_PROTO_DEV(T,Device::CPU);     \
     MPI_ALLREDUCE_PROTO_DEV(T,Device::GPU)
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 MPI_ALLREDUCE_PROTO(byte);
 MPI_ALLREDUCE_PROTO(int);

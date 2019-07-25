@@ -103,14 +103,14 @@ void InterleaveMatrixUpdate(
     Ring* B, Int colStrideB, Int rowStrideB,
     SyncInfo<Device::CPU>);
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 template<typename Ring>
 void InterleaveMatrixUpdate(
     Ring alpha, Int localHeight, Int localWidth,
     Ring const* A, Int colStrideA, Int rowStrideA,
     Ring* B, Int colStrideB, Int rowStrideB,
     SyncInfo<Device::GPU>);
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 template<typename Ring, Device D=Device::CPU>
 void UpdateWithLocalData(
@@ -375,7 +375,7 @@ template<typename S,typename T,
          typename=EnableIf<And<CanCast<S,T>,Not<IsSame<S,T>>>>>
 void Copy( const Matrix<S>& A, Matrix<T>& B );
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 template <typename T>
 void Copy(Matrix<T,Device::CPU> const&, Matrix<T,Device::GPU>&);
 template <typename T>
@@ -384,7 +384,7 @@ template <typename T>
 void CopyAsync(Matrix<T,Device::CPU> const&, Matrix<T,Device::GPU>&);
 template <typename T>
 void CopyAsync(Matrix<T,Device::GPU> const&, Matrix<T,Device::CPU>&);
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 template <typename T>
 void CopyAsync(ElementalMatrix<T> const& A, ElementalMatrix<T>& B);
@@ -468,7 +468,7 @@ void PartialRowStridedUnpack(
     T* B, Int BLDim,
     SyncInfo<Device::CPU> );
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 template <typename T, typename=EnableIf<IsStorageType<T,Device::GPU>>>
 void InterleaveMatrix(
     Int height, Int width,
@@ -512,7 +512,7 @@ void PartialRowStridedUnpack(
     T* B, Int BLDim,
     SyncInfo<Device::GPU> );
 
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 template <typename T, Device D,
           typename=DisableIf<IsStorageType<T,D>>, typename=void>
@@ -669,7 +669,7 @@ void StridedUnpack(
 
 // DiagonalScale
 // =============
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 template<typename T, typename=EnableIf<IsDeviceValidType<T,Device::GPU>>>
 void DiagonalScale
 ( LeftOrRight side, Orientation orientation,
@@ -679,7 +679,7 @@ template<typename T, typename=DisableIf<IsDeviceValidType<T,Device::GPU>>,
 void DiagonalScale
 ( LeftOrRight side, Orientation orientation,
   Matrix<T,Device::GPU> const& d, Matrix<T,Device::GPU>& A );
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 template<typename TDiag,typename T>
 void DiagonalScale(
@@ -788,10 +788,10 @@ template<typename T>
 void EntrywiseFill( Matrix<T>& A, function<T(void)> func );
 template<typename T>
 void EntrywiseFill( AbstractDistMatrix<T>& A, function<T(void)> func );
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 template<typename T>
 void EntrywiseFill( Matrix<T,Device::GPU>& A, function<T(void)> func );
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 // EntrywiseMap
 // ============
@@ -1644,7 +1644,7 @@ void Transpose
 ( const Matrix<T>& A,
         Matrix<T>& B,
   bool conjugate=false );
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 template<typename T,typename=EnableIf<IsDeviceValidType<T,Device::GPU>>>
 void Transpose
 ( Matrix<T,Device::GPU> const& A,
@@ -1657,7 +1657,7 @@ void Transpose
 ( Matrix<T,Device::GPU> const& A,
   Matrix<T,Device::GPU>& B,
   bool conjugate=false );
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 template<typename T>
 void Transpose

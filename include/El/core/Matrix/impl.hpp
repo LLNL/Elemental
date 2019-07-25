@@ -11,7 +11,7 @@
 
 #include "impl_cpu.hpp"
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 #include "impl_gpu.hpp"
 #endif
 

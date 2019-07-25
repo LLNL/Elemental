@@ -84,13 +84,13 @@ void Transpose(AbstractMatrix<T> const& A, AbstractMatrix<T>& B,
             static_cast<Matrix<T,Device::CPU> const&>(A),
             static_cast<Matrix<T,Device::CPU>&>(B), conjugate);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         Transpose(
             static_cast<Matrix<T,Device::GPU> const&>(A),
             static_cast<Matrix<T,Device::GPU>&>(B), conjugate);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("Bad device for transform.");
     }
@@ -158,7 +158,7 @@ void Transpose( const Matrix<T>& A, Matrix<T>& B, bool conjugate )
 }
 
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 template <typename T, typename>
 void Transpose(Matrix<T,Device::GPU> const& A,
                Matrix<T,Device::GPU>& B, bool conjugate )
@@ -186,7 +186,7 @@ void Transpose(Matrix<T,Device::GPU> const& A,
 {
     LogicError("Bad device type!");
 }
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 template<typename T>
 void Transpose
@@ -416,7 +416,7 @@ void Adjoint
     EL_EXTERN template void Transpose(                          \
         Matrix<T> const& A, Matrix<T>& B, bool conjugate);
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 EL_EXTERN template void Transpose(
     Matrix<float,Device::GPU> const& A, Matrix<float,Device::GPU>& B,
     bool conjugate);
@@ -431,7 +431,7 @@ EL_EXTERN template void Transpose(
     Matrix<gpu_half_type,Device::GPU>& B,
     bool conjugate);
 #endif // HYDROGEN_GPU_USE_FP16
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

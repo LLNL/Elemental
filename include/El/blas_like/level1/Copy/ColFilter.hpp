@@ -102,11 +102,11 @@ void ColFilter
     case Device::CPU:
         ColFilter_impl<Device::CPU>(A,B);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         ColFilter_impl<Device::GPU>(A,B);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("ColFilter: Bad device.");
     }

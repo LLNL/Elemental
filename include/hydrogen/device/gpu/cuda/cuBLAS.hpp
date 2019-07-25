@@ -1,8 +1,6 @@
 #ifndef HYDROGEN_DEVICE_GPU_CUDA_CUBLAS_HPP_
 #define HYDROGEN_DEVICE_GPU_CUDA_CUBLAS_HPP_
 
-#include <El/hydrogen_config.h>
-
 #include "cuBLASError.hpp"
 #include "cuBLASManagement.hpp"
 #include "cuBLASMeta.hpp"

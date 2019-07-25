@@ -110,14 +110,14 @@ void AllToAll(T const*, int, T*, int, Comm const&, SyncInfo<D> const&)
 #define MPI_ALLTOALL_PROTO_DEV(T,D) \
     template void AllToAll(T const*, int, T*, int, Comm const&, SyncInfo<D> const&)
 
-#ifndef HYDROGEN_HAVE_CUDA
+#ifndef HYDROGEN_HAVE_GPU
 #define MPI_ALLTOALL_PROTO(T)             \
     MPI_ALLTOALL_PROTO_DEV(T,Device::CPU)
 #else
 #define MPI_ALLTOALL_PROTO(T)             \
     MPI_ALLTOALL_PROTO_DEV(T,Device::CPU);      \
     MPI_ALLTOALL_PROTO_DEV(T,Device::GPU)
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 MPI_ALLTOALL_PROTO(byte);
 MPI_ALLTOALL_PROTO(int);

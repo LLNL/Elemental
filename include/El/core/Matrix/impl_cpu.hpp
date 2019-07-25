@@ -62,7 +62,7 @@ Matrix<T, Device::CPU>::Matrix(Matrix<T, Device::CPU> const& A)
     Copy(A, *this);
 }
 
-#ifdef HYDROGEN_HAVE_CUDA
+#if defined(HYDROGEN_HAVE_CUDA)
 template <typename T>
 Matrix<T, Device::CPU>::Matrix(Matrix<T, Device::GPU> const& A)
     : Matrix{A.Height(), A.Width(), A.LDim()}
@@ -76,7 +76,21 @@ Matrix<T, Device::CPU>::Matrix(Matrix<T, Device::GPU> const& A)
                                     stream));
     H_CHECK_CUDA(cudaStreamSynchronize(stream));
 }
-#endif // HYDROGEN_HAVE_CUDA
+#elif defined(HYDROGEN_HAVE_ROCM)
+template <typename T>
+Matrix<T, Device::CPU>::Matrix(Matrix<T, Device::GPU> const& A)
+    : Matrix{A.Height(), A.Width(), A.LDim()}
+{
+    EL_DEBUG_CSE;
+    auto stream = gpu::DefaultSyncInfo().Stream();
+    H_CHECK_HIP(hipMemcpy2DAsync(data_, this->LDim()*sizeof(T),
+                                    A.LockedBuffer(), A.LDim()*sizeof(T),
+                                    A.Height()*sizeof(T), A.Width(),
+                                    hipMemcpyDeviceToHost,
+                                    stream));
+    H_CHECK_HIP(hipStreamSynchronize(stream));
+}
+#endif // HYDROGEN_HAVE_GPU
 
 template <typename T>
 Matrix<T, Device::CPU>::Matrix(Matrix<T, Device::CPU>&& A) EL_NO_EXCEPT

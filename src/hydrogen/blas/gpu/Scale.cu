@@ -1,9 +1,15 @@
 #include <hydrogen/blas/gpu/Scale.hpp>
 
 #include <El/hydrogen_config.h>
+#ifdef HYDROGEN_HAVE_CUDA
 #include <hydrogen/device/gpu/CUDA.hpp>
-
 #include <cuda_runtime.h>
+using gpuStream_t = cudaStream_t;
+#elif defined(HYDROGEN_HAVE_ROCM)
+#include <hydrogen/device/gpu/ROCm.hpp>
+#include <hip/hip_runtime.h>
+using gpuStream_t = hipStream_t;
+#endif
 
 namespace
 {
@@ -40,33 +46,32 @@ template <typename T, typename SizeT, typename>
 void Scale_GPU_impl(
     SizeT num_entries,
     T const& alpha, T* A, SizeT lda,
-    cudaStream_t stream)
+    gpuStream_t stream)
 {
     if (!num_entries)
         return;
 
     constexpr size_t threads_per_block = 128;
     auto blocks = (num_entries + threads_per_block - 1)/ threads_per_block;
-    T arg_alpha = alpha;
-    void* args[] = { &num_entries, &arg_alpha, &A, &lda};
-    H_CHECK_CUDA(
-        cudaLaunchKernel(
-            (void const*)&scale_1d_kernel_naive<T,SizeT>,
-            blocks, threads_per_block, args, 0, stream));
+    gpu::LaunchKernel(
+        scale_1d_kernel_naive<T,SizeT>,
+        blocks, threads_per_block, 0,
+        SyncInfo<Device::GPU>(stream, nullptr),
+        num_entries, alpha, A, lda);
 }
 
 template <typename T, typename SizeT, typename>
 void Scale_GPU_impl(
     SizeT num_rows, SizeT num_cols,
     T const& alpha, T* A, SizeT lda,
-    cudaStream_t stream)
+    gpuStream_t stream)
 {
     if (num_rows == TypeTraits<SizeT>::Zero()
         || num_cols == TypeTraits<SizeT>::Zero())
     {
         return;
     }
-    
+
     constexpr int TILE_DIM = 32;
     constexpr int BLK_COLS = 8;
 
@@ -75,24 +80,22 @@ void Scale_GPU_impl(
               1);
     dim3 thds(TILE_DIM, BLK_COLS, 1);
 
-    T arg_alpha = alpha;
-    void* args[] = { &num_rows, &num_cols,
-                     &arg_alpha, &A, &lda};
-    H_CHECK_CUDA(
-        cudaLaunchKernel(
-            (void const*)&scale_2d_kernel_naive<TILE_DIM,BLK_COLS,T,SizeT>,
-            blks, thds, args, 0, stream));
+    gpu::LaunchKernel(
+        scale_2d_kernel_naive<TILE_DIM,BLK_COLS,T,SizeT>,
+        blks, thds, 0,
+        SyncInfo<Device::GPU>(stream, nullptr),
+        num_rows, num_cols, alpha, A, lda);
 }
 
 #define ETI(DataType, SizeType)                         \
     template void Scale_GPU_impl(                       \
         SizeType,                                       \
         DataType const&, DataType*, SizeType,           \
-        cudaStream_t);                                  \
+        gpuStream_t);                                  \
     template void Scale_GPU_impl(                       \
         SizeType, SizeType,                             \
         DataType const&, DataType*, SizeType,           \
-        cudaStream_t)
+        gpuStream_t)
 
 ETI(float, int);
 ETI(float, long);

@@ -139,11 +139,11 @@ void Exchange
     case Device::CPU:
         Exchange_impl<T,Device::CPU>(A,B,sendRank,recvRank,comm);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         Exchange_impl<T,Device::GPU>(A,B,sendRank,recvRank,comm);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("Exchange: Bad device.");
     }

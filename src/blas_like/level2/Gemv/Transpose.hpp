@@ -148,11 +148,11 @@ void Transpose
     case Device::CPU:
         Transpose_impl<Device::CPU>(orientation, alpha, APre, x, beta, yPre);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         Transpose_impl<Device::GPU>(orientation, alpha, APre, x, beta, yPre);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("Gemv::Transpose: Bad device.");
     }

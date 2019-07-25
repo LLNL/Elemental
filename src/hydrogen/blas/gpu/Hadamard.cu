@@ -1,8 +1,15 @@
 #include <hydrogen/blas/gpu/Hadamard.hpp>
 
 #include <El/hydrogen_config.h>
+#ifdef HYDROGEN_HAVE_CUDA
 #include <hydrogen/device/gpu/CUDA.hpp>
 #include <cuda_runtime.h>
+using gpuStream_t = cudaStream_t;
+#elif defined(HYDROGEN_HAVE_ROCM)
+#include <hydrogen/device/gpu/ROCm.hpp>
+#include <hip/hip_runtime.h>
+using gpuStream_t = hipStream_t;
+#endif
 
 namespace
 {
@@ -61,7 +68,7 @@ void Hadamard_GPU_impl(
     T const* X, size_t colStrideX, size_t rowStrideX,
     T const* Y, size_t colStrideY, size_t rowStrideY,
     T* Z, size_t colStrideZ, size_t rowStrideZ,
-    cudaStream_t stream)
+    gpuStream_t stream)
 {
     if (height <= 0 || width <= 0) { return; }
     size_t size = height * width;
@@ -73,39 +80,35 @@ void Hadamard_GPU_impl(
     {
         if (X == Z)
         {
-            void* args[] = { &size, &Y, &Z };
-            H_CHECK_CUDA(
-                cudaLaunchKernel(
-                    (void const*)&MultAssign_kernel<T>,
-                    gridDim, blockDim, args, 0, stream));
+            gpu::LaunchKernel(
+                MultAssign_kernel<T>,
+                gridDim, blockDim, 0, SyncInfo<Device::GPU>(stream, nullptr),
+                size, Y, Z);
         }
         else if (Y == Z)
         {
-            void* args[] = { &size, &X, &Z };
-            H_CHECK_CUDA(
-                cudaLaunchKernel(
-                    (void const*)&MultAssign_kernel<T>,
-                    gridDim, blockDim, args, 0, stream));
+            gpu::LaunchKernel(
+                MultAssign_kernel<T>,
+                gridDim, blockDim, 0, SyncInfo<Device::GPU>(stream, nullptr),
+                size, X, Z);
         }
         else
         {
-            void* args[] = { &size, &X, &Y, &Z };
-            H_CHECK_CUDA(
-                cudaLaunchKernel(
-                    (void const*)&Hadamard1D_kernel<T>,
-                    gridDim, blockDim, args, 0, stream));
+            gpu::LaunchKernel(
+                Hadamard1D_kernel<T>,
+                gridDim, blockDim, 0, SyncInfo<Device::GPU>(stream, nullptr),
+                size, X, Y, Z);
         }
     }
     else
     {
-        void* args[] = { &height, &width,
-                         &X, &colStrideX, &rowStrideX,
-                         &Y, &colStrideY, &rowStrideY,
-                         &Z, &colStrideZ, &rowStrideZ };
-        H_CHECK_CUDA(
-            cudaLaunchKernel(
-                (void const*)&Hadamard2D_kernel<T>,
-                gridDim, blockDim, args, 0, stream));
+        gpu::LaunchKernel(
+            Hadamard2D_kernel<T>,
+            gridDim, blockDim, 0, SyncInfo<Device::GPU>(stream, nullptr),
+            height, width,
+            X, colStrideX, rowStrideX,
+            Y, colStrideY, rowStrideY,
+            Z, colStrideZ, rowStrideZ);
     }
 
 }
@@ -115,7 +118,7 @@ void Hadamard_GPU_impl(
         size_t, size_t,                         \
         T const*, size_t, size_t,               \
         T const*, size_t, size_t,               \
-        T*, size_t, size_t, cudaStream_t)
+        T*, size_t, size_t, gpuStream_t)
 
 #ifdef HYDROGEN_GPU_USE_FP16
 ETI(gpu_half_type);

@@ -23,11 +23,11 @@ void MakeUniform( AbstractMatrix<T>& A, T center, Base<T> radius )
     case Device::CPU:
         MakeUniform(static_cast<Matrix<T,Device::CPU>&>(A), center, radius);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         MakeUniform(static_cast<Matrix<T,Device::GPU>&>(A), center, radius);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("MakeUniform: Bad device.");
     }
@@ -82,7 +82,7 @@ void Uniform( AbstractDistMatrix<T>& A, Int m, Int n, T center, Base<T> radius )
     template void MakeUniform(                                  \
         Matrix<T,Device::CPU>& A, T center, Base<T> radius );
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 template void MakeUniform(Matrix<float,Device::GPU>&, float, Base<float>);
 template void MakeUniform(Matrix<double,Device::GPU>&, double, Base<double>);
 
@@ -91,7 +91,7 @@ ABSTRACT_PROTO(gpu_half_type);
 template void MakeUniform(Matrix<gpu_half_type,Device::GPU>&,
                           gpu_half_type, Base<gpu_half_type>);
 #endif
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

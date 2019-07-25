@@ -117,7 +117,7 @@ void Scatter(const T*, int, T*, int, int, Comm const&, SyncInfo<D> const&)
     template void Scatter(const T* sbuf, int sc, T* rbuf, int rc, int root, \
                           Comm const& comm, SyncInfo<D> const&)
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 #define MPI_COLLECTIVE_PROTO(T) \
     MPI_COLLECTIVE_PROTO_DEV(T,Device::CPU);    \
     MPI_COLLECTIVE_PROTO_DEV(T,Device::GPU)

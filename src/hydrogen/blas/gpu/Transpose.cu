@@ -1,12 +1,17 @@
 #include <hydrogen/blas/gpu/Transpose.hpp>
 
 #include <El/hydrogen_config.h>
+#ifdef HYDROGEN_HAVE_CUDA
 #include <hydrogen/device/gpu/CUDA.hpp>
-
 #include <cuda_runtime.h>
-
 #include <cooperative_groups.h>
 namespace cg = cooperative_groups;
+using gpuStream_t = cudaStream_t;
+#elif defined(HYDROGEN_HAVE_ROCM)
+#include <hydrogen/device/gpu/ROCm.hpp>
+#include <hip/hip_runtime.h>
+using gpuStream_t = hipStream_t;
+#endif
 
 namespace
 {
@@ -18,7 +23,9 @@ __global__ void transpose_kernel(
     T const* __restrict__ A, SizeT const lda,
     T* __restrict__ B, SizeT const ldb)
 {
+#ifdef HYDROGEN_HAVE_CUDA
     cg::thread_block cta = cg::this_thread_block();
+#endif
     __shared__ T tile[TILE_DIM][TILE_DIM+1];
 
     SizeT row_idx_A = blockIdx.x * TILE_DIM + threadIdx.x;
@@ -47,7 +54,11 @@ __global__ void transpose_kernel(
             tile[threadIdx.y+ii][threadIdx.x] = A[idx_in + ii*lda];
         }
 
+#ifdef HYDROGEN_HAVE_CUDA
         cg::sync(cta);
+#else
+        __syncthreads();
+#endif
 
         #pragma unroll
         for (int ii = 0; ii < TILE_DIM; ii += BLK_COLS)
@@ -69,7 +80,11 @@ __global__ void transpose_kernel(
         }
 
         // Same warp-sync stuff -- I assume this still needs to happen.
+#ifdef HYDROGEN_HAVE_CUDA
         cg::sync(cta);
+#else
+        __syncthreads();
+#endif
 
         // Don't write rows of the new matrix that don't exist.
         if (row_idx < n)
@@ -89,7 +104,7 @@ namespace hydrogen
 template <typename T, typename SizeT, typename>
 void Transpose_GPU_impl(
     SizeT m, SizeT n, T const* A, SizeT lda, T* B, SizeT ldb,
-    cudaStream_t stream)
+    gpuStream_t stream)
 {
     if (m == TypeTraits<SizeT>::Zero() || n == TypeTraits<SizeT>::Zero())
         return;
@@ -101,19 +116,19 @@ void Transpose_GPU_impl(
               (n + TILE_DIM - 1) / TILE_DIM,
               1);
     dim3 thds(TILE_DIM, BLK_COLS, 1);
-    void* args[] = { &m, &n, &A, &lda, &B, &ldb };
 
-    H_CHECK_CUDA(
-        cudaLaunchKernel(
-            (void const*)transpose_kernel<TILE_DIM,BLK_COLS,T,SizeT>,
-            blks, thds, args, 0, stream));
+    gpu::LaunchKernel(
+        transpose_kernel<TILE_DIM,BLK_COLS,T,SizeT>,
+        blks, thds, 0,
+        SyncInfo<Device::GPU>(stream, nullptr),
+        m, n, A, lda, B, ldb);
 }
 
 #define ETI(DataType, SizeType)                 \
     template void Transpose_GPU_impl(           \
         SizeType, SizeType,                     \
         DataType const*, SizeType,              \
-        DataType*, SizeType, cudaStream_t)
+        DataType*, SizeType, gpuStream_t)
 
 ETI(float, int);
 ETI(float, long);

@@ -27,7 +27,7 @@ void TransposeAxpy(
                       static_cast<Matrix<T,Device::CPU>&>(Y),
                       conjugate);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         TransposeAxpy(alphaS,
                       static_cast<Matrix<T,Device::GPU> const&>(X),
@@ -35,7 +35,7 @@ void TransposeAxpy(
                       conjugate);
 
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("Bad device for TransposeAxpy");
     }
@@ -106,7 +106,7 @@ void TransposeAxpy
     }
 }
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 template <typename T, typename S,
           typename=EnableIf<IsDeviceValidType<T,Device::GPU>>>
 void TransposeAxpy(S alphaS,
@@ -175,7 +175,7 @@ void TransposeAxpy (S alphaS,
 {
     LogicError("TransposeAxpy: Bad type/device combo.");
 }
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 template<typename T,typename S>
 void TransposeAxpy

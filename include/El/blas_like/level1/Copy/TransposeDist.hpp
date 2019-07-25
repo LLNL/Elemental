@@ -215,7 +215,7 @@ void TransposeDist(DistMatrix<T,U,V,ELEMENT,Device::CPU> const& A,
     }
 }
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 
 // FIXME (trb): This should work just fine, but it might not have
 // optimal performance for row/column vectors (A.Height() or A.Width()
@@ -270,7 +270,7 @@ void TransposeDist(DistMatrix<T,U,V,ELEMENT,Device::GPU> const& A,
 
 }
 
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 template<typename T,Dist U,Dist V,Device D,typename,typename>
 void TransposeDist(DistMatrix<T,U,V,ELEMENT,D> const& A,

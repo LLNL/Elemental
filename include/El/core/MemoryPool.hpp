@@ -10,9 +10,11 @@
 #include <mutex>
 
 #include "El/hydrogen_config.h"
-#ifdef HYDROGEN_HAVE_CUDA
+#if defined(HYDROGEN_HAVE_CUDA)
 #include <cuda_runtime.h>
-#endif  // HYDROGEN_HAVE_CUDA
+#elif defined(HYDROGEN_HAVE_ROCM)
+#include <hip/hip_runtime.h>
+#endif
 
 namespace El
 {
@@ -200,6 +202,32 @@ inline void MemoryPool<true>::do_free(void* ptr)
             "\"", cudaGetErrorString(error), "\"");
     }
 }
+#elif defined(HYDROGEN_HAVE_ROCM)
+template <>
+inline void* MemoryPool<true>::do_allocation(size_t bytes)
+{
+    void* ptr;
+    auto error = hipHostMalloc(&ptr, bytes);
+    if (error != hipSuccess)
+    {
+        details::ThrowRuntimeError(
+            "Failed to allocate HIP pinned memory with message: ",
+            "\"", hipGetErrorString(error), "\"");
+    }
+    return ptr;
+}
+
+template<>
+inline void MemoryPool<true>::do_free(void* ptr)
+{
+    auto error = hipHostFree(ptr);
+    if (error != hipSuccess)
+    {
+        details::ThrowRuntimeError(
+            "Failed to free HIP pinned memory with message: ",
+            "\"", hipGetErrorString(error), "\"");
+    }
+}
 #endif  // HYDROGEN_HAVE_CUDA
 
 template <>
@@ -218,7 +246,7 @@ inline void MemoryPool<false>::do_free(void* ptr)
     return std::free(ptr);
 }
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 /** Get singleton instance of CUDA pinned host memory pool. */
 MemoryPool<true>& PinnedHostMemoryPool();
 /** Destroy singleton instance of CUDA pinned host memory pool. */

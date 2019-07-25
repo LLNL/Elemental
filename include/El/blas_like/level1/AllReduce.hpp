@@ -61,11 +61,11 @@ void AllReduce(AbstractMatrix<T>& A, mpi::Comm const& comm, mpi::Op op)
     case Device::CPU:
         AllReduce(static_cast<Matrix<T,Device::CPU>&>(A), comm, op);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         AllReduce(static_cast<Matrix<T,Device::GPU>&>(A), comm, op);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("AllReduce: Bad device!");
     }

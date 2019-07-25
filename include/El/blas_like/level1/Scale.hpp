@@ -13,7 +13,7 @@
 namespace El
 {
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 template <typename T, typename=EnableIf<IsComputeType<T,Device::GPU>>>
 void Scale(T const& alpha, Matrix<T,Device::GPU>& A)
 {
@@ -36,7 +36,7 @@ void Scale(T const&, Matrix<T,Device::GPU>&)
 {
     LogicError("Scale: Bad device/type combo!");
 }
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 template <typename T, typename S,
           typename=EnableIf<IsComputeType<T,Device::CPU>>>
@@ -102,11 +102,11 @@ void Scale( S alphaS, AbstractMatrix<T>& A )
         case Device::CPU:
             Scale(alpha, static_cast<Matrix<T,Device::CPU>&>(A));
             break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
         case Device::GPU:
             Scale(alpha, static_cast<Matrix<T,Device::GPU>&>(A));
             break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
         default:
             LogicError("Bad device type in Scale");
         }

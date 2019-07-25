@@ -8,7 +8,11 @@
 #include <hydrogen/Device.hpp>
 #include <hydrogen/meta/MetaUtilities.hpp>
 
-#include <cuda_runtime.h>
+#ifdef HYDROGEN_HAVE_CUDA
+#include <hydrogen/device/gpu/CUDA.hpp>
+#elif defined(HYDROGEN_HAVE_ROCM)
+#include <hydrogen/device/gpu/ROCm.hpp>
+#endif
 
 #include <stdexcept>
 
@@ -21,7 +25,7 @@ void Hadamard_GPU_impl(
     T const* A, size_t row_stride_A, size_t lda,
     T const* B, size_t row_stride_B, size_t ldb,
     T* C, size_t row_stride_C, size_t ldc,
-    cudaStream_t stream);
+    gpuStream_t stream);
 
 template <typename T,
           typename=EnableUnless<IsComputeType<T,Device::GPU>>,
@@ -31,7 +35,7 @@ void Hadamard_GPU_impl(
     T const* const&, size_t const&, size_t const&,
     T const* const&, size_t const&, size_t const&,
     T* const&, size_t const&, size_t const&,
-    cudaStream_t const&)
+    gpuStream_t const&)
 {
     throw std::logic_error("Hadamard: Type not valid on GPU.");
 }

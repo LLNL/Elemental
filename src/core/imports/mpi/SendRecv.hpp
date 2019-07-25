@@ -79,7 +79,7 @@ T SendRecv( T sb, int to, int from, Comm const& comm, SyncInfo<D> const& syncInf
         T* buf, int count, int to, int from, Comm const& comm,                 \
         SyncInfo<D> const&)
 
-#ifndef HYDROGEN_HAVE_CUDA
+#ifndef HYDROGEN_HAVE_GPU
 #define MPI_COLLECTIVE_PROTO(T)             \
     MPI_COLLECTIVE_PROTO_DEV(T,Device::CPU)
 #else

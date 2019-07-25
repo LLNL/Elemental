@@ -131,11 +131,11 @@ void Normal
     case Device::CPU:
         Normal_impl<Device::CPU>(alpha, APre, x, beta, yPre);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         Normal_impl<Device::GPU>(alpha, APre, x, beta, yPre);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("Gemv::Normal: Bad device.");
     }

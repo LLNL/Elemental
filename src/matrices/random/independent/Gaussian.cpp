@@ -37,11 +37,11 @@ void MakeGaussian(AbstractMatrix<F>& A, F mean, Base<F> stddev)
     case Device::CPU:
         MakeGaussian(static_cast<Matrix<F,Device::CPU>&>(A), mean, stddev);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         MakeGaussian(static_cast<Matrix<F,Device::GPU>&>(A), mean, stddev);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("MakeGaussian: Bad device.");
     }

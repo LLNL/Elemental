@@ -98,11 +98,11 @@ void RowFilter
     case Device::CPU:
         RowFilter_impl<Device::CPU>(A,B);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         RowFilter_impl<Device::GPU>(A,B);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("RowFilter: Bad device.");
     }

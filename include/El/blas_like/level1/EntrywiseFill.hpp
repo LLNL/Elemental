@@ -23,7 +23,7 @@ void EntrywiseFill( Matrix<T, Device::CPU>& A, function<T(void)> func )
 }
 
 // FIXME: Make proper kernel
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 template <typename T>
 void EntrywiseFill(Matrix<T,Device::GPU> &A, function<T(void)> func)
 {
@@ -32,7 +32,7 @@ void EntrywiseFill(Matrix<T,Device::GPU> &A, function<T(void)> func)
     EntrywiseFill(CPU_Mat, std::move(func));
     A = CPU_Mat;
 }
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 template<typename T>
 void EntrywiseFill( AbstractDistMatrix<T>& A, function<T(void)> func )
@@ -50,12 +50,12 @@ void EntrywiseFill( AbstractDistMatrix<T>& A, function<T(void)> func )
   EL_EXTERN template void EntrywiseFill \
   ( AbstractDistMatrix<T>& A, function<T(void)> func );
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 EL_EXTERN template void EntrywiseFill(
     Matrix<float,Device::GPU>&, function<float(void)>);
 EL_EXTERN template void EntrywiseFill(
     Matrix<double,Device::GPU>&, function<double(void)>);
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

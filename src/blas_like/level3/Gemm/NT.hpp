@@ -80,11 +80,11 @@ void SUMMA_NTA
     case Device::CPU:
         SUMMA_NTA_impl<Device::CPU>(orientB, alpha, APre, BPre, CPre);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         SUMMA_NTA_impl<Device::GPU>(orientB, alpha, APre, BPre, CPre);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("SUMMA_NTA: Bad device.");
     }
@@ -163,11 +163,11 @@ void SUMMA_NTB
     case Device::CPU:
         SUMMA_NTB_impl<Device::CPU>(orientB, alpha, APre, BPre, CPre);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         SUMMA_NTB_impl<Device::GPU>(orientB, alpha, APre, BPre, CPre);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("SUMMA_NTB: Bad device.");
     }
@@ -246,11 +246,11 @@ void SUMMA_NTC
     case Device::CPU:
         SUMMA_NTC_impl<Device::CPU>(orientB, alpha, APre, BPre, CPre);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         SUMMA_NTC_impl<Device::GPU>(orientB, alpha, APre, BPre, CPre);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("SUMMA_NTC: Bad device.");
     }
@@ -338,12 +338,12 @@ void SUMMA_NTDot
         SUMMA_NTDot_impl<Device::CPU>(
             orientB, alpha, APre, BPre, CPre, blockSize);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         SUMMA_NTDot_impl<Device::GPU>(
             orientB, alpha, APre, BPre, CPre, blockSize);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("SUMMA_NTDot: Bad device.");
     }

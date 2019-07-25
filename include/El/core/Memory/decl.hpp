@@ -27,7 +27,7 @@ constexpr unsigned DefaultMemoryMode<Device::CPU>()
     return 0;
 }
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 template <>
 constexpr unsigned DefaultMemoryMode<Device::GPU>()
 {

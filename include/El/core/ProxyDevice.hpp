@@ -24,12 +24,12 @@ public:
                 proxy_ = new proxy_type{
                     static_cast<Matrix<T,Device::CPU> const&>(A)};
                 break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
             case Device::GPU:
                 proxy_ = new proxy_type{
                     static_cast<Matrix<T,Device::GPU> const&>(A)};
                 break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
             default:
                 LogicError("AbstractMatrixReadDeviceProxy: Bad device.");
             }

@@ -135,11 +135,11 @@ void PartialRowAllGather
     case Device::CPU:
         PartialRowAllGather_impl<Device::CPU>(A,B);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         PartialRowAllGather_impl<Device::GPU>(A,B);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("PartialRowAllGather: Bad device.");
     }

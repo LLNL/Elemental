@@ -7,13 +7,13 @@ namespace El
 
 namespace
 {
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 std::unique_ptr<MemoryPool<true>> pinnedHostMemoryPool_;
-#endif  // HYDROGEN_HAVE_CUDA
+#endif  // HYDROGEN_HAVE_GPU
 std::unique_ptr<MemoryPool<false>> hostMemoryPool_;
 }  // namespace <anon>
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 
 MemoryPool<true>& PinnedHostMemoryPool()
 {
@@ -25,7 +25,7 @@ MemoryPool<true>& PinnedHostMemoryPool()
 void DestroyPinnedHostMemoryPool()
 { pinnedHostMemoryPool_.reset(); }
 
-#endif  // HYDROGEN_HAVE_CUDA
+#endif  // HYDROGEN_HAVE_GPU
 
 MemoryPool<false>& HostMemoryPool()
 {

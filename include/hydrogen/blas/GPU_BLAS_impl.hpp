@@ -40,7 +40,7 @@ namespace gpu_blas_impl = hydrogen::cublas;
 // needs.
 
 #define GPU_BLAS_USE_ROCBLAS
-#include <El/core/imports/rocblas.hpp>
+#include <hydrogen/device/gpu/rocm/rocBLAS.hpp>
 
 namespace gpu_blas_impl = hydrogen::rocblas;
 

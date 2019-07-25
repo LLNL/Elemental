@@ -124,7 +124,7 @@ AbstractDistMatrix<T>::MakeSizeConsistent(bool includingViewers)
         if (this->GetLocalDevice() == Device::CPU)
             mpi::Broadcast(message, msgSize, Root(), CrossComm(),
                            SyncInfo<Device::CPU>{});
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
         else if (this->GetLocalDevice() == Device::GPU)
         {
             auto syncInfo = SyncInfoFromMatrix(
@@ -133,7 +133,7 @@ AbstractDistMatrix<T>::MakeSizeConsistent(bool includingViewers)
             mpi::Broadcast(message, msgSize, Root(), CrossComm(),
                            syncInfo);
         }
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
         else
             LogicError("AbstractMatrix: Bad Device!");
     }
@@ -143,7 +143,7 @@ AbstractDistMatrix<T>::MakeSizeConsistent(bool includingViewers)
         if (this->GetLocalDevice() == Device::CPU)
             mpi::Broadcast(message, msgSize, vcRoot, grid.ViewingComm(),
                            SyncInfo<Device::CPU>{});
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
         else if (this->GetLocalDevice() == Device::GPU)
         {
             auto syncInfo = SyncInfoFromMatrix(
@@ -152,7 +152,7 @@ AbstractDistMatrix<T>::MakeSizeConsistent(bool includingViewers)
             mpi::Broadcast(message, msgSize, vcRoot, grid.ViewingComm(),
                            syncInfo);
         }
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
         else
             LogicError("AbstractMatrix: Bad Device!");
 

@@ -114,7 +114,7 @@ ElementalMatrix<T>::MakeConsistent(bool includingViewers)
         if (this->GetLocalDevice() == Device::CPU)
             mpi::Broadcast(message, msgLength, this->Root(), this->CrossComm(),
                            SyncInfo<Device::CPU>{});
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
         else if (this->GetLocalDevice() == Device::GPU)
         {
             auto syncInfo = SyncInfoFromMatrix(
@@ -123,7 +123,7 @@ ElementalMatrix<T>::MakeConsistent(bool includingViewers)
             mpi::Broadcast(message, msgLength, this->Root(), this->CrossComm(),
                            syncInfo);
         }
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
         else
             LogicError("ElementalMatrix: Bad Device!");
     }
@@ -133,7 +133,7 @@ ElementalMatrix<T>::MakeConsistent(bool includingViewers)
         if (this->GetLocalDevice() == Device::CPU)
             mpi::Broadcast(message, msgLength, vcRoot, grid.ViewingComm(),
                            SyncInfo<Device::CPU>{});
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
         else if (this->GetLocalDevice() == Device::GPU)
         {
             auto syncInfo = SyncInfoFromMatrix(
@@ -142,7 +142,7 @@ ElementalMatrix<T>::MakeConsistent(bool includingViewers)
             mpi::Broadcast(message, msgLength, vcRoot, grid.ViewingComm(),
                            syncInfo);
         }
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
         else
             LogicError("ElementalMatrix: Bad Device!");
     }
@@ -395,7 +395,7 @@ ElementalMatrix<T>::Attach(
             static_cast<Matrix<T,Device::CPU>&>(this->Matrix()).
                 Attach_(localHeight, localWidth, buffer, ldim);
             break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
         case El::Device::GPU:
             static_cast<Matrix<T,Device::GPU>&>(this->Matrix()).
                 Attach_(localHeight, localWidth, buffer, ldim);
@@ -459,7 +459,7 @@ ElementalMatrix<T>::LockedAttach(
             static_cast<Matrix<T,Device::CPU>&>(this->Matrix()).
                 LockedAttach_(localHeight, localWidth, buffer, ldim);
             break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
         case El::Device::GPU:
             static_cast<Matrix<T,Device::GPU>&>(this->Matrix()).
                 LockedAttach_(localHeight, localWidth, buffer, ldim);

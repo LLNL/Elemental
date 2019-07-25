@@ -87,11 +87,11 @@ void Contract
     case Device::CPU:
         ContractDispatch<T,Device::CPU>(A,B);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         ContractDispatch<T,Device::GPU>(A,B);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("Contract: Bad device type.");
     }

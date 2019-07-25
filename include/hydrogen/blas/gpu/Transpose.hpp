@@ -4,7 +4,11 @@
 #include <hydrogen/Device.hpp>
 #include <hydrogen/meta/MetaUtilities.hpp>
 
-#include <cuda_runtime.h>
+#if defined(HYDROGEN_HAVE_CUDA)
+#include <hydrogen/device/gpu/CUDA.hpp>
+#elif defined(HYDROGEN_HAVE_ROCM)
+#include <hydrogen/device/gpu/ROCm.hpp>
+#endif
 
 #include <stdexcept>
 
@@ -37,7 +41,7 @@ void Transpose_GPU_impl(
     SizeT num_rows, SizeT num_cols,
     T const* A, SizeT lda,
     T* B, SizeT ldb,
-    cudaStream_t stream);
+    gpuStream_t stream);
 
 template <typename T, typename SizeT,
           typename=EnableUnless<IsStorageType<T,Device::GPU>>,
@@ -46,7 +50,7 @@ void Transpose_GPU_impl(
     SizeT const&, SizeT const&,
     T const* const&, SizeT const&,
     T* const&, SizeT const&,
-    cudaStream_t const&)
+    gpuStream_t const&)
 {
     throw std::logic_error("Copy: Type not valid on GPU.");
 }

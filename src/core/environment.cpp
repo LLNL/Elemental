@@ -224,7 +224,7 @@ void Initialize( int& argc, char**& argv )
 
 #ifdef HYDROGEN_HAVE_GPU
     gpu::Initialize();
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
     ::numElemInits = 1;
     if( !mpi::Initialized() )
@@ -301,6 +301,9 @@ void Initialize( int& argc, char**& argv )
 
 #ifdef HYDROGEN_HAVE_CUDA
     cublas::Initialize();
+#endif
+#ifdef HYDROGEN_HAVE_ROCM
+    hydrogen::rocblas::Initialize();
 #endif
 
 #ifdef EL_HAVE_QT5

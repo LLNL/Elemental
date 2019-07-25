@@ -32,7 +32,7 @@ void Display(AbstractMatrix<Real> const& A, std::string title)
     case Device::CPU:
         Display(static_cast<Matrix<Real,Device::CPU> const&>(A), title);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
     {
         // Copy to the CPU
@@ -41,7 +41,7 @@ void Display(AbstractMatrix<Real> const& A, std::string title)
         Display(A_CPU, title);
     }
     break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("Display: Bad Device type.");
     }

@@ -170,11 +170,11 @@ void SUMMA_NNA
     case Device::CPU:
         SUMMA_NNA_impl<Device::CPU>(alpha, APre, BPre, CPre);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         SUMMA_NNA_impl<Device::GPU>(alpha, APre, BPre, CPre);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("SUMMA_NNA: Bad device.");
     }
@@ -251,11 +251,11 @@ void SUMMA_NNB
     case Device::CPU:
         SUMMA_NNB_impl<Device::CPU>(alpha, APre, BPre, CPre);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         SUMMA_NNB_impl<Device::GPU>(alpha, APre, BPre, CPre);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("SUMMA_NNB: Bad device.");
     }
@@ -330,11 +330,11 @@ void SUMMA_NNC
     case Device::CPU:
         SUMMA_NNC_impl<Device::CPU>(alpha, APre, BPre, CPre);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         SUMMA_NNC_impl<Device::GPU>(alpha, APre, BPre, CPre);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("SUMMA_NNC: Bad device.");
     }
@@ -425,11 +425,11 @@ void SUMMA_NNDot
     case Device::CPU:
         SUMMA_NNDot_impl<Device::CPU>(alpha, APre, BPre, CPre, blockSize);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         SUMMA_NNDot_impl<Device::GPU>(alpha, APre, BPre, CPre, blockSize);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("SUMMA_NNDot: Bad device.");
     }

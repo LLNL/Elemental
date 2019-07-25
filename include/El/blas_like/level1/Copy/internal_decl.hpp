@@ -64,12 +64,12 @@ template<typename T,Dist U,Dist V,
 void TransposeDist( DistMatrix<T,U,V,ELEMENT,Device::CPU> const& A,
                     DistMatrix<T,V,U,ELEMENT,Device::CPU>& B );
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 template<typename T,Dist U,Dist V,
          typename=EnableIf<IsStorageType<T,Device::GPU>>>
 void TransposeDist( DistMatrix<T,U,V,ELEMENT,Device::GPU> const& A,
                     DistMatrix<T,V,U,ELEMENT,Device::GPU>& B );
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 template<typename T,Dist U,Dist V,Device D,
          typename=DisableIf<IsStorageType<T,D>>,typename=void>

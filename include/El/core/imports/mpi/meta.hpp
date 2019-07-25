@@ -30,7 +30,7 @@ namespace mpi
 template <typename T, Device D>
 struct IsMpiDeviceValidType : IsDeviceValidType<T,D> {};
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 // Signed integer types
 template <>
 struct IsMpiDeviceValidType<char, Device::GPU> : std::true_type {};
@@ -57,7 +57,7 @@ struct IsMpiDeviceValidType<unsigned long int, Device::GPU> : std::true_type {};
 template <>
 struct IsMpiDeviceValidType<unsigned long long int, Device::GPU>
     : std::true_type {};
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 #ifdef HYDROGEN_HAVE_ALUMINUM
 namespace internal

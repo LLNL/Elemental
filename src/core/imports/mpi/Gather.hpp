@@ -126,7 +126,7 @@ void Gather(const T*, int, T*, int, int, Comm const&, SyncInfo<D> const&)
     template void Gather(const Complex<T>* sbuf, int sc, Complex<T>* rbuf, \
                          int rc, int root, Comm const& comm, SyncInfo<D> const&);
 
-#ifndef HYDROGEN_HAVE_CUDA
+#ifndef HYDROGEN_HAVE_GPU
 #define MPI_COLLECTIVE_PROTO(T) \
     MPI_COLLECTIVE_PROTO_DEV(T,Device::CPU)
 #define MPI_COLLECTIVE_COMPLEX_PROTO(T) \

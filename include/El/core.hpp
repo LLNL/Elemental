@@ -57,13 +57,16 @@
 #include <hydrogen/blas/GPU_BLAS.hpp>
 #endif // HYDROGEN_HAVE_GPU
 
-#ifdef HYDROGEN_HAVE_CUDA
+#if defined(HYDROGEN_HAVE_CUDA)
 #include <hydrogen/device/gpu/CUDA.hpp>
+#include <hydrogen/device/gpu/cuda/cuBLAS.hpp>
+#elif defined(HYDROGEN_HAVE_ROCM)
+#include <hydrogen/device/gpu/ROCm.hpp>
+#endif
+
 #ifdef HYDROGEN_HAVE_CUB
 #include <hydrogen/device/gpu/cuda/CUB.hpp>
 #endif // HYDROGEN_HAVE_CUB
-#include <hydrogen/device/gpu/cuda/cuBLAS.hpp>
-#endif // HYDROGEN_HAVE_CUDA
 
 // Inject Hydrogen-specific symbols into El
 namespace El

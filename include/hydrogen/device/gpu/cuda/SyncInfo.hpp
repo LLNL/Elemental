@@ -6,6 +6,7 @@
 #include <hydrogen/SyncInfo.hpp>
 #include <hydrogen/meta/MetaUtilities.hpp>
 
+#include "CUDAError.hpp"
 #include "CUDAManagement.hpp"
 
 namespace hydrogen

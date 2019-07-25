@@ -1,8 +1,15 @@
 #include <hydrogen/blas/gpu/Copy.hpp>
 
 #include <El/hydrogen_config.h>
+#ifdef HYDROGEN_HAVE_CUDA
 #include <hydrogen/device/gpu/CUDA.hpp>
 #include <cuda_runtime.h>
+using gpuStream_t = cudaStream_t;
+#elif defined(HYDROGEN_HAVE_ROCM)
+#include <hydrogen/device/gpu/ROCm.hpp>
+#include <hip/hip_runtime.h>
+using gpuStream_t = hipStream_t;
+#endif
 
 namespace
 {
@@ -78,11 +85,11 @@ void Copy_GPU_impl(
     SizeT num_entries,
     SrcT const* src, SizeT src_stride,
     DestT * dest, SizeT dest_stride,
-    cudaStream_t stream)
+    gpuStream_t stream)
 {
     if (num_entries <= TypeTraits<SizeT>::Zero())
         return;
-    
+
 #ifdef HYDROGEN_DO_BOUNDS_CHECKING
     // The kernel parameters are __restrict__-ed. This helps ensure
     // that's not a lie.
@@ -95,13 +102,12 @@ void Copy_GPU_impl(
 
     constexpr size_t threads_per_block = 128;
     auto blocks = (num_entries + threads_per_block - 1)/ threads_per_block;
-    void* args[] = { &num_entries, &src, &src_stride, &dest, &dest_stride };
 
-    H_CHECK_CUDA(
-        cudaLaunchKernel(
-            (void const*)&copy_1d_kernel<SrcT,DestT,SizeT>,
-            blocks, threads_per_block,
-            args, 0, stream));
+    gpu::LaunchKernel(
+        copy_1d_kernel<SrcT,DestT,SizeT>,
+        blocks, threads_per_block,
+        0, SyncInfo<Device::GPU>(stream,nullptr),
+        num_entries, src, src_stride, dest, dest_stride);
 }
 
 template <typename SrcT, typename DestT, typename SizeT, typename, typename>
@@ -109,7 +115,7 @@ void Copy_GPU_impl(
     SizeT num_rows, SizeT num_cols,
     SrcT const* src, SizeT src_row_stride, SizeT src_col_stride,
     DestT* dest, SizeT dest_row_stride, SizeT dest_col_stride,
-    cudaStream_t stream)
+    gpuStream_t stream)
 {
   if (num_rows == 0 || num_cols == 0)
     return;
@@ -130,24 +136,23 @@ void Copy_GPU_impl(
     dim3 blks((num_rows + TILE_SIZE - 1)/TILE_SIZE,
               (num_cols + TILE_SIZE - 1)/TILE_SIZE, 1);
     dim3 thds(TILE_SIZE, BLK_COLS, 1);
-    void* args[] = { &num_rows, &num_cols,
-                     &src, &src_row_stride, &src_col_stride,
-                     &dest, &dest_row_stride, &dest_col_stride };
 
-    H_CHECK_CUDA(
-        cudaLaunchKernel(
-            (void const*)&copy_2d_kernel<TILE_SIZE,BLK_COLS,SrcT,DestT,SizeT>,
-            blks, thds, args, 0, stream));
+    gpu::LaunchKernel(
+        copy_2d_kernel<TILE_SIZE,BLK_COLS,SrcT,DestT,SizeT>,
+        blks, thds, 0, SyncInfo<Device::GPU>(stream,nullptr),
+        num_rows, num_cols,
+        src, src_row_stride, src_col_stride,
+        dest, dest_row_stride, dest_col_stride);
 }
 
 #define ETI(SourceType, DestType, SizeType)             \
     template void Copy_GPU_impl(                        \
         SizeType, SourceType const*, SizeType,          \
-        DestType*, SizeType, cudaStream_t);             \
+        DestType*, SizeType, gpuStream_t);              \
     template void Copy_GPU_impl(                        \
         SizeType, SizeType,                             \
         SourceType const*, SizeType, SizeType,          \
-        DestType*, SizeType, SizeType, cudaStream_t)
+        DestType*, SizeType, SizeType, gpuStream_t)
 
 ETI(float, float, int);
 ETI(float, float, long);

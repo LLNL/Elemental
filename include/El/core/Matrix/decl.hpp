@@ -108,7 +108,7 @@ public:
 
     /** @brief Assign by copying data from a GPU */
     Matrix<T, Device::CPU>& operator=(Matrix<T, Device::GPU> const& A);
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
     ///@}
     /** @name Modifiers */

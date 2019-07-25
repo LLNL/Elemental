@@ -17,13 +17,13 @@ Base<Field> FrobeniusNorm(AbstractMatrix<Field> const& A)
     {
     case Device::CPU:
         return FrobeniusNorm(static_cast<Matrix<Field,Device::CPU> const&>(A));
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
     {
         AbstractMatrixReadDeviceProxy<Field,Device::CPU> ALocProxy{A};
         return FrobeniusNorm(ALocProxy.GetLocked());
     }
-#endif //HYDROGEN_HAVE_CUDA
+#endif //HYDROGEN_HAVE_GPU
     default:
         LogicError("FrobeniusNorm: Bad Device.");
     }

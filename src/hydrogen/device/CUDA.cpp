@@ -93,7 +93,7 @@ SyncInfo<Device::GPU> GetNewSyncInfo()
     return SyncInfo<Device::GPU>{GetNewStream(), GetNewEvent()};
 }
 
-void DestroySyncInfo(SyncInfo<Device::GPU> si)
+void DestroySyncInfo(SyncInfo<Device::GPU>& si)
 {
     FreeStream(si.Stream());
     FreeEvent(si.Event());

@@ -317,14 +317,14 @@ void Reduce(T* buf, int count, int root, Comm const& comm,
     template T Reduce(T, int, Comm const&, SyncInfo<D> const&);                \
     template void Reduce(T*, int, int, Comm const&, SyncInfo<D> const&)
 
-#ifndef HYDROGEN_HAVE_CUDA
+#ifndef HYDROGEN_HAVE_GPU
 #define MPI_REDUCE_PROTO(T)                     \
     MPI_REDUCE_PROTO_DEV(T,Device::CPU)
 #else
 #define MPI_REDUCE_PROTO(T)                     \
     MPI_REDUCE_PROTO_DEV(T,Device::CPU);        \
     MPI_REDUCE_PROTO_DEV(T,Device::GPU)
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 MPI_REDUCE_PROTO(byte);
 MPI_REDUCE_PROTO(int);

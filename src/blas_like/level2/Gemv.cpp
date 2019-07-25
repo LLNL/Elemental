@@ -33,7 +33,7 @@ void Gemv(Orientation orientA,
              beta,
              static_cast<Matrix<T,Device::CPU>&>(C));
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         Gemv(orientA, alpha,
              static_cast<Matrix<T,Device::GPU> const&>(A),
@@ -41,7 +41,7 @@ void Gemv(Orientation orientA,
              beta,
              static_cast<Matrix<T,Device::GPU>&>(C));
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("Bad device type.");
     }
@@ -309,7 +309,7 @@ void Gemv
     Gemv(orientation, alpha, A, x, T(0), y);
 }
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 template void Gemv(Orientation orientA,
                    float alpha,
                    Matrix<float,Device::GPU> const& A,
@@ -322,7 +322,7 @@ template void Gemv(Orientation orientA,
                    Matrix<double,Device::GPU> const& B,
                    double beta,
                    Matrix<double,Device::GPU>& C);
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 #define PROTO(T) \
   template void Gemv                                   \

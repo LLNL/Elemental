@@ -194,11 +194,11 @@ void ColAllGather
     case Device::CPU:
         ColAllGather_impl<Device::CPU>(A,B);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         ColAllGather_impl<Device::GPU>(A,B);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("ColAllGather: Bad device.");
     }

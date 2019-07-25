@@ -220,10 +220,10 @@ DM::ConstructWithNewDevice(Device D2) const
     {
     case Device::CPU:
         return ConstructWithNewDevice_impl_<Device::CPU>();
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         return ConstructWithNewDevice_impl_<Device::GPU>();
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("Unkown device type.");
     }

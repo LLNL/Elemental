@@ -2484,7 +2484,7 @@ EL_NO_RELEASE_EXCEPT
         EL_NO_RELEASE_EXCEPT;                                           \
     MPI_PROTO_COMMON_DEV(Complex<T>,D)
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 #define MPI_PROTO(T) \
     MPI_PROTO_DEVICELESS(T) \
     MPI_PROTO_DEV(T, Device::CPU) \
@@ -2506,7 +2506,7 @@ MPI_PROTO(Entry<gpu_half_type>)
 #define MPI_PROTO_COMPLEX(T) \
     MPI_PROTO_DEVICELESS_COMPLEX(T)                    \
     MPI_PROTO_COMPLEX_DEV(T, Device::CPU)
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 MPI_PROTO(byte)
 MPI_PROTO(int)

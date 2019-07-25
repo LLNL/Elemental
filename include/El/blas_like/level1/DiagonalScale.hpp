@@ -13,7 +13,7 @@
 
 namespace El {
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
 template <typename T, typename>
 void DiagonalScale(
     LeftOrRight side, Orientation orientation,
@@ -47,7 +47,7 @@ void DiagonalScale(
     LogicError("DiagonalScale: Bad device type.");
 }
 
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 template<typename TDiag,typename T>
 void DiagonalScale(
@@ -104,13 +104,13 @@ void DiagonalScale(LeftOrRight side,
                       static_cast<Matrix<T,Device::CPU> const&>(d),
                       static_cast<Matrix<T,Device::CPU>&>(A));
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         DiagonalScale(side, orientation,
                       static_cast<Matrix<T,Device::GPU> const&>(d),
                       static_cast<Matrix<T,Device::GPU>&>(A));
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("DiagonalScale: Bad device.");
     }

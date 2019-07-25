@@ -111,14 +111,14 @@ void Broadcast( T& b, int root, Comm const& comm, SyncInfo<D> const& syncInfo )
     template void Broadcast(T*, int, int, Comm const&, SyncInfo<D> const&);       \
     template void Broadcast(T&, int, Comm const&, SyncInfo<D> const&)
 
-#ifndef HYDROGEN_HAVE_CUDA
+#ifndef HYDROGEN_HAVE_GPU
 #define MPI_BROADCAST_PROTO(T)                  \
     MPI_BROADCAST_PROTO_DEV(T,Device::CPU)
 #else
 #define MPI_BROADCAST_PROTO(T)                  \
     MPI_BROADCAST_PROTO_DEV(T,Device::CPU);     \
     MPI_BROADCAST_PROTO_DEV(T,Device::GPU)
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
 MPI_BROADCAST_PROTO(byte);
 MPI_BROADCAST_PROTO(int);
