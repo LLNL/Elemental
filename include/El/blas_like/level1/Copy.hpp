@@ -26,54 +26,91 @@ using Expand = TypeList<X<Ts>...>;
 // This is replaced by a generic multiple dispatch engine in
 // DiHydrogen; this is a one-off use-case for now, so there's no need
 // to backport a robust implementation.
-template <typename LHSList, typename RHSList>
-struct BaseCopy
+template <typename FunctorT, typename LHSList, typename RHSList>
+struct CopyDispatcher
 {
-    static void Do(BaseDistMatrix const& src, BaseDistMatrix& tgt)
+    static void Do(FunctorT f,
+                   BaseDistMatrix const& src, BaseDistMatrix& tgt)
     {
         using LHead = Head<LHSList>;
         using LTail = Tail<LHSList>;
         if (auto const* ptr = dynamic_cast<LHead const*>(&src))
-            return BaseCopy<LHSList, RHSList>::DoRHS(*ptr, tgt);
+            return CopyDispatcher<FunctorT, LHSList, RHSList>::DoRHS(
+                f, *ptr, tgt);
         else
-            return BaseCopy<LTail, RHSList>::Do(src, tgt);
+            return CopyDispatcher<FunctorT, LTail, RHSList>::Do(f, src, tgt);
     }
 
     template <typename LHSType>
-    static void DoRHS(LHSType const& src, BaseDistMatrix& tgt)
+    static void DoRHS(FunctorT f, LHSType const& src, BaseDistMatrix& tgt)
     {
         using RHead = Head<RHSList>;
         using RTail = Tail<RHSList>;
         if (auto* ptr = dynamic_cast<RHead*>(&tgt))
-            return Copy(src, *ptr);
+            return f(src, *ptr);
         else
-            return BaseCopy<LHSList, RTail>::DoRHS(src, tgt);
+            return CopyDispatcher<FunctorT, LHSList, RTail>::DoRHS(f, src, tgt);
     }
-};
+};// struct CopyDispatcher
 
-template <typename RHSList>
-struct BaseCopy<TypeList<>, RHSList>
+template <typename FunctorT, typename RHSList>
+struct CopyDispatcher<FunctorT, TypeList<>, RHSList>
 {
-    static void Do(BaseDistMatrix const& src, BaseDistMatrix& tgt)
+    static void Do(FunctorT const&,
+                   BaseDistMatrix const&, BaseDistMatrix const&)
     {
         LogicError("Source matrix type not found.");
     }
 };
 
-template <typename LHSList>
-struct BaseCopy<LHSList, TypeList<>>
+template <typename FunctorT, typename LHSList>
+struct CopyDispatcher<FunctorT, LHSList, TypeList<>>
 {
-    static void DoRHS(BaseDistMatrix const& src, BaseDistMatrix& tgt)
+    static void DoRHS(FunctorT const&,
+                      BaseDistMatrix const&, BaseDistMatrix const&)
     {
         LogicError("Target matrix type not found.");
     }
 };
 
+struct CopyFunctor
+{
+    template <typename T, typename U>
+    void operator()(AbstractDistMatrix<T> const& src,
+                    AbstractDistMatrix<U>& tgt) const
+    {
+        return Copy(src, tgt);
+    }
+};// CopyFunctor
+
+struct CopyAsyncFunctor
+{
+    template <typename T, typename U>
+    void operator()(AbstractDistMatrix<T> const& src,
+                    AbstractDistMatrix<U>& tgt) const
+    {
+        return CopyAsync(src, tgt);
+    }
+};// CopyAsyncFunctor
+
 }// namespace details
+
 inline void Copy(BaseDistMatrix const& Source, BaseDistMatrix& Target)
 {
+    using FunctorT = details::CopyFunctor;
     using MatrixTs = details::Expand<AbstractDistMatrix, float, double>;
-    return details::BaseCopy<MatrixTs, MatrixTs>::Do(Source, Target);
+    using Dispatcher = details::CopyDispatcher<FunctorT, MatrixTs, MatrixTs>;
+    details::CopyFunctor f;
+    return Dispatcher::Do(f, Source, Target);
+}
+
+inline void CopyAsync(BaseDistMatrix const& Source, BaseDistMatrix& Target)
+{
+    using FunctorT = details::CopyAsyncFunctor;
+    using MatrixTs = details::Expand<AbstractDistMatrix, float, double>;
+    using Dispatcher = details::CopyDispatcher<FunctorT, MatrixTs, MatrixTs>;
+    details::CopyAsyncFunctor f;
+    return Dispatcher::Do(f, Source, Target);
 }
 
 template <typename T>
