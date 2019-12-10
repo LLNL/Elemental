@@ -9,6 +9,9 @@
 #ifndef EL_DISTMATRIX_ABSTRACT_HPP
 #define EL_DISTMATRIX_ABSTRACT_HPP
 
+#include <functional>
+#include <typeinfo>
+
 namespace El
 {
 
@@ -376,8 +379,9 @@ struct DistData
     int root;  // relevant for [o ,o ]/[MD,* ]/[* ,MD]
     const Grid* grid;
     Device device;
+    std::reference_wrapper<std::type_info const> held_type_info;
 
-    DistData() { }
+    DistData() : held_type_info(typeid(BaseDistMatrix)) { }
 
     template<typename Ring>
     DistData(const AbstractDistMatrix<Ring>& A)
@@ -385,7 +389,8 @@ struct DistData
           blockHeight(A.BlockHeight()), blockWidth(A.BlockWidth()),
           colAlign(A.ColAlign()), rowAlign(A.RowAlign()),
           colCut(A.ColCut()), rowCut(A.RowCut()),
-          root(A.Root()), grid(&A.Grid()), device(A.GetLocalDevice())
+          root(A.Root()), grid(&A.Grid()), device(A.GetLocalDevice()),
+          held_type_info(typeid(Ring))
     { }
 };
 inline bool operator==(const DistData& A, const DistData& B)
@@ -399,7 +404,9 @@ inline bool operator==(const DistData& A, const DistData& B)
           (A.rowCut == B.rowCut) &&
           (A.root == B.root) &&
           (A.grid == B.grid) &&
-          (A.device == B.device)); }
+          (A.device == B.device) &&
+          (static_cast<std::type_info const&>(A.held_type_info)
+           == static_cast<std::type_info const&>(B.held_type_info))); }
 inline bool operator!=(const DistData& A, const DistData& B)
 { return !(A == B); }
 
