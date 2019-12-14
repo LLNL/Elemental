@@ -394,6 +394,29 @@ void Copy2DImpl(SizeT nrows, SizeT ncols,
     }
 }
 
+template <typename T, typename U, typename SizeT>
+void Copy2DImpl(SizeT nrows, SizeT ncols,
+                TransposeMode transA,
+                T const* A, SizeT lda,
+                U* B, SizeT ldb,
+                SyncInfo<Device::GPU> const& si)
+{
+    switch (transA)
+    {
+    case TransposeMode::NORMAL:
+        Copy_GPU_impl(nrows, ncols,
+                      A, SizeT(1), lda,
+                      B, SizeT(1), ldb, si.stream_);
+        break;
+    case TransposeMode::TRANSPOSE:
+        throw std::logic_error(
+            "Copy2DImpl: Need to implement multitype transpose");
+        break;
+    default:
+        throw std::logic_error("Copy2DImpl: TransposeMode not supported!");
+    }
+}
+
 template <typename T, typename SizeT,
           typename=EnableUnless<IsSupportedType<T,BLAS_Op::COPY>>,
           typename=void>
@@ -555,11 +578,11 @@ void Copy(SizeT size,
     details::CopyImpl(size, X, incx, Y, incy, si);
 }
 
-template <typename T, typename SizeT>
+template <typename T, typename U, typename SizeT>
 void Copy(TransposeMode transA,
           SizeT num_rows, SizeT num_cols,
           T const* A, SizeT lda,
-          T* B, SizeT ldb,
+          U* B, SizeT ldb,
           SyncInfo<Device::GPU> const& si)
 {
     details::Copy2DImpl(num_rows, num_cols, transA,

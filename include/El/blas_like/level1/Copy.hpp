@@ -17,6 +17,10 @@
 #include <El/blas_like/level1/Copy/GeneralPurpose.hpp>
 #include <El/blas_like/level1/Copy/util.hpp>
 
+#ifdef HYDROGEN_HAVE_GPU
+#include <hydrogen/blas/GPU_BLAS.hpp>
+#endif
+
 namespace El {
 namespace details {
 
@@ -248,6 +252,29 @@ void Copy( const Matrix<T>& A, Matrix<T>& B )
 }
 
 #ifdef HYDROGEN_HAVE_CUDA
+template <typename T, typename U>
+void Copy(Matrix<T, Device::GPU> const& A, Matrix<U, Device::GPU>& B)
+{
+    EL_DEBUG_CSE;
+    Int const height = A.Height();
+    Int const width = A.Width();
+    B.Resize(height, width);
+    Int const ldA = A.LDim();
+    Int const ldB = B.LDim();
+    T const* ABuf = A.LockedBuffer();
+    U* BBuf = B.Buffer();
+
+    SyncInfo<Device::GPU> syncInfoA = SyncInfoFromMatrix(A),
+        syncInfoB = SyncInfoFromMatrix(B);
+    auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
+
+    gpu_blas::Copy(TransposeMode::NORMAL,
+                   height, width,
+                   ABuf, ldA,
+                   BBuf, ldB,
+                   syncInfoB);
+}
+
 template<typename T>
 void Copy(const Matrix<T,Device::GPU>& A, Matrix<T,Device::GPU>& B)
 {
