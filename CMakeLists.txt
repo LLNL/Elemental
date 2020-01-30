@@ -172,6 +172,14 @@ option(Hydrogen_ENABLE_ROCM
   "Search for ROCm/HIP support and enable related features if found."
   OFF)
 
+if (Hydrogen_ENABLE_ROCM AND Hydrogen_ENABLE_CUDA)
+  message(FATAL_ERROR
+    "ROCm and CUDA code paths are mutually exclusive. "
+    "Please enable the one that corresponds to your hardware. "
+    "If you have mixed hardware, please contact the Hydrogen developers "
+    "as this would be of great interest.")
+endif ()
+
 #
 # MEMORY-RELATED OPTIONS
 #
