@@ -13,7 +13,7 @@ template <typename F, typename... Args>
 void LaunchKernel(
     F kernel, dim3 const& gridDim, dim3 const& blkDim,
     size_t sharedMem, SyncInfo<Device::GPU> const& si,
-    Args... kernel_args)
+    Args&&... kernel_args)
 {
     H_CHECK_HIP(hipGetLastError());
     // Note that this is (currently) implemented as a macro; not clear
