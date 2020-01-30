@@ -9,6 +9,8 @@
 #ifndef EL_MATRIX_IMPL_GPU_HPP_
 #define EL_MATRIX_IMPL_GPU_HPP_
 
+#include <El/blas_like/level1/decl.hpp>
+
 namespace El
 {
 //
@@ -51,7 +53,7 @@ Matrix<T, Device::GPU>::Matrix(Matrix<T, Device::GPU> const& A)
     : Matrix{A.Height(), A.Width(), A.Height()}
 {
     EL_DEBUG_CSE;
-    Copy(A, *this);
+    ::El::Copy(A, *this);
 }
 
 #if defined(HYDROGEN_HAVE_CUDA)
@@ -95,7 +97,7 @@ Matrix<T, Device::GPU>::operator=(Matrix<T, Device::CPU> const& A)
 
 template <typename T>
 Matrix<T, Device::GPU>::Matrix(Matrix<T, Device::GPU>&& A) EL_NO_EXCEPT
-    : AbstractMatrix<T>{std::move(A)},
+    : AbstractMatrix<T>(std::move(A)),
       memory_{std::move(A.memory_)}, data_{A.data_}
 {
     A.data_ = nullptr;
@@ -105,14 +107,26 @@ template <typename T>
 Matrix<T, Device::GPU>::~Matrix() { }
 
 template <typename T>
+std::unique_ptr<AbstractMatrix<T>>
+Matrix<T, Device::GPU>::Copy() const
+{
+    return std::unique_ptr<AbstractMatrix<T>>{
+        new Matrix<T,Device::GPU>(*this)};
+}
+
+template <typename T>
+std::unique_ptr<AbstractMatrix<T>>
+Matrix<T, Device::GPU>::Construct() const
+{
+    return std::unique_ptr<AbstractMatrix<T>>{
+        new Matrix<T,Device::GPU>{}};
+}
+
+template <typename T>
 void Matrix<T, Device::GPU>::Attach
 (Int height, Int width, T* buffer, Int leadingDimension)
 {
     EL_DEBUG_CSE;
-#ifndef EL_RELEASE
-    if (this->FixedSize())
-        LogicError("Cannot attach a new buffer to a view with fixed size");
-#endif // !EL_RELEASE
     Attach_(height, width, buffer, leadingDimension);
 }
 
@@ -121,11 +135,6 @@ void Matrix<T, Device::GPU>::LockedAttach
 (Int height, Int width, T const* buffer, Int leadingDimension)
 {
     EL_DEBUG_CSE;
-#ifndef EL_RELEASE
-    if (this->FixedSize())
-        LogicError("Cannot attach a new buffer to a view with fixed size");
-#endif // !EL_RELEASE
-
     LockedAttach_(height, width, buffer, leadingDimension);
 }
 

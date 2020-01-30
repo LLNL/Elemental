@@ -17,7 +17,7 @@ void Ones( Matrix<T>& A, Int m, Int n )
 {
     EL_DEBUG_CSE
     A.Resize( m, n );
-    Fill( A, T(1) );
+    Fill( A, TypeTraits<T>::One() );
 }
 
 template<typename T>
@@ -25,7 +25,7 @@ void Ones( AbstractMatrix<T>& A, Int m, Int n )
 {
     EL_DEBUG_CSE
     A.Resize( m, n );
-    Fill( A, T(1) );
+    Fill( A, TypeTraits<T>::One() );
 }
 
 template<typename T>
@@ -33,7 +33,7 @@ void Ones( AbstractDistMatrix<T>& A, Int m, Int n )
 {
     EL_DEBUG_CSE
     A.Resize( m, n );
-    Fill( A, T(1) );
+    Fill( A, TypeTraits<T>::One() );
 }
 
 
@@ -41,6 +41,10 @@ void Ones( AbstractDistMatrix<T>& A, Int m, Int n )
   template void Ones( Matrix<T>& A, Int m, Int n ); \
   template void Ones( AbstractMatrix<T>& A, Int m, Int n ); \
   template void Ones( AbstractDistMatrix<T>& A, Int m, Int n );
+
+#ifdef HYDROGEN_GPU_USE_FP16
+PROTO(gpu_half_type)
+#endif
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

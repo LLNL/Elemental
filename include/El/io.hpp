@@ -56,6 +56,9 @@ void Display( const AbstractDistMatrix<T>& A, string title="DistMatrix" );
 // Dense
 // -----
 template<typename T>
+void Print(const AbstractMatrix<T>& A, string title="Matrix",
+           ostream& os=cout);
+template<typename T>
 void Print( const Matrix<T>& A, string title="Matrix", ostream& os=cout );
 template<typename T>
 void Print

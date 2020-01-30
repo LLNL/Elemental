@@ -23,7 +23,7 @@ Ring HilbertSchmidt(
     if (A.GetDevice() != Device::CPU || A.GetDevice() != B.GetDevice())
         LogicError("HilbertSchmidt not supported for this device.");
 
-    Ring innerProd(0);
+    Ring innerProd(0.);
     const Int width = A.Width();
     const Int height = A.Height();
     const Ring* ABuf = A.LockedBuffer();
@@ -72,7 +72,7 @@ Ring HilbertSchmidt
     Ring innerProd;
     if( A.Participating() )
     {
-        Ring localInnerProd(0);
+        Ring localInnerProd(0.);
         const Int localHeight = A.LocalHeight();
         const Int localWidth = A.LocalWidth();
         const Ring* ABuf = A.LockedBuffer();
@@ -103,6 +103,10 @@ Ring HilbertSchmidt
   ( const AbstractMatrix<Ring>& A, const AbstractMatrix<Ring>& B );       \
   template Ring HilbertSchmidt \
   ( const AbstractDistMatrix<Ring>& A, const AbstractDistMatrix<Ring>& B );
+
+#ifdef HYDROGEN_GPU_USE_FP16
+PROTO(gpu_half_type)
+#endif
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

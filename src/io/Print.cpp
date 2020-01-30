@@ -115,6 +115,8 @@ void Print( const vector<T>& x, string title, ostream& os )
   template void Print \
   ( const Matrix<T>& A, string title, ostream& os ); \
   template void Print \
+  ( const AbstractMatrix<T>& A, string title, ostream& os ); \
+  template void Print \
   ( const AbstractDistMatrix<T>& A, string title, ostream& os );
 
 #ifdef HYDROGEN_GPU_USE_FP16

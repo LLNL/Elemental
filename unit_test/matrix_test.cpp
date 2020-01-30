@@ -13,14 +13,14 @@ TEMPLATE_TEST_CASE(
   float, double)
 {
     using value_type = TestType;
-    using matrix_type = El::Matrix<value_type, El::Device::CPU>;
-    using size_type = typename matrix_type::size_type;
+    using cpu_matrix_type = El::Matrix<value_type, El::Device::CPU>;
+    using size_type = typename cpu_matrix_type::size_type;
 
     auto const zero_size = hydrogen::TypeTraits<size_type>::Zero();
 
     GIVEN("An empty matrix")
     {
-        auto mat = matrix_type{};
+        auto mat = cpu_matrix_type{};
 
         THEN ("The matrix has dimension 0x0 with nonzero LDim.")
         {
@@ -44,6 +44,25 @@ TEMPLATE_TEST_CASE(
                 CHECK(mat.MemorySize() == size_type{77});
                 CHECK(mat.Contiguous());
                 CHECK_FALSE(mat.IsEmpty());
+
+                AND_WHEN ("The matrix is copied")
+                {
+                    auto new_mat = mat.Copy();
+                    THEN ("The new matrix has the same size as the original.")
+                    {
+                        CHECK_FALSE(new_mat->IsEmpty());
+
+                        CHECK(new_mat->Height() == mat.Height());
+                        CHECK(new_mat->Width() == mat.Width());
+                        CHECK(new_mat->GetDevice() == mat.GetDevice());
+
+                        // The new matrix is memory-tight
+                        CHECK(new_mat->LDim() == new_mat->Height());
+                        CHECK(new_mat->MemorySize()
+                              == new_mat->LDim()*new_mat->Width());
+                        CHECK(new_mat->Contiguous());
+                    }
+                }
             }
             AND_WHEN ("The matrix is shrunk")
             {
@@ -58,6 +77,24 @@ TEMPLATE_TEST_CASE(
                     CHECK(mat.Contiguous());
                     CHECK_FALSE(mat.IsEmpty());
                 }
+                AND_WHEN ("The matrix is copied")
+                {
+                    auto new_mat = mat.Copy();
+                    THEN ("The new matrix has the same size as the original.")
+                    {
+                        CHECK_FALSE(new_mat->IsEmpty());
+
+                        CHECK(new_mat->Height() == mat.Height());
+                        CHECK(new_mat->Width() == mat.Width());
+                        CHECK(new_mat->GetDevice() == mat.GetDevice());
+
+                        // The new matrix is memory-tight
+                        CHECK(new_mat->LDim() == new_mat->Height());
+                        CHECK(new_mat->MemorySize()
+                              == new_mat->LDim()*new_mat->Width());
+                        CHECK(new_mat->Contiguous());
+                    }
+                }
             }
             AND_WHEN ("The matrix is expanded")
             {
@@ -71,6 +108,24 @@ TEMPLATE_TEST_CASE(
                     CHECK(mat.Contiguous());
                     CHECK_FALSE(mat.IsEmpty());
                 }
+                AND_WHEN ("The matrix is copied")
+                {
+                    auto new_mat = mat.Copy();
+                    THEN ("The new matrix has the same size as the original.")
+                    {
+                        CHECK_FALSE(new_mat->IsEmpty());
+
+                        CHECK(new_mat->Height() == mat.Height());
+                        CHECK(new_mat->Width() == mat.Width());
+                        CHECK(new_mat->GetDevice() == mat.GetDevice());
+
+                        // The new matrix is memory-tight
+                        CHECK(new_mat->LDim() == new_mat->Height());
+                        CHECK(new_mat->MemorySize()
+                              == new_mat->LDim()*new_mat->Width());
+                        CHECK(new_mat->Contiguous());
+                    }
+                }
             }
             AND_WHEN ("The matrix is resized with a large leading dimension")
             {
@@ -83,6 +138,33 @@ TEMPLATE_TEST_CASE(
                     CHECK(mat.MemorySize() == size_type{11*13});
                     CHECK_FALSE(mat.Contiguous());
                     CHECK_FALSE(mat.IsEmpty());
+                }
+                AND_WHEN ("The matrix is copied")
+                {
+                    auto new_mat = mat.Copy();
+                    THEN ("The new matrix has the same size as the original.")
+                    {
+                        CHECK_FALSE(new_mat->IsEmpty());
+
+                        CHECK(new_mat->Height() == mat.Height());
+                        CHECK(new_mat->Width() == mat.Width());
+                        CHECK(new_mat->GetDevice() == mat.GetDevice());
+
+                        // The new matrix is memory-tight
+                        CHECK(new_mat->LDim() == new_mat->Height());
+                        CHECK(new_mat->MemorySize()
+                              == new_mat->LDim()*new_mat->Width());
+                        CHECK(new_mat->Contiguous());
+                    }
+                }
+            }
+            AND_WHEN ("The matrix is used to construct a new matrix")
+            {
+                auto new_mat = mat.Construct();
+                THEN ("The new matrix is empty and on the same device.")
+                {
+                    CHECK(new_mat->IsEmpty());
+                    CHECK(new_mat->GetDevice() == mat.GetDevice());
                 }
             }
         }
@@ -101,9 +183,9 @@ TEMPLATE_TEST_CASE(
         }
     }
 
-    GIVEN ("A nontrivial matrix")
+    GIVEN ("A nontrivial CPU matrix")
     {
-        auto mat = matrix_type{7,11};
+        auto mat = cpu_matrix_type{7,11};
         mat(0,0) = value_type(0.0);
 
         WHEN ("A submatrix is viewed")
@@ -141,7 +223,7 @@ TEMPLATE_TEST_CASE(
 
     GIVEN ("A column vector as a matrix")
     {
-        auto mat = matrix_type{13,1};
+        auto mat = cpu_matrix_type{13,1};
         REQUIRE(mat.Contiguous());
         WHEN ("The matrix is resized with nontrivial leading dimension")
         {

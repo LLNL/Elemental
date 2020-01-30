@@ -69,6 +69,10 @@ void Zeros( AbstractDistMatrix<T>& A, Int m, Int n )
   template void Zeros( AbstractMatrix<T>& A, Int m, Int n ); \
   template void Zeros( AbstractDistMatrix<T>& A, Int m, Int n );
 
+#ifdef HYDROGEN_GPU_USE_FP16
+PROTO(gpu_half_type)
+#endif
+
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE
 #define EL_ENABLE_QUAD

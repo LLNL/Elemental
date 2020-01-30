@@ -684,10 +684,96 @@ template<typename Real,
 Complex<Real> Sqrt( const Complex<Real>& alpha );
 
 template<> Int Sqrt( const Int& alpha );
+#ifdef HYDROGEN_HAVE_HALF
+inline cpu_half_type Exp(cpu_half_type const& alpha)
+{
+    return half_float::exp(alpha);
+}
+inline cpu_half_type Log(cpu_half_type const& alpha)
+{
+    return half_float::log(alpha);
+}
+inline cpu_half_type Pow(cpu_half_type const& base, cpu_half_type const& exp)
+{
+    return half_float::pow(base, exp);
+}
+inline cpu_half_type Sqrt(cpu_half_type const& x)
+{
+    return half_float::sqrt(x);
+}
+inline cpu_half_type Expm1(cpu_half_type const& alpha)
+{
+    return half_float::expm1(alpha);
+}
+inline cpu_half_type Cos(cpu_half_type const& alpha)
+{
+    return half_float::cos(alpha);
+}
+inline cpu_half_type Sin(cpu_half_type const& alpha)
+{
+    return half_float::sin(alpha);
+}
+inline cpu_half_type Tan(cpu_half_type const& alpha)
+{
+    return half_float::tan(alpha);
+}
+inline cpu_half_type Acos(cpu_half_type const& alpha)
+{
+    return half_float::acos(alpha);
+}
+inline cpu_half_type Asin(cpu_half_type const& alpha)
+{
+    return half_float::asin(alpha);
+}
+inline cpu_half_type Atan(cpu_half_type const& alpha)
+{
+    return half_float::atan(alpha);
+}
+inline cpu_half_type Cosh(cpu_half_type const& alpha)
+{
+    return half_float::cosh(alpha);
+}
+inline cpu_half_type Sinh(cpu_half_type const& alpha)
+{
+    return half_float::sinh(alpha);
+}
+inline cpu_half_type Tanh(cpu_half_type const& alpha)
+{
+    return half_float::tanh(alpha);
+}
+inline cpu_half_type Acosh(cpu_half_type const& alpha)
+{
+    return half_float::acosh(alpha);
+}
+inline cpu_half_type Asinh(cpu_half_type const& alpha)
+{
+    return half_float::asinh(alpha);
+}
+inline cpu_half_type Atanh(cpu_half_type const& alpha)
+{
+    return half_float::atanh(alpha);
+}
+#endif // HYDROGEN_HAVE_HALF
 #ifdef HYDROGEN_GPU_USE_FP16
+inline gpu_half_type Exp(gpu_half_type const& x)
+{
+    return std::exp(float(x));
+}
+inline gpu_half_type Log(gpu_half_type const& x)
+{
+    return std::log(float(x));
+}
+inline gpu_half_type Pow(gpu_half_type const& base, gpu_half_type const& exp)
+{
+    return std::pow(float(base), float(exp));
+}
 inline gpu_half_type Sqrt(gpu_half_type const& x)
 {
-    return Sqrt(float(x));
+    return std::sqrt(float(x));
+}
+inline gpu_half_type Expm1(gpu_half_type const& x)
+{
+    return std::expm1(float(x));
 }
 #endif // HYDROGEN_GPU_USE_FP16
 #ifdef HYDROGEN_HAVE_QD

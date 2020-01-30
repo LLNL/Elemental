@@ -28,7 +28,6 @@ void InitializeCUDA(int argc, char* argv[])
 
     unsigned int numDevices = 0;
     int device = 0;
-
     nvmlReturn_t r = nvmlInit();
     if (r != NVML_SUCCESS) { throw std::runtime_error("NVML error"); }
     r = nvmlDeviceGetCount(&numDevices);

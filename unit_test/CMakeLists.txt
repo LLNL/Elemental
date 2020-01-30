@@ -1,5 +1,16 @@
 list(APPEND HYDROGEN_CATCH2_TEST_FILES
-  matrix_test.cpp)
+  matrix_test.cpp
+  )
+if (HYDROGEN_HAVE_GPU)
+  list(APPEND HYDROGEN_CATCH2_TEST_FILES
+    copy_cpu_gpu_test.cpp
+    )
+  if (HYDROGEN_HAVE_HALF AND HYDROGEN_GPU_USE_FP16)
+    list(APPEND HYDROGEN_CATCH2_TEST_FILES
+      copy_cpu_gpu_half_test.cpp
+      )
+  endif ()
+endif (HYDROGEN_HAVE_GPU)
 
 if (HYDROGEN_HAVE_GPU)
   list(APPEND HYDROGEN_CATCH2_TEST_FILES

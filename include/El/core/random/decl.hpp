@@ -34,6 +34,11 @@ Int CoinFlip();
 template<typename T>
 T UnitCell();
 
+#ifdef HYDROGEN_HAVE_HALF
+cpu_half_type SampleUniform(
+    cpu_half_type const& a=0._h, cpu_half_type const& b=1._h);
+#endif
+
 template<typename Real=double,typename=EnableIf<IsReal<Real>>>
 Real SampleUniformNaive
 ( const Real& a=Real(0), const Real& b=UnitCell<Real>() );

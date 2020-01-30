@@ -2,6 +2,7 @@
 set_full_path(THIS_DIR_SOURCES
   ColumnMinAbs.cpp
   ColumnNorms.cpp
+  Copy.cpp
   HilbertSchmidt.cpp
   Instantiate.cpp
   Max.cpp

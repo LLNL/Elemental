@@ -125,6 +125,20 @@ void Read
     }
 }
 
+#ifdef HYDROGEN_GPU_USE_FP16
+template <>
+void Read<gpu_half_type>(
+    AbstractDistMatrix<gpu_half_type>& A,
+    const string filename, FileFormat format,
+    bool sequential)
+{
+    std::unique_ptr<AbstractDistMatrix<float>> A_tmp(
+        AbstractDistMatrix<float>::Instantiate(A.DistData()));
+    Read(*A_tmp, filename, format, sequential);
+    Copy(*A_tmp, A);
+}
+#endif // HYDROGEN_GPU_USE_FP16
+
 #define PROTO(T) \
   template void Read \
   ( Matrix<T>& A, const string filename, FileFormat format ); \

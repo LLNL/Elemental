@@ -53,8 +53,8 @@ endif (__GIT_EXECUTABLE)
 
 # This must be set because version tags
 set(HYDROGEN_VERSION_MAJOR 1)
-set(HYDROGEN_VERSION_MINOR 2)
-set(HYDROGEN_VERSION_PATCH 0)
+set(HYDROGEN_VERSION_MINOR 3)
+set(HYDROGEN_VERSION_PATCH 3)
 set(HYDROGEN_VERSION_MAJOR_MINOR
     "${HYDROGEN_VERSION_MAJOR}.${HYDROGEN_VERSION_MINOR}")
 set(HYDROGEN_VERSION
@@ -134,7 +134,7 @@ option(Hydrogen_ENABLE_TESTING
   "Build the test suite in the tests directory." ON)
 
 option(Hydrogen_ENABLE_UNIT_TESTS
-  "Build the Catch2-based unit tests." ON)
+  "Build the Catch2-based unit tests." OFF)
 
 option(Hydrogen_ENABLE_QUADMATH
   "Search for quadmath library and enable related features if found." OFF)
@@ -411,13 +411,13 @@ if (HYDROGEN_HAVE_CUDA OR HYDROGEN_HAVE_ROCM)
 endif ()
 
 if (Hydrogen_ENABLE_ALUMINUM)
-  find_package(Aluminum 0.2.0 NO_MODULE QUIET
+  find_package(Aluminum 0.3.0 NO_MODULE
     HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
     $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
     PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
     NO_DEFAULT_PATH)
   if (NOT Aluminum_FOUND)
-    find_package(Aluminum 0.2.0 NO_MODULE QUIET)
+    find_package(Aluminum 0.3.0 NO_MODULE)
   endif ()
 
   if (Aluminum_FOUND)
@@ -563,6 +563,7 @@ if (HYDROGEN_HAVE_CUDA)
     $<TARGET_NAME_IF_EXISTS:cuda::toolkit>
     )
 
+  target_link_libraries(Hydrogen_CXX PUBLIC Hydrogen_CUDA)
   list(APPEND HYDROGEN_LIBRARIES Hydrogen_CUDA)
 endif ()
 

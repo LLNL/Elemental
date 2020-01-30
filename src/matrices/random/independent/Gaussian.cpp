@@ -83,6 +83,10 @@ void Gaussian
   template void Gaussian \
   ( AbstractDistMatrix<F>& A, Int m, Int n, F mean, Base<F> stddev );
 
+#ifdef HYDROGEN_GPU_USE_FP16
+PROTO(gpu_half_type)
+#endif
+
 #define EL_NO_INT_PROTO
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

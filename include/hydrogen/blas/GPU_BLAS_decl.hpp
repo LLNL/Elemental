@@ -216,11 +216,11 @@ void Copy(SizeT size,
  *
  *  @ingroup device_blas
  */
-template <typename T, typename SizeT>
+template <typename T, typename U, typename SizeT>
 void Copy(TransposeMode transpA,
           SizeT num_rows, SizeT num_cols,
           T const* A, SizeT lda,
-          T* B, SizeT ldb,
+          U* B, SizeT ldb,
           SyncInfo<Device::GPU> const& syncinfo);
 
 /** @brief 2-D Copy operation in GPU memory with 2 strides.

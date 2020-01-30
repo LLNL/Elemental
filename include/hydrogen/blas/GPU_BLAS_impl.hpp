@@ -394,6 +394,29 @@ void Copy2DImpl(SizeT nrows, SizeT ncols,
     }
 }
 
+template <typename T, typename U, typename SizeT>
+void Copy2DImpl(SizeT nrows, SizeT ncols,
+                TransposeMode transA,
+                T const* A, SizeT lda,
+                U* B, SizeT ldb,
+                SyncInfo<Device::GPU> const& si)
+{
+    switch (transA)
+    {
+    case TransposeMode::NORMAL:
+        Copy_GPU_impl(nrows, ncols,
+                      A, SizeT(1), lda,
+                      B, SizeT(1), ldb, si.Stream());
+        break;
+    case TransposeMode::TRANSPOSE:
+        throw std::logic_error(
+            "Copy2DImpl: Need to implement multitype transpose");
+        break;
+    default:
+        throw std::logic_error("Copy2DImpl: TransposeMode not supported!");
+    }
+}
+
 template <typename T, typename SizeT,
           typename=EnableUnless<IsSupportedType<T,BLAS_Op::COPY>>,
           typename=void>
@@ -452,7 +475,50 @@ void AxpyImpl(SizeT const&, T const&,
 }
 
 template <typename T, typename SizeT,
+          typename=EnableUnless<IsSupportedType<T, BLAS_Op::GEMV>>,
+          typename=EnableWhen<IsSupportedType<T, BLAS_Op::GEMM>>>
+void GemvImpl(
+    TransposeMode transA,
+    SizeT nrows, SizeT ncols,
+    T const& alpha,
+    T const* A, SizeT lda,
+    T const* x, SizeT incx,
+    T const& beta,
+    T* y, SizeT incy,
+    SyncInfo<Device::GPU> const& si)
+{
+    using NTP = MakePointer<NativeType<T>>;
+    using CNTP = MakePointerToConst<NativeType<T>>;
+
+    if (incy != SizeT(1))
+        throw std::runtime_error("incy must be 1 right now. "
+                                 "Let Tom know you've hit this case.");
+
+    auto const ATrans = transA;
+    auto const BTrans = (incx == SizeT(1)
+                         ? TransposeMode::NORMAL
+                         : TransposeMode::TRANSPOSE);
+    auto const m = (ATrans == TransposeMode::NORMAL ? nrows : ncols);
+    auto const k = (ATrans == TransposeMode::NORMAL ? ncols : nrows);
+    auto const n = SizeT(1);
+    auto const LDB = (incx == SizeT(1) ? ncols : incx);
+    auto const LDC = nrows;
+
+    SyncManager mgr(GetLibraryHandle(), si);
+    gpu_blas_impl::Gemm(
+        GetLibraryHandle(),
+        ToNativeTransposeMode(ATrans), ToNativeTransposeMode(BTrans),
+        ToSizeT(m), ToSizeT(n), ToSizeT(k),
+        alpha,
+        reinterpret_cast<CNTP>(A), ToSizeT(lda),
+        reinterpret_cast<CNTP>(x), ToSizeT(LDB),
+        beta,
+        reinterpret_cast<NTP>(y), ToSizeT(LDC));
+}
+
+template <typename T, typename SizeT,
           typename=EnableUnless<IsSupportedType<T,BLAS_Op::GEMV>>,
+          typename=EnableUnless<IsSupportedType<T,BLAS_Op::GEMM>>,
           typename=void>
 void GemvImpl(
     TransposeMode const&,
@@ -555,11 +621,11 @@ void Copy(SizeT size,
     details::CopyImpl(size, X, incx, Y, incy, si);
 }
 
-template <typename T, typename SizeT>
+template <typename T, typename U, typename SizeT>
 void Copy(TransposeMode transA,
           SizeT num_rows, SizeT num_cols,
           T const* A, SizeT lda,
-          T* B, SizeT ldb,
+          U* B, SizeT ldb,
           SyncInfo<Device::GPU> const& si)
 {
     details::Copy2DImpl(num_rows, num_cols, transA,

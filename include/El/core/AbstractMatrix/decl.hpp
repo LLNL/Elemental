@@ -48,6 +48,26 @@ public:
     virtual ~AbstractMatrix() = default;
 
     ///@}
+    /** @name Abstract Copies. */
+    ///@{
+
+    /** @brief Copy the underlying matrix into a new matrix with the
+     *         same type and device.
+     *
+     *  @return A newly-allocated matrix that is a deep copy of this
+     *          matrix with the same device type.
+     *  @warning This could dynamically allocate memory.
+     */
+    virtual std::unique_ptr<AbstractMatrix<T>> Copy() const = 0;
+
+    /** @brief Construct an empty matrix with the same type and device.
+     *
+     *  @return A default-constructed (i.e., empty) matrix with the
+     *          same device allocation as this matrix.
+     */
+    virtual std::unique_ptr<AbstractMatrix<T>> Construct() const = 0;
+
+    ///@}
     /** @name Queries */
     ///@{
 

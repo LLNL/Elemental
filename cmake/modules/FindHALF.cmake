@@ -19,7 +19,11 @@ find_path(HALF_INCLUDE_PATH half.hpp)
 
 include(CheckCXXSourceCompiles)
 set(_half_verify_code
-  "#include <half.hpp>
+  "#ifndef HALF_ENABLE_F16C_INTRINSICS
+#define HALF_ENABLE_F16C_INTRINSICS __F16C__
+#endif
+
+#include <half.hpp>
 int main(int, char**)
 {
   half_float::half x

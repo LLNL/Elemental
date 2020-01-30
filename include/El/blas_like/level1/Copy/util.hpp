@@ -133,7 +133,7 @@ void InterleaveMatrix(
     {
 #ifdef HYDROGEN_HAVE_MKL
         mkl::omatcopy(
-            NORMAL, height, width, T(1),
+            NORMAL, height, width, T(1.0),
             A, rowStrideA, colStrideA,
             B, rowStrideB, colStrideB);
 #else

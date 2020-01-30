@@ -86,6 +86,29 @@ void Write
     }
 }
 
+#ifdef HYDROGEN_GPU_USE_FP16
+template <>
+void Write<gpu_half_type>(AbstractMatrix<gpu_half_type> const& A,
+                          string basename,
+                          FileFormat format, string title)
+{
+    Matrix<float> A_tmp;
+    Copy(A, A_tmp);
+    return Write(A_tmp, basename, format, title);
+}
+
+template <>
+void Write<gpu_half_type>(
+    const AbstractDistMatrix<gpu_half_type>& A,
+    string basename, FileFormat format, string title)
+{
+    std::unique_ptr<AbstractDistMatrix<float>> A_tmp(
+        AbstractDistMatrix<float>::Instantiate(A.DistData()));
+    Copy(A, *A_tmp);
+    Write(*A_tmp, basename, format, title);
+}
+#endif // HYDROGEN_GPU_USE_FP16
+
 #define PROTO(T) \
     template void Write                         \
     ( const AbstractMatrix<T>&, string, FileFormat, string );   \

@@ -103,11 +103,21 @@ T UnitCell()
 {
     typedef Base<T> Real;
     T cell;
-    SetRealPart( cell, Real(1) );
+    SetRealPart( cell, TypeTraits<Real>::One() );
     if( IsComplex<T>::value )
-        SetImagPart( cell, Real(1) );
+        SetImagPart( cell, TypeTraits<Real>::One() );
     return cell;
 }
+
+#ifdef HYDROGEN_HAVE_HALF
+inline cpu_half_type SampleUniform(
+    cpu_half_type const& a, cpu_half_type const& b)
+{
+    std::mt19937& gen = Generator();
+    std::uniform_real_distribution<float> uni((float)a,(float)b);
+    return cpu_half_type{uni(gen)};
+}
+#endif // HYDROGEN_HAVE_HALF
 
 template<typename Real,typename>
 Real SampleUniformNaive( const Real& a, const Real& b )
@@ -151,7 +161,7 @@ F SampleNormalMarsiglia( const F& mean, const Base<F>& stddev )
 
     Real stddevAdj = stddev;
     if( IsComplex<F>::value )
-        stddevAdj /= Sqrt(Real(2));
+        stddevAdj /= Sqrt(Real(2.));
 
     // Run Marsiglia's polar method
     // ============================
@@ -159,12 +169,12 @@ F SampleNormalMarsiglia( const F& mean, const Base<F>& stddev )
     //       F is real.
     while( true )
     {
-        const Real U = SampleUniform(Real(-1),Real(1));
-        const Real V = SampleUniform(Real(-1),Real(1));
+        const Real U = SampleUniform(Real(-1.),TypeTraits<Real>::One());
+        const Real V = SampleUniform(Real(-1.),TypeTraits<Real>::One());
         const Real S = Sqrt(U*U+V*V);
-        if( S > Real(0) && S < Real(1) )
+        if( S > TypeTraits<Real>::Zero() && S < TypeTraits<Real>::One() )
         {
-            const Real W = Sqrt(-2*Log(S)/S);
+            const Real W = Sqrt(Real(-2.)*Log(S)/S);
             SetRealPart( sample, RealPart(mean) + stddevAdj*U*W );
             if( IsComplex<F>::value )
                 SetImagPart( sample, ImagPart(mean) + stddevAdj*V*W );
@@ -211,8 +221,8 @@ template<typename F>
 F SampleBall( const F& center, const Base<F>& radius )
 {
     typedef Base<F> Real;
-    const Real r = SampleUniform(Real(0),radius);
-    const Real angle = SampleUniform(Real(0),2*Pi<Real>());
+    const Real r = SampleUniform(TypeTraits<Real>::Zero(),radius);
+    const Real angle = SampleUniform(TypeTraits<Real>::Zero(),2*Pi<Real>());
     return center + F(r*Cos(angle),r*Sin(angle));
 }
 

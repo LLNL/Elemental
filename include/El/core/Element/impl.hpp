@@ -354,6 +354,19 @@ template<typename Real,
 Complex<Real> Exp( const Complex<Real>& alpha ) EL_NO_EXCEPT
 { return ComplexFromPolar( Exp(RealPart(alpha)), ImagPart(alpha) ); }
 
+template<typename F,
+         typename/*=EnableIf<IsField<F>>*/,
+         typename/*=EnableIf<IsStdScalar<F>>*/>
+F Expm1( const F& alpha ) EL_NO_EXCEPT
+{ return std::expm1(alpha); }
+
+template<typename Real,
+         typename/*=EnableIf<IsField<Real>>*/,
+         typename/*=DisableIf<IsStdScalar<Real>>*/,
+         typename/*=void*/>
+Complex<Real> Expm1( const Complex<Real>& alpha ) EL_NO_EXCEPT
+{ return ComplexFromPolar( Expm1(RealPart(alpha)), ImagPart(alpha) ); }
+
 template<typename FBase,typename TExp,
          typename/*=EnableIf<IsStdField<FBase>>*/,
          typename/*=EnableIf<IsStdField<TExp>>*/>

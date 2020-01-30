@@ -111,6 +111,22 @@ public:
 #endif // HYDROGEN_HAVE_GPU
 
     ///@}
+    /** @name Abstract Copies. */
+    ///@{
+
+    /** @brief Copy this matrix into a new matrix.
+     *
+     *  @return A new deep-copy of this matrix.
+     */
+    std::unique_ptr<AbstractMatrix<T>> Copy() const override;
+
+    /** @brief Get a new matrix with this device allocation.
+     *
+     *  @return A new empty matrix with this device allocation.
+     */
+    std::unique_ptr<AbstractMatrix<T>> Construct() const override;
+
+    ///@}
     /** @name Modifiers */
     ///@{
 
@@ -326,6 +342,22 @@ public:
 
     /** @brief Move assignment */
     Matrix<T, Device::GPU>& operator=(Matrix<T, Device::GPU>&& A);
+
+    ///@}
+    /** @name Abstract Copies. */
+    ///@{
+
+    /** @brief Copy this matrix into a new matrix.
+     *
+     *  @return A new deep-copy of this matrix.
+     */
+    std::unique_ptr<AbstractMatrix<T>> Copy() const override;
+
+    /** @brief Get a new matrix with this device allocation.
+     *
+     *  @return A new empty matrix with this device allocation.
+     */
+    std::unique_ptr<AbstractMatrix<T>> Construct() const override;
 
     ///@}
     /** @name Basic queries */

@@ -322,6 +322,19 @@ template void Gemv(Orientation orientA,
                    Matrix<double,Device::GPU> const& B,
                    double beta,
                    Matrix<double,Device::GPU>& C);
+#ifdef HYDROGEN_GPU_USE_FP16
+template void Gemv(Orientation orientA,
+                   gpu_half_type alpha,
+                   Matrix<gpu_half_type,Device::GPU> const& A,
+                   Matrix<gpu_half_type,Device::GPU> const& B,
+                   gpu_half_type beta,
+                   Matrix<gpu_half_type,Device::GPU>& C);
+template void Gemv(Orientation, gpu_half_type,
+                   AbstractMatrix<gpu_half_type> const&,
+                   AbstractMatrix<gpu_half_type> const&,
+                   gpu_half_type,
+                   AbstractMatrix<gpu_half_type>&);
+#endif // HYDROGEN_GPU_USE_FP16
 #endif // HYDROGEN_HAVE_GPU
 
 #define PROTO(T) \
@@ -353,11 +366,6 @@ template void Gemv(Orientation orientA,
   (Orientation orientation, \
     T alpha, const DistMatrix<T,MC,MR,BLOCK>& A, \
              const DistMatrix<T,MC,MR,BLOCK>& x, \
-    T beta,        DistMatrix<T,MC,MR,BLOCK>& y); \
-  template void Gemv \
-  (Orientation orientation, \
-    T alpha, const DistMatrix<T,MC,MR,BLOCK>& A, \
-             const DistMatrix<T,MC,MR,BLOCK>& x, \
                    DistMatrix<T,MC,MR,BLOCK>& y); \
   template void LocalGemv \
   (Orientation orientation, \
@@ -371,6 +379,19 @@ template void Gemv(Orientation orientA,
 #define EL_ENABLE_BIGINT
 #define EL_ENABLE_BIGFLOAT
 #define EL_ENABLE_HALF
+#include <El/macros/Instantiate.h>
+
+// Fix "explicit instantiation after explicit specialization" warnings
+#undef PROTO
+#define PROTO(T)                                        \
+    template void Gemv                                  \
+    (Orientation orientation,                           \
+     T alpha, const DistMatrix<T,MC,MR,BLOCK>& A,       \
+     const DistMatrix<T,MC,MR,BLOCK>& x,                \
+     T beta,        DistMatrix<T,MC,MR,BLOCK>& y);
+
+#define EL_NO_INT_PROTO
+#undef EL_ENABLE_QUAD
 #include <El/macros/Instantiate.h>
 
 } // namespace El

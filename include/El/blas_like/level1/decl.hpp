@@ -366,61 +366,7 @@ void Contract( const BlockMatrix<T>& A, BlockMatrix<T>& B );
 
 // Copy
 // ====
-
-template<typename T>
-void Copy( const AbstractMatrix<T>& A, AbstractMatrix<T>& B );
-template<typename T>
-void Copy( const Matrix<T>& A, Matrix<T>& B );
-template<typename S,typename T,
-         typename=EnableIf<And<CanCast<S,T>,Not<IsSame<S,T>>>>>
-void Copy( const Matrix<S>& A, Matrix<T>& B );
-
-#ifdef HYDROGEN_HAVE_GPU
-template <typename T>
-void Copy(Matrix<T,Device::CPU> const&, Matrix<T,Device::GPU>&);
-template <typename T>
-void Copy(Matrix<T,Device::GPU> const&, Matrix<T,Device::CPU>&);
-template <typename T>
-void CopyAsync(Matrix<T,Device::CPU> const&, Matrix<T,Device::GPU>&);
-template <typename T>
-void CopyAsync(Matrix<T,Device::GPU> const&, Matrix<T,Device::CPU>&);
-#endif // HYDROGEN_HAVE_GPU
-
-template <typename T>
-void CopyAsync(ElementalMatrix<T> const& A, ElementalMatrix<T>& B);
-template <typename T>
-void CopyAsync(AbstractDistMatrix<T> const& A, AbstractDistMatrix<T>& B);
-
-template<typename S,typename T,
-         typename=EnableIf<CanCast<S,T>>>
-void Copy( const ElementalMatrix<S>& A, ElementalMatrix<T>& B );
-
-template<typename S,typename T,
-         typename=EnableIf<CanCast<S,T>>>
-void Copy( const BlockMatrix<S>& A, BlockMatrix<T>& B );
-
-template<typename T>
-void Copy( const AbstractDistMatrix<T>& A, AbstractDistMatrix<T>& B );
-template<typename S,typename T,
-         typename=EnableIf<And<CanCast<S,T>,Not<IsSame<S,T>>>>>
-void Copy( const AbstractDistMatrix<S>& A, AbstractDistMatrix<T>& B );
-
-template<typename T>
-void CopyFromRoot
-( const Matrix<T>& A, DistMatrix<T,CIRC,CIRC>& B,
-  bool includingViewers=false );
-template<typename T>
-void CopyFromNonRoot( DistMatrix<T,CIRC,CIRC>& B,
-  bool includingViewers=false );
-
-template<typename T>
-void CopyFromRoot
-( const Matrix<T>& A, DistMatrix<T,CIRC,CIRC,BLOCK>& B,
-  bool includingViewers=false );
-template<typename T>
-void CopyFromNonRoot( DistMatrix<T,CIRC,CIRC,BLOCK>& B,
-  bool includingViewers=false );
-
+class BaseDistMatrix;
 
 namespace copy {
 namespace util {
@@ -666,6 +612,13 @@ void StridedUnpack(
 
 } // namespace util
 } // namespace copy
+
+} // namespace El
+
+#include "Copy.hpp"
+
+namespace El
+{
 
 // DiagonalScale
 // =============

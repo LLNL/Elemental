@@ -118,6 +118,14 @@ void TestGemm
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
     float cudaTime;
+
+    // Warmup run -- doesn't matter in CPU land
+    if (D == Device::GPU)
+    {
+        C = COrig;
+        Gemm(orientA, orientB, alpha, A, B, beta, C, GEMM_SUMMA_A);
+        mpi::Barrier(g.Comm());
+    }
 #endif
 
     // Test the variant of Gemm that keeps A stationary

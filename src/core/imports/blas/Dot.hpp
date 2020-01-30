@@ -32,7 +32,7 @@ T Dot
     // NOTE: Temporaries are avoided since constructing a BigInt/BigFloat
     //       involves a memory allocation
     T gamma;
-    T alpha{0};
+    T alpha(0.);
     for( BlasInt i=0; i<n; ++i )
     {
         Conj( x[i*incx], gamma );
@@ -90,6 +90,12 @@ template cpu_half_type Dot
 ( BlasInt n,
   const cpu_half_type* x, BlasInt incx,
   const cpu_half_type* y, BlasInt incy );
+#endif
+#ifdef HYDROGEN_GPU_USE_FP16
+template gpu_half_type Dot
+( BlasInt n,
+  const gpu_half_type* x, BlasInt incx,
+  const gpu_half_type* y, BlasInt incy );
 #endif
 #ifdef HYDROGEN_HAVE_MPC
 template BigInt Dot

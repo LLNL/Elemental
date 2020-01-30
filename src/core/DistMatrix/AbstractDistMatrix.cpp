@@ -541,6 +541,61 @@ AbstractDistMatrix<double>::Instantiate
     return Instantiate_<double>(grid, root, colDist, rowDist, wrap, dev);
 }
 
+#ifdef HYDROGEN_HAVE_HALF
+
+
+template<>
+AbstractDistMatrix<cpu_half_type>*
+AbstractDistMatrix<cpu_half_type>::Instantiate
+(const El::Grid& grid, int root,
+ Dist colDist, Dist rowDist, DistWrap wrap, Device dev)
+{
+    if (dev != Device::CPU)
+    {
+        LogicError("cpu_half_type only supported on CPU");
+    }
+
+#define GUARD(CDIST,RDIST,WRAP)                                         \
+    (colDist == CDIST) && (rowDist == RDIST) && (wrap == WRAP)
+#define PAYLOAD(CDIST,RDIST,WRAP)                                       \
+    return new DistMatrix<cpu_half_type,CDIST,RDIST,WRAP,Device::CPU>(grid, root);
+#include "El/macros/GuardAndPayload.h"
+    LogicError
+        ("Invalid template arguments for DistMatrix "
+         "(colDist=",Int(colDist),", rowDist=",Int(rowDist),", "
+         "wrap=",Int(wrap),", dev=",Int(dev),")");
+    return nullptr;
+}
+
+#ifdef HYDROGEN_GPU_USE_FP16
+template<>
+AbstractDistMatrix<gpu_half_type>*
+AbstractDistMatrix<gpu_half_type>::Instantiate
+(const El::Grid& grid, int root,
+ Dist colDist, Dist rowDist, DistWrap wrap, Device dev)
+{
+    if (dev != Device::GPU)
+    {
+        LogicError("gpu_half_type only supported on GPU");
+    }
+    if (wrap != ELEMENT)
+    {
+        LogicError("GPU matrices only supported with ELEMENT distributions");
+    }
+#define GUARD(CDIST,RDIST,WRAP)                                         \
+    (colDist == CDIST) && (rowDist == RDIST) && (wrap == WRAP)
+#define PAYLOAD(CDIST,RDIST,WRAP)                                       \
+    return new DistMatrix<gpu_half_type,CDIST,RDIST,ELEMENT,Device::GPU>(grid, root);
+#include "El/macros/GuardAndPayload.h"
+    LogicError
+        ("Invalid template arguments for DistMatrix "
+         "(colDist=",Int(colDist),", rowDist=",Int(rowDist),", "
+         "wrap=",Int(wrap),", dev=",Int(dev),")");
+    return nullptr;
+}
+#endif // HYDROGEN_GPU_USE_FP16
+#endif // HYDROGEN_HAVE_HALF
+
 template<typename T>
 AbstractDistMatrix<T>*
 AbstractDistMatrix<T>::Instantiate(const El::DistData& data)

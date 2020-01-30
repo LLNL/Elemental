@@ -23,8 +23,17 @@ namespace hydrogen
 
 #ifdef HYDROGEN_HAVE_HALF
 
-template <typename F>
+template <typename F, typename T>
 struct Caster
+{
+    static T Cast(F const& x)
+    {
+        return static_cast<T>(x);
+    }
+};
+
+template <typename F>
+struct Caster<F, half_float::half>
 {
     static half_float::half Cast(F const& x)
     {
@@ -32,11 +41,30 @@ struct Caster
     }
 };
 
+#ifdef HYDROGEN_GPU_USE_FP16
+template <typename F>
+struct Caster<F, __half>
+{
+    template <typename DF,
+              EnableWhen<std::is_integral<DF>, int> = 0>
+    static __half Cast(DF const& x)
+    {
+        return __half(float(x));
+    }
+
+    template <typename DF,
+              EnableUnless<std::is_integral<DF>, int> = 0>
+    static __half Cast(DF const& x)
+    {
+        return static_cast<__half>(x);
+    }
+};
+#endif // HYDROGEN_GPU_USE_FP16
 
 template <typename T, typename F>
 T To(F const& x)
 {
-    return Caster<F>::Cast(x);
+    return Caster<F, T>::Cast(x);
 }
 
 #else

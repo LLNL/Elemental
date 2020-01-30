@@ -9,6 +9,8 @@
 #ifndef EL_BLAS_ENTRYWISEMAP_HPP
 #define EL_BLAS_ENTRYWISEMAP_HPP
 
+#include "El/core/DistMatrix/AbstractDistMatrix.hpp"
+
 namespace El {
 
 template<typename T>

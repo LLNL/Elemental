@@ -2,6 +2,7 @@
 #define EL_CORE_ABSTRACTMATRIX_IMPL_HPP_
 
 #include "decl.hpp"
+#include <El/blas_like/level1/decl.hpp>
 
 namespace El
 {
@@ -266,7 +267,7 @@ AbstractMatrix<T>&
 AbstractMatrix<T>::operator=(AbstractMatrix<T> const& A)
 {
     EL_DEBUG_CSE;
-    Copy(A, *this);
+    ::El::Copy(A, *this);
     return *this;
 }
 

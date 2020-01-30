@@ -106,7 +106,7 @@ void Transpose( const Matrix<T>& A, Matrix<T>& B, bool conjugate )
 #ifdef HYDROGEN_HAVE_MKL
     Orientation orient = ( conjugate ? ADJOINT : TRANSPOSE );
     mkl::omatcopy
-    ( orient, m, n, T(1), A.LockedBuffer(), A.LDim(), B.Buffer(), B.LDim() );
+    ( orient, m, n, T(1.0), A.LockedBuffer(), A.LDim(), B.Buffer(), B.LDim() );
 #else
     // OpenBLAS's {i,o}matcopy routines where disabled for the reasons detailed
     // in src/core/imports/openblas.cpp
