@@ -24,7 +24,7 @@ find_library(ROCBLAS_LIBRARY rocblas
   NO_DEFAULT_PATH
   DOC "The rocBLAS library.")
 find_library(ROCBLAS_LIBRARY rocblas)
-  
+
 # Standard handling of the package arguments
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Rocblas
@@ -36,7 +36,8 @@ endif ()
 
 if (ROCBLAS_INCLUDE_PATH AND ROCBLAS_LIBRARY)
   set_target_properties(rocblas::rocblas PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${ROCBLAS_INCLUDE_PATH}"
+    INTERFACE_INCLUDE_DIRECTORIES
+    "${ROCBLAS_INCLUDE_PATH};/opt/rocm/hsa/include;/opt/rocm/hip/include"
     INTERFACE_LINK_LIBRARIES "${ROCBLAS_LIBRARY}")
 endif ()
 
