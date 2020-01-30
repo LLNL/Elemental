@@ -274,7 +274,7 @@ main(int argc, char* argv[])
         ComplainIfDebug();
         OutputFromRoot(g.Comm(),"Will test Gemm",transA,transB);
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
         if (testGPU)
         {
 #ifdef HYDROGEN_GPU_USE_FP16
