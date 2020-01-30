@@ -546,6 +546,9 @@ target_link_libraries(
   $<TARGET_NAME_IF_EXISTS:cuda::toolkit>
   )
 
+target_compile_definitions(Hydrogen_CXX PUBLIC
+  "-D__HIP_PLATFORM_HCC__")
+
 # Add the CXX library to "Hydrogen"
 set(HYDROGEN_LIBRARIES Hydrogen_CXX)
 
@@ -572,7 +575,8 @@ if (HYDROGEN_HAVE_ROCM)
   target_include_directories(Hydrogen_ROCM PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
-    $<INSTALL_INTERFACE:include>)
+    $<INSTALL_INTERFACE:include>
+    )
 
   target_link_libraries(Hydrogen_ROCM PUBLIC
     ${HALF_LIBRARIES}
@@ -580,6 +584,7 @@ if (HYDROGEN_HAVE_ROCM)
     )
 
   #set_target_properties(Hydrogen_ROCM PROPERTIES LINKER_LANGUAGE CXX)
+  list(APPEND HYDROGEN_LIBRARIES Hydrogen_ROCM)
 endif ()
 
 # Setup the tests
