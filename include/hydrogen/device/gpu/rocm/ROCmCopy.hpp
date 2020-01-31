@@ -93,12 +93,25 @@ void Copy2DToHost(T const* src, size_t src_ldim,
             hipMemcpyDeviceToHost, src_si.Stream()));
 }
 
+#define PRINT_VAR(var)                          \
+    std::cout << #var ": " << var << std::endl
+
 template <typename T>
 void Copy2DToDevice(T const* src, size_t src_ldim,
                     T* dest, size_t dest_ldim,
                     size_t height, size_t width,
                     SyncInfo<Device::GPU> const& dest_si)
 {
+    if (height == 0UL || width == 0UL)
+        return;
+
+    PRINT_VAR(src);
+    PRINT_VAR(src_ldim);
+    PRINT_VAR(dest);
+    PRINT_VAR(dest_ldim);
+    PRINT_VAR(height);
+    PRINT_VAR(width);
+    PRINT_VAR(dest_si.Stream());
     H_CHECK_HIP(
         hipMemcpy2DAsync(
             dest, dest_ldim*sizeof(T),
