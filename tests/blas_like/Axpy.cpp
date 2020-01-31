@@ -181,7 +181,7 @@ main(int argc, char* argv[])
         // Message
         OutputFromRoot(g.Comm(),"Testing Axpy");
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
         if (testGPU)
         {
             TestAxpy<float,Device::GPU>(
@@ -191,7 +191,7 @@ main(int argc, char* argv[])
         }
 #else
         (void)testGPU;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
         // Run tests
         if (testCPU)
         {

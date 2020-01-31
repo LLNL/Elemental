@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
             El::Output("grid is ",grid.Height()," x ",grid.Width());
 
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
         if (testGPU)
         {
             TestGemm<float,El::Device::GPU>
@@ -285,7 +285,7 @@ int main(int argc, char *argv[])
         }
 #else
         (void) testGPU;
-#endif // HYDROGEN_ENABLE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 
         TestGemm<float,El::Device::CPU>
             (m, n, k, grid, testSequential, instrument);

@@ -67,6 +67,28 @@ void TestAssociativity
         OutputFromRoot(g.Comm(),"Finished in ",runTime,                 \
                      " seconds (",gFlops," GFlop/s)");                  \
     }
+#elif defined(HYDROGEN_HAVE_ROCM)
+#define START_CUDA_TIMER                                  \
+    if (D == Device::GPU)                                 \
+        hipEventRecord(start, rocm::GetDefaultStream());
+
+#define STOP_CUDA_TIMER                                         \
+    if (D == Device::GPU)                                       \
+    {                                                           \
+        hipEventRecord(stop, rocm::GetDefaultStream());        \
+        hipEventSynchronize(stop);                             \
+        hipEventElapsedTime(&cudaTime, start, stop);           \
+    }
+
+#define SUMMARIZE_CUDA_TIMER                                            \
+    if (D == Device::GPU)                                               \
+    {                                                                   \
+        runTime = cudaTime * 1e-3;                                      \
+        realGFlops = 2.*double(m)*double(n)*double(k)/(1.e9*runTime);   \
+        gFlops = (IsComplex<T>::value ? 4*realGFlops : realGFlops);     \
+        OutputFromRoot(g.Comm(),"Finished in ",runTime,                 \
+                     " seconds (",gFlops," GFlop/s)");                  \
+    }
 
 #else
 #define START_CUDA_TIMER do {} while (false)
@@ -113,10 +135,16 @@ void TestGemm
     }
 
     Timer timer;
+#ifdef HYDROGEN_HAVE_GPU
 #ifdef HYDROGEN_HAVE_CUDA
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
+#elif defined(HYDROGEN_HAVE_ROCM)
+    hipEvent_t start, stop;
+    hipEventCreate(&start);
+    hipEventCreate(&stop);
+#endif
     float cudaTime;
 
     // Warmup run -- doesn't matter in CPU land
@@ -178,6 +206,7 @@ void TestGemm
     if (correctness)
         TestAssociativity(orientA, orientB, alpha, A, B, beta, COrig, C, print);
     PopIndent();
+    flush(std::cout);
 
     // Test the variant of Gemm that keeps C stationary
     C = COrig;
@@ -203,6 +232,7 @@ void TestGemm
         TestAssociativity
             (orientA, orientB, alpha, A, B, beta, COrig, C, print);
     PopIndent();
+    flush(std::cout);
 
     if (orientA == NORMAL && orientB == NORMAL)
     {
@@ -232,11 +262,15 @@ void TestGemm
             TestAssociativity
                 (orientA, orientB, alpha, A, B, beta, COrig, C, print);
         PopIndent();
+        flush(std::cout);
     }
     PopIndent();
 #ifdef HYDROGEN_HAVE_CUDA
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
+#elif defined(HYDROGEN_HAVE_ROCM)
+    hipEventDestroy(start);
+    hipEventDestroy(stop);
 #endif
     flush(std::cout);
 }
