@@ -3,6 +3,8 @@
 #include <hydrogen/device/GPU.hpp>
 #include <hydrogen/device/gpu/ROCm.hpp>
 
+#include <El/core/MemoryPool.hpp>
+
 namespace hydrogen
 {
 namespace gpu
@@ -13,7 +15,7 @@ namespace
 hipStream_t GetNewStream()
 {
     hipStream_t stream;
-    H_CHECK_HIP(hipStreamCreate(&stream));//, hipStreamNonBlocking));
+    H_CHECK_HIP(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
     return stream;
 }
 
@@ -84,7 +86,7 @@ void Initialize()
 
 void Finalize()
 {
-    //El::DestroyPinnedHostMemoryPool(); // FIXME
+    El::DestroyPinnedHostMemoryPool();
     DestroySyncInfo(default_syncinfo_);
     rocm_initialized_ = false;
 }
