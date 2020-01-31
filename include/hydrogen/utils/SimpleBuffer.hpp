@@ -75,7 +75,7 @@ void setBufferToValue(T* buffer, size_t size, T const& value,
     gpu::Fill1DBuffer(buffer, size, value, syncInfo);
     AddSynchronizationPoint(syncInfo);
 }
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
 }// namespace details
 
 
