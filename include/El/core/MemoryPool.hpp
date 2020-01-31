@@ -28,7 +28,7 @@ void ThrowRuntimeError(Args&&... args)
     (void) dummy;
     throw std::runtime_error(oss.str());
 }
-}
+} // namespace details
 
 /** Simple caching memory pool.
  *  This maintains a set of bins that contain allocations of a fixed size.
@@ -251,7 +251,7 @@ inline void MemoryPool<false>::do_free(void* ptr)
 MemoryPool<true>& PinnedHostMemoryPool();
 /** Destroy singleton instance of CUDA pinned host memory pool. */
 void DestroyPinnedHostMemoryPool();
-#endif  // HYDROGEN_HAVE_CUDA
+#endif  // HYDROGEN_HAVE_GPU
 /** Get singleton instance of host memory pool. */
 MemoryPool<false>& HostMemoryPool();
 /** Destroy singleton instance of host memory pool. */

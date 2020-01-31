@@ -65,7 +65,7 @@ void Broadcast( AbstractMatrix<T>& A, mpi::Comm const& comm, int rank )
         Broadcast_impl(static_cast<Matrix<T,Device::GPU>&>(A),
                        std::move(comm), rank);
         break;
-#endif // HYROGEN_HAVE_CUDA
+#endif // HYROGEN_HAVE_GPU
     default:
         LogicError("Unsupported device type.");
     }

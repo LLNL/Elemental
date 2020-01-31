@@ -250,21 +250,10 @@ void InterleaveMatrix(
 {
     if (colStrideA == 1 && colStrideB == 1)
     {
-#if defined(HYDROGEN_HAVE_CUDA)
-        H_CHECK_CUDA(
-            cudaMemcpy2DAsync(B, rowStrideB*sizeof(T),
-                              A, rowStrideA*sizeof(T),
-                              height*sizeof(T), width,
-                              cudaMemcpyDeviceToDevice,
-                              syncInfo.Stream()));
-#elif defined(HYDROGEN_HAVE_HIP)
-        H_CHECK_HIP(
-            hipMemcpy2DAsync(B, rowStrideB*sizeof(T),
-                             A, rowStrideA*sizeof(T),
-                             height*sizeof(T), width,
-                             hipMemcpyDeviceToDevice,
-                             syncInfo.Stream()));
-#endif
+        gpu::Copy2DIntraDevice(A, rowStrideA,
+                               B, rowStrideB,
+                               height, width,
+                               syncInfo);
     }
     else
     {
@@ -287,21 +276,12 @@ void RowStridedPack(
     {
         const Int rowShift = Shift_(k, rowAlign, rowStride);
         const Int localWidth = Length_(width, rowShift, rowStride);
-#if defined(HYDROGEN_HAVE_CUDA)
-        H_CHECK_CUDA(
-            cudaMemcpy2DAsync(BPortions + k*portionSize, height*sizeof(T),
-                              A+rowShift*ALDim, rowStride*ALDim*sizeof(T),
-                              height*sizeof(T), localWidth,
-                              cudaMemcpyDeviceToDevice,
-                              syncInfo.Stream()));
-#elif defined(HYDROGEN_HAVE_ROCM)
-        H_CHECK_HIP(
-            hipMemcpy2DAsync(BPortions + k*portionSize, height*sizeof(T),
-                             A+rowShift*ALDim, rowStride*ALDim*sizeof(T),
-                             height*sizeof(T), localWidth,
-                             hipMemcpyDeviceToDevice,
-                             syncInfo.Stream()));
-#endif
+
+        gpu::Copy2DIntraDevice(
+            A+rowShift*ALDim, rowStride*ALDim,
+            BPortions + k*portionSize, height,
+            height, localWidth,
+            syncInfo);
     }
 }
 
@@ -317,21 +297,11 @@ void RowStridedUnpack(
     {
         const Int rowShift = Shift_(k, rowAlign, rowStride);
         const Int localWidth = Length_(width, rowShift, rowStride);
-#if defined(HYDROGEN_HAVE_CUDA)
-        H_CHECK_CUDA(
-            cudaMemcpy2DAsync(B+rowShift*BLDim, rowStride*BLDim*sizeof(T),
-                              APortions+k*portionSize, height*sizeof(T),
-                              height*sizeof(T), localWidth,
-                              cudaMemcpyDeviceToDevice,
-                              syncInfo.Stream()));
-#elif defined(HYDROGEN_HAVE_ROCM)
-        H_CHECK_HIP(
-            hipMemcpy2DAsync(B+rowShift*BLDim, rowStride*BLDim*sizeof(T),
-                             APortions+k*portionSize, height*sizeof(T),
-                             height*sizeof(T), localWidth,
-                             hipMemcpyDeviceToDevice,
-                             syncInfo.Stream()));
-#endif
+        gpu::Copy2DIntraDevice(
+            APortions+k*portionSize, height,
+            B+rowShift*BLDim, rowStride*BLDim,
+            height, localWidth,
+            syncInfo);
     }
 }
 
@@ -351,21 +321,12 @@ void PartialRowStridedPack(
                                     rowAlign, rowStride);
         const Int rowOffset = (rowShift-rowShiftA) / rowStridePart;
         const Int localWidth = Length_(width, rowShift, rowStride);
-#if defined(HYDROGEN_HAVE_CUDA)
-        H_CHECK_CUDA(cudaMemcpy2DAsync(
-                         BPortions + k*portionSize, height*sizeof(T),
-                         A + rowOffset*ALDim, rowStrideUnion*ALDim*sizeof(T),
-                         height*sizeof(T), localWidth,
-                         cudaMemcpyDeviceToDevice,
-                         syncInfo.Stream()));
-#elif defined(HYDROGEN_HAVE_ROCM)
-        H_CHECK_HIP(hipMemcpy2DAsync(
-                        BPortions + k*portionSize, height*sizeof(T),
-                        A + rowOffset*ALDim, rowStrideUnion*ALDim*sizeof(T),
-                        height*sizeof(T), localWidth,
-                        hipMemcpyDeviceToDevice,
-                        syncInfo.Stream()));
-#endif
+
+        gpu::Copy2DIntraDevice(
+            A + rowOffset*ALDim, rowStrideUnion*ALDim,
+            BPortions + k*portionSize, height,
+            height, localWidth,
+            syncInfo);
     }
 }
 
@@ -385,21 +346,11 @@ void PartialRowStridedUnpack(
                                     rowAlign, rowStride);
         const Int rowOffset = (rowShift-rowShiftB) / rowStridePart;
         const Int localWidth = Length_(width, rowShift, rowStride);
-#if defined(HYDROGEN_HAVE_CUDA)
-        H_CHECK_CUDA(cudaMemcpy2DAsync(
-                         B + rowOffset*BLDim, rowStrideUnion*BLDim*sizeof(T),
-                         APortions + k*portionSize, height*sizeof(T),
-                         height*sizeof(T), localWidth,
-                         cudaMemcpyDeviceToDevice,
-                         syncInfo.Stream()));
-#elif defined(HYDROGEN_HAVE_ROCM)
-        H_CHECK_HIP(hipMemcpy2DAsync(
-                        B + rowOffset*BLDim, rowStrideUnion*BLDim*sizeof(T),
-                        APortions + k*portionSize, height*sizeof(T),
-                        height*sizeof(T), localWidth,
-                        hipMemcpyDeviceToDevice,
-                        syncInfo.Stream()));
-#endif
+        gpu::Copy2DIntraDevice(
+            APortions + k*portionSize, height,
+            B + rowOffset*BLDim, rowStrideUnion*BLDim,
+            height, localWidth,
+            syncInfo);
     }
 }
 

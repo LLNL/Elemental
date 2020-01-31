@@ -64,33 +64,22 @@ Matrix<T, Device::CPU>::Matrix(Matrix<T, Device::CPU> const& A)
     ::El::Copy(A, *this);
 }
 
-#if defined(HYDROGEN_HAVE_CUDA)
+#ifdef HYDROGEN_HAVE_GPU
 template <typename T>
 Matrix<T, Device::CPU>::Matrix(Matrix<T, Device::GPU> const& A)
     : Matrix{A.Height(), A.Width(), A.LDim()}
 {
     EL_DEBUG_CSE;
-    auto stream = gpu::DefaultSyncInfo().Stream();
-    H_CHECK_CUDA(cudaMemcpy2DAsync(data_, this->LDim()*sizeof(T),
-                                    A.LockedBuffer(), A.LDim()*sizeof(T),
-                                    A.Height()*sizeof(T), A.Width(),
-                                    cudaMemcpyDeviceToHost,
-                                    stream));
-    H_CHECK_CUDA(cudaStreamSynchronize(stream));
-}
-#elif defined(HYDROGEN_HAVE_ROCM)
-template <typename T>
-Matrix<T, Device::CPU>::Matrix(Matrix<T, Device::GPU> const& A)
-    : Matrix{A.Height(), A.Width(), A.LDim()}
-{
-    EL_DEBUG_CSE;
-    auto stream = gpu::DefaultSyncInfo().Stream();
-    H_CHECK_HIP(hipMemcpy2DAsync(data_, this->LDim()*sizeof(T),
-                                    A.LockedBuffer(), A.LDim()*sizeof(T),
-                                    A.Height()*sizeof(T), A.Width(),
-                                    hipMemcpyDeviceToHost,
-                                    stream));
-    H_CHECK_HIP(hipStreamSynchronize(stream));
+    auto syncinfo = SyncInfoFromMatrix(A);
+    gpu::Copy2DToHost(
+        A.LockedBuffer(), A.LDim(),
+        data_, this->LDim(),
+        A.Height(), A.Width(),
+        syncinfo);
+
+    // Cannot exit until this method has finished or matrix data might
+    // be invalid.
+    Synchronize(syncinfo);
 }
 #endif // HYDROGEN_HAVE_GPU
 

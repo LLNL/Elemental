@@ -56,35 +56,21 @@ Matrix<T, Device::GPU>::Matrix(Matrix<T, Device::GPU> const& A)
     ::El::Copy(A, *this);
 }
 
-#if defined(HYDROGEN_HAVE_CUDA)
 template <typename T>
 Matrix<T, Device::GPU>::Matrix(Matrix<T, Device::CPU> const& A)
     : Matrix{A.Height(), A.Width(), A.LDim()}
 {
     EL_DEBUG_CSE;
-    auto stream = this->GetSyncInfo().Stream();
-    H_CHECK_CUDA(cudaMemcpy2DAsync(data_, this->LDim()*sizeof(T),
-                                    A.LockedBuffer(), A.LDim()*sizeof(T),
-                                    A.Height()*sizeof(T), A.Width(),
-                                    cudaMemcpyHostToDevice,
-                                    stream));
-    H_CHECK_CUDA(cudaStreamSynchronize(stream));
+    auto syncinfo = SyncInfoFromMatrix(*this);
+
+    gpu::Copy2DToDevice(
+        A.LockedBuffer(), A.LDim(),
+        data_, this->LDim(),
+        A.Height(), A.Width(),
+        syncinfo);
+
+    Synchronize(syncinfo);
 }
-#elif defined(HYDROGEN_HAVE_ROCM)
-template <typename T>
-Matrix<T, Device::GPU>::Matrix(Matrix<T, Device::CPU> const& A)
-    : Matrix{A.Height(), A.Width(), A.LDim()}
-{
-    EL_DEBUG_CSE;
-    auto stream = this->GetSyncInfo().Stream();
-    H_CHECK_HIP(hipMemcpy2DAsync(data_, this->LDim()*sizeof(T),
-                                    A.LockedBuffer(), A.LDim()*sizeof(T),
-                                    A.Height()*sizeof(T), A.Width(),
-                                    hipMemcpyHostToDevice,
-                                    stream));
-    H_CHECK_HIP(hipStreamSynchronize(stream));
-}
-#endif // HYDROGEN_HAVE_CUDA
 
 template <typename T>
 Matrix<T, Device::GPU>&
@@ -290,19 +276,10 @@ T Matrix<T, Device::GPU>::Get(Int i, Int j) const
 #endif
     if (i == END) i = this->Height() - 1;
     if (j == END) j = this->Width() - 1;
-    auto stream = this->GetSyncInfo().Stream();
+    auto syncinfo = SyncInfoFromMatrix(*this);
     T val;
-#if defined(HYDROGEN_HAVE_CUDA)
-    H_CHECK_CUDA(cudaMemcpyAsync( &val, &data_[i+j*this->LDim()],
-                                   sizeof(T), cudaMemcpyDeviceToHost,
-                                   stream ));
-    H_CHECK_CUDA(cudaStreamSynchronize(stream));
-#elif defined(HYDROGEN_HAVE_ROCM)
-    H_CHECK_HIP(hipMemcpyAsync( &val, &data_[i+j*this->LDim()],
-                                   sizeof(T), hipMemcpyDeviceToHost,
-                                   stream ));
-    H_CHECK_HIP(hipStreamSynchronize(stream));
-#endif
+    gpu::Copy1DToHost(&data_[i+j*this->LDim()], &val, 1, syncinfo);
+    Synchronize(syncinfo);
     return val;
 }
 
@@ -342,17 +319,10 @@ void Matrix<T, Device::GPU>::Set(Int i, Int j, T const& alpha)
 #endif
     if (i == END) i = this->Height() - 1;
     if (j == END) j = this->Width() - 1;
-#if defined(HYDROGEN_HAVE_CUDA)
-    H_CHECK_CUDA(cudaMemcpyAsync(&data_[i+j*this->LDim()], &alpha,
-                                 sizeof(T), cudaMemcpyHostToDevice,
-                                 GetSyncInfo().Stream() ));
-    H_CHECK_CUDA(cudaStreamSynchronize(GetSyncInfo().Stream()));
-#elif defined(HYDROGEN_HAVE_ROCM)
-    H_CHECK_HIP(hipMemcpyAsync(&data_[i+j*this->LDim()], &alpha,
-                                 sizeof(T), hipMemcpyHostToDevice,
-                                 GetSyncInfo().Stream() ));
-    H_CHECK_HIP(hipStreamSynchronize(GetSyncInfo().Stream()));
-#endif
+
+    auto syncinfo = SyncInfoFromMatrix(*this);
+    gpu::Copy1DToDevice(&alpha, &data_[i+j*this->LDim()], 1, syncinfo);
+    Synchronize(syncinfo);
 }
 
 template <typename T>
