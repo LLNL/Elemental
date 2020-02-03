@@ -28,6 +28,9 @@ template <typename T>
 void Fill1DBuffer(T* buffer, size_t num_elements, T value,
                   SyncInfo<Device::GPU> const& si)
 {
+    if (num_elements == 0UL)
+        return;
+
     Fill_GPU_1D_impl(buffer, num_elements, value, si.Stream());
 }
 
@@ -36,6 +39,9 @@ void Copy1DIntraDevice(T const* H_RESTRICT src, T* H_RESTRICT dest,
                        size_t num_elements,
                        SyncInfo<Device::GPU> const& si)
 {
+    if (num_elements == 0UL)
+        return;
+
     H_CHECK_HIP(
         hipMemcpyAsync(
             dest, src, num_elements*sizeof(T),
@@ -47,6 +53,9 @@ void Copy1DToHost(T const* H_RESTRICT src, T* H_RESTRICT dest,
                   size_t num_elements,
                   SyncInfo<Device::GPU> const& src_si)
 {
+    if (num_elements == 0UL)
+        return;
+
     H_CHECK_HIP(
         hipMemcpyAsync(
             dest, src, num_elements*sizeof(T),
@@ -58,12 +67,14 @@ void Copy1DToDevice(T const* H_RESTRICT src, T* H_RESTRICT dest,
                     size_t num_elements,
                     SyncInfo<Device::GPU> const& dest_si)
 {
+    if (num_elements == 0UL)
+        return;
+
     H_CHECK_HIP(
         hipMemcpyAsync(
             dest, src, num_elements*sizeof(T),
             hipMemcpyHostToDevice, dest_si.Stream()));
 }
-
 
 template <typename T>
 void Copy2DIntraDevice(T const* src, size_t src_ldim,
@@ -71,6 +82,9 @@ void Copy2DIntraDevice(T const* src, size_t src_ldim,
                        size_t height, size_t width,
                        SyncInfo<Device::GPU> const& si)
 {
+    if (height == 0UL || width == 0UL)
+        return;
+
     H_CHECK_HIP(
         hipMemcpy2DAsync(
             dest, dest_ldim*sizeof(T),
@@ -85,6 +99,9 @@ void Copy2DToHost(T const* src, size_t src_ldim,
                   size_t height, size_t width,
                   SyncInfo<Device::GPU> const& src_si)
 {
+    if (height == 0UL || width == 0UL)
+        return;
+
     H_CHECK_HIP(
         hipMemcpy2DAsync(
             dest, dest_ldim*sizeof(T),
