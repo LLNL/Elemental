@@ -18,11 +18,14 @@ set(HYDROGEN_MPI_CXX_COMPILER "@MPI_CXX_COMPILER@")
 set(MPI_CXX_COMPILER "${HYDROGEN_MPI_CXX_COMPILER}"
   CACHE FILEPATH "The MPI CXX compiler.")
 
-set(_OpenMP_DIR "@OpenMP_DIR@")
-if (NOT OpenMP_DIR)
-  set(OpenMP_DIR "${_OpenMP_DIR}")
-endif ()
-include (FindAndVerifyOpenMP)
+set(_HYDROGEN_HAVE_OPENMP @EL_HAVE_OPENMP@)
+if (_HYDROGEN_HAVE_OPENMP)
+  set(_OpenMP_DIR "@OpenMP_DIR@")
+  if (NOT OpenMP_DIR)
+    set(OpenMP_DIR "${_OpenMP_DIR}")
+  endif ()
+  include (FindAndVerifyOpenMP)
+endif (_HYDROGEN_HAVE_OPENMP)
 # FIXME: I should do verification to make sure all found features are
 #   the same.
 include (FindAndVerifyMPI)
@@ -55,6 +58,16 @@ if (_HYDROGEN_HAVE_ALUMINUM)
       "but Aluminum does not have MPI-CUDA support.")
   endif ()
 endif (_HYDROGEN_HAVE_ALUMINUM)
+
+# ROCm
+set(_HYDROGEN_HAVE_ROCM @HYDROGEN_HAVE_ROCM@)
+if (_HYDROGEN_HAVE_ROCM)
+  find_package(HIP REQUIRED)
+  find_package(ROCBLAS REQUIRED)
+
+  # query this beforehand, to set to what it was?
+  set(CMAKE_CXX_EXTENSIONS FALSE)
+endif (_HYDROGEN_HAVE_ROCM)
 
 # CUDA!
 set(_HYDROGEN_HAVE_CUDA @HYDROGEN_HAVE_CUDA@)

@@ -432,19 +432,19 @@ if (Hydrogen_ENABLE_ALUMINUM)
     set(HYDROGEN_HAVE_ALUMINUM TRUE)
     message(STATUS "Found Aluminum: ${Aluminum_DIR}")
 
-    if (HYDROGEN_HAVE_CUDA AND AL_HAS_NCCL)
+    if (HYDROGEN_HAVE_GPU AND AL_HAS_NCCL)
       set(HYDROGEN_HAVE_NCCL2 TRUE)
       message(STATUS "Aluminum detected with NCCL2 backend support.")
     else ()
       set(HYDROGEN_HAVE_NCCL2 FALSE)
-    endif (HYDROGEN_HAVE_CUDA AND AL_HAS_NCCL)
+    endif (HYDROGEN_HAVE_GPU AND AL_HAS_NCCL)
 
-    if (HYDROGEN_HAVE_CUDA AND AL_HAS_MPI_CUDA)
+    if (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
       set(HYDROGEN_HAVE_AL_MPI_CUDA TRUE)
       message(STATUS "Aluminum detected with MPI-CUDA backend support.")
     else ()
       set(HYDROGEN_HAVE_AL_MPI_CUDA FALSE)
-    endif (HYDROGEN_HAVE_CUDA AND AL_HAS_MPI_CUDA)
+    endif (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
   else ()
     set(HYDROGEN_HAVE_ALUMINUM FALSE)
     set(HYDROGEN_HAVE_NCCL2 FALSE)
@@ -553,6 +553,12 @@ target_link_libraries(
   $<TARGET_NAME_IF_EXISTS:EP::extended_precision>
   $<TARGET_NAME_IF_EXISTS:cuda::toolkit>
   )
+if (Hydrogen_ENABLE_ROCM)
+  target_link_libraries(
+    Hydrogen_CXX PUBLIC
+    /opt/rocm/hip/lib/libhip_hcc.so
+    )
+endif (Hydrogen_ENABLE_ROCM)
 
 target_compile_definitions(Hydrogen_CXX PUBLIC
   "-D__HIP_PLATFORM_HCC__")

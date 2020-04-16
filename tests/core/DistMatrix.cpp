@@ -20,6 +20,7 @@ Check(DistMatrix<T,AColDist,ARowDist,ELEMENT,ADevice>& A,
 
     const Int height = B.Height();
     const Int width = B.Width();
+    SyncInfo<Device::CPU> cpu_si;
 
     OutputFromRoot
     (g.Comm(),
@@ -29,8 +30,8 @@ Check(DistMatrix<T,AColDist,ARowDist,ELEMENT,ADevice>& A,
      ",",DeviceName<BDevice>(),"]");
     Int colAlign = SampleUniform<Int>(0,A.ColStride());
     Int rowAlign = SampleUniform<Int>(0,A.RowStride());
-    mpi::Broadcast(colAlign, 0, g.Comm());
-    mpi::Broadcast(rowAlign, 0, g.Comm());
+    mpi::Broadcast(colAlign, 0, g.Comm(), cpu_si);
+    mpi::Broadcast(rowAlign, 0, g.Comm(), cpu_si);
     A.Align(colAlign, rowAlign);
     A = B;
     if (A.Height() != B.Height() || A.Width() != B.Width())
@@ -54,7 +55,7 @@ Check(DistMatrix<T,AColDist,ARowDist,ELEMENT,ADevice>& A,
     }
 
     Int summedErrorFlag;
-    mpi::AllReduce(&myErrorFlag, &summedErrorFlag, 1, mpi::SUM, g.Comm());
+    mpi::AllReduce(&myErrorFlag, &summedErrorFlag, 1, mpi::SUM, g.Comm(), cpu_si);
 
     if (summedErrorFlag == 0)
     {
@@ -66,7 +67,7 @@ Check(DistMatrix<T,AColDist,ARowDist,ELEMENT,ADevice>& A,
     }
     else
     {
-        OutputFromRoot(g.Comm(),"FAILED");
+        OutputFromRoot(g.Comm(),"FAILED (", summedErrorFlag," ranks failed)");
         if (print)
             Print(A, "A");
         if (print)
@@ -83,6 +84,11 @@ void CheckAll_device(DistMatrix<T,U,V,ELEMENT,D>& A, bool print)
     {
       DistMatrix<T,CIRC,CIRC,ELEMENT,CopyD> A_CIRC_CIRC(A.Grid());
       Check(A_CIRC_CIRC, A, print);
+    }
+
+    if (D == Device::GPU)
+    {
+        hydrogen::break_on_me();
     }
 
     {
@@ -177,10 +183,12 @@ template<typename T,Dist U,Dist V,Device D>
 void CheckAll(Int m, Int n, const Grid& grid, bool print)
 {
     DistMatrix<T,U,V,ELEMENT,D> A(grid);
+    SyncInfo<Device::CPU> cpu_si;
+
     Int colAlign = SampleUniform<Int>(0,A.ColStride());
     Int rowAlign = SampleUniform<Int>(0,A.RowStride());
-    mpi::Broadcast(colAlign, 0, grid.Comm());
-    mpi::Broadcast(rowAlign, 0, grid.Comm());
+    mpi::Broadcast(colAlign, 0, grid.Comm(), cpu_si);
+    mpi::Broadcast(rowAlign, 0, grid.Comm(), cpu_si);
     A.Align(colAlign, rowAlign);
 
     const T center = 0;
@@ -189,7 +197,7 @@ void CheckAll(Int m, Int n, const Grid& grid, bool print)
 
     CheckAll_device<Device::CPU>(A, print);
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     CheckAll_device<Device::GPU>(A, print);
 #endif
 }
@@ -240,7 +248,7 @@ DistMatrixTest(Int m, Int n, const Grid& grid, bool print)
 
     DistMatrixTest_device<T,Device::CPU>(m,n,grid,print);
 
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     DistMatrixTest_device<T,Device::GPU>(m,n,grid,print);
 #endif
 }
@@ -251,58 +259,63 @@ main(int argc, char* argv[])
     Environment env(argc, argv);
     mpi::Comm comm = mpi::NewWorldComm();
 
-    try
+    int gridHeight = Input("--gridHeight","height of process grid",0);
+    const bool colMajor = Input("--colMajor","column-major ordering?",true);
+    const Int m = Input("--height","height of matrix",50);
+    const Int n = Input("--width","width of matrix",50);
+    const bool print = Input("--print","print wrong matrices?",false);
+    const bool debug = Input("--debug","wait for debugger?",false);
+    ProcessInput();
+    PrintInputReport();
+
+    if (gridHeight == 0)
+        gridHeight = Grid::DefaultHeight(mpi::Size(comm));
+    const GridOrder order = colMajor ? COLUMN_MAJOR : ROW_MAJOR;
+    const Grid grid(std::move(comm), gridHeight, order);
+
+    if (debug)
     {
-        int gridHeight = Input("--gridHeight","height of process grid",0);
-        const bool colMajor = Input("--colMajor","column-major ordering?",true);
-        const Int m = Input("--height","height of matrix",50);
-        const Int n = Input("--width","width of matrix",50);
-        const bool print = Input("--print","print wrong matrices?",false);
-        ProcessInput();
-        PrintInputReport();
+        volatile int x = 1;
+        while (x) {
+            hydrogen::break_on_me();
+        };
+    }
 
-        if (gridHeight == 0)
-            gridHeight = Grid::DefaultHeight(mpi::Size(comm));
-        const GridOrder order = colMajor ? COLUMN_MAJOR : ROW_MAJOR;
-        const Grid grid(std::move(comm), gridHeight, order);
+    DistMatrixTest<Int>(m, n, grid, print);
 
-        DistMatrixTest<Int>(m, n, grid, print);
+    DistMatrixTest<float>(m, n, grid, print);
+    DistMatrixTest<Complex<float>>(m, n, grid, print);
 
-        DistMatrixTest<float>(m, n, grid, print);
-        DistMatrixTest<Complex<float>>(m, n, grid, print);
-
-        DistMatrixTest<double>(m, n, grid, print);
-        DistMatrixTest<Complex<double>>(m, n, grid, print);
+    DistMatrixTest<double>(m, n, grid, print);
+    DistMatrixTest<Complex<double>>(m, n, grid, print);
 
 #ifdef EL_HAVE_QD
-        DistMatrixTest<DoubleDouble>(m, n, grid, print);
-        DistMatrixTest<QuadDouble>(m, n, grid, print);
+    DistMatrixTest<DoubleDouble>(m, n, grid, print);
+    DistMatrixTest<QuadDouble>(m, n, grid, print);
 #endif
 
 #ifdef EL_HAVE_QUAD
-        DistMatrixTest<Quad>(m, n, grid, print);
-        DistMatrixTest<Complex<Quad>>(m, n, grid, print);
+    DistMatrixTest<Quad>(m, n, grid, print);
+    DistMatrixTest<Complex<Quad>>(m, n, grid, print);
 #endif
 
 #ifdef HYDROGEN_HAVE_HALF
-        DistMatrixTest<cpu_half_type>(m, n, grid, print);
+    DistMatrixTest<cpu_half_type>(m, n, grid, print);
 #endif
 
 #ifdef EL_HAVE_MPC
-        DistMatrixTest<BigInt>(m, n, grid, print);
-        OutputFromRoot(g.Comm(),"Setting BigInt precision to 512 bits");
-        mpfr::SetMinIntBits(512);
-        DistMatrixTest<BigInt>(m, n, grid, print);
+    DistMatrixTest<BigInt>(m, n, grid, print);
+    OutputFromRoot(g.Comm(),"Setting BigInt precision to 512 bits");
+    mpfr::SetMinIntBits(512);
+    DistMatrixTest<BigInt>(m, n, grid, print);
 
-        DistMatrixTest<BigFloat>(m, n, grid, print);
-        DistMatrixTest<Complex<BigFloat>>(m, n, grid, print);
-        OutputFromRoot(g.Comm(),"Setting BigFloat precision to 512 bits");
-        mpfr::SetPrecision(512);
-        DistMatrixTest<BigFloat>(m, n, grid, print);
-        DistMatrixTest<Complex<BigFloat>>(m, n, grid, print);
+    DistMatrixTest<BigFloat>(m, n, grid, print);
+    DistMatrixTest<Complex<BigFloat>>(m, n, grid, print);
+    OutputFromRoot(g.Comm(),"Setting BigFloat precision to 512 bits");
+    mpfr::SetPrecision(512);
+    DistMatrixTest<BigFloat>(m, n, grid, print);
+    DistMatrixTest<Complex<BigFloat>>(m, n, grid, print);
 #endif
-    }
-    catch(std::exception& e) { ReportException(e); }
 
     return 0;
 }
