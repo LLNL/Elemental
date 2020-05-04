@@ -477,6 +477,10 @@ public:
     SyncInfo<Device::GPU> GetSyncInfo() const EL_NO_EXCEPT;
     void SetSyncInfo(SyncInfo<Device::GPU> const&) EL_NO_EXCEPT;
 
+    void UpdateMemSyncInfo() EL_NO_EXCEPT
+    {
+        memory_.ResetSyncInfo(SyncInfoFromMatrix(*this));
+    }
     ///@}
 
 private:

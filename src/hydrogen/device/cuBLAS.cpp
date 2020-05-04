@@ -134,4 +134,16 @@ std::string BuildcuBLASErrorMessage(
 }
 
 }// namespace cublas
+
+namespace gpu_blas
+{
+void SetPointerMode(PointerMode mode)
+{
+    H_CHECK_CUBLAS(
+        cublasSetPointerMode(cublas::GetLibraryHandle(),
+                             (mode == PointerMode::HOST
+                              ? CUBLAS_POINTER_MODE_HOST
+                              : CUBLAS_POINTER_MODE_DEVICE)));
+}
+}// namespace gpu_blas
 }// namespace hydrogen

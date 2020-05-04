@@ -27,7 +27,7 @@ namespace hydrogen
  *  determined at configure time based on user-input configure options
  *  and/or system interrogation.
  *
- *  @note since HIP is a compatibility layer, it should be
+ *  @note Since HIP is a compatibility layer, it should be
  *  possible to just universally use HIP. However, we wish to allow
  *  the two backends to evolve independently. Thus, it should
  *  theoretically be possible to just universally use the HIP

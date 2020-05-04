@@ -10,6 +10,85 @@
 #include <El/blas_like/level3.hpp>
 #include "El/core/Profiling.hpp"
 
+#if defined(HYDROGEN_HAVE_GPU) && defined(HYDROGEN_HAVE_ALUMINUM)
+#define HYDROGEN_HAVE_MS_GEMM
+#endif
+
+#ifdef HYDROGEN_HAVE_MS_GEMM
+#include "./SyncInfoPool.hpp"
+
+namespace
+{
+size_t GetDefaultSyncPoolSize()
+{
+    char* size_override = getenv("H_STREAMPOOL_SIZE");
+    if (size_override)
+        return std::stoul(size_override);
+    else
+        return 1;
+}
+
+template <
+    El::Collective C, hydrogen::Device D,
+    typename=El::EnableIf<El::IsAluminumSupported<float,D,C>>
+    >
+void InitGrid(El::Grid const& g, hydrogen::SyncInfo<D> const& syncInfo)
+{
+    using Backend = El::BestBackend<float, hydrogen::Device::GPU, C>;
+
+    g.MCComm().template GetComm<Backend>(syncInfo);
+    g.VCComm().template GetComm<Backend>(syncInfo);
+
+    g.MRComm().template GetComm<Backend>(syncInfo);
+    g.VRComm().template GetComm<Backend>(syncInfo);
+
+    g.MDComm().template GetComm<Backend>(syncInfo);
+    g.MDPerpComm().template GetComm<Backend>(syncInfo);
+}
+
+template <
+    El::Collective C, hydrogen::Device D,
+    typename=El::DisableIf<El::IsAluminumSupported<float,D,C>>,
+    typename=void
+    >
+void InitGrid(El::Grid const&, hydrogen::SyncInfo<D> const&)
+{
+}
+
+hydrogen::SyncInfoPool<hydrogen::Device::GPU> const&
+InitializeComms(El::Grid const& g,
+                hydrogen::SyncInfoPool<hydrogen::Device::GPU> const& pool)
+{
+    static std::forward_list<El::Grid const*> initialized_grids_;
+
+    if (std::find(initialized_grids_.cbegin(),
+                  initialized_grids_.cend(),
+                  &g)
+        == initialized_grids_.cend())
+    {
+        for (size_t ii = 0; ii < pool.Size(); ++ii)
+        {
+            auto& syncInfo = pool.Next();
+            InitGrid<El::Collective::ALLTOALL>(g, syncInfo);
+            InitGrid<El::Collective::ALLGATHER>(g, syncInfo);
+        }
+        hydrogen::gpu::SynchronizeDevice();
+        initialized_grids_.push_front(&g);
+    }
+    return pool;
+}
+
+hydrogen::SyncInfoPool<hydrogen::Device::GPU> const&
+GetSyncInfoPool(El::Grid const& g)
+{
+    static hydrogen::SyncInfoPool<hydrogen::Device::GPU>
+        pool(GetDefaultSyncPoolSize());
+
+    return InitializeComms(g, pool);
+}
+}// namespace <anon>
+#endif // HYDROGEN_HAVE_MS_GEMM
+
 #include "./Gemm/NN.hpp"
 #include "./Gemm/NT.hpp"
 #include "./Gemm/TN.hpp"
@@ -60,7 +139,7 @@ void Gemm(Orientation orientA, Orientation orientB,
 namespace
 {
 template <typename T>
-static void Gemm_impl(
+void Gemm_impl(
     Orientation orientA, Orientation orientB,
     T alpha,
     Matrix<T,Device::CPU> const& A, Matrix<T,Device::CPU> const& B,
@@ -82,7 +161,7 @@ static void Gemm_impl(
 
 #ifdef HYDROGEN_HAVE_GPU
 template <typename T>
-static void Gemm_impl(
+void Gemm_impl(
     Orientation orientA, Orientation orientB,
     T alpha,
     Matrix<T,Device::GPU> const& A, Matrix<T,Device::GPU> const& B,
@@ -243,7 +322,7 @@ void LocalGemm
            const AbstractDistMatrix<T>& B,
   T beta,        AbstractDistMatrix<T>& C)
 {
-    EL_DEBUG_CSE
+    EL_DEBUG_CSE;
 #ifndef EL_RELEASE
     if(orientA == NORMAL && orientB == NORMAL)
     {

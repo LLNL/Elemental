@@ -12,8 +12,7 @@ void AllGather(
     const T* sbuf, int sc, T* rbuf, int rc, Comm const& comm,
     SyncInfo<D> const& syncInfo)
 {
-    EL_DEBUG_CSE
-
+    EL_DEBUG_CSE;
     using Backend = BestBackend<T,D,Collective::ALLGATHER>;
     Al::Allgather<Backend>(
         sbuf, rbuf, sc, comm.template GetComm<Backend>(syncInfo));

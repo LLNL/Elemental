@@ -19,7 +19,6 @@ namespace mpi
 {
 namespace internal
 {
-
 /** @class SharedPtrCommTupleT
  *  @brief A tuple of shared_ptrs to comms
  *
@@ -87,7 +86,6 @@ bool SyncInfoEquiv(SyncInfo<D1> const&, SyncInfo<D2> const&) EL_NO_EXCEPT
 }
 }// namespace internal
 
-
 /** @class AluminumComm
  *  @brief A communicator implementation wrapping Aluminum communicators.
  *
@@ -102,6 +100,24 @@ class AluminumComm
 
     /** @brief The collection of all communicators. */
     mutable comm_tuple_type al_comms_;
+
+    template <typename BackendT>
+    struct CommSync
+    {
+        static constexpr Device D = DeviceForBackend<BackendT>();
+        using comm_type = typename BackendT::comm_type;
+
+        CommSync(SyncInfo<D> const& master, SyncInfo<D> const& other,
+                 comm_type & comm)
+            : multisync_{master, other},
+              comm_{comm}
+        {}
+
+        operator comm_type& () { return comm_; }
+
+        MultiSync<D,D> multisync_;
+        comm_type & comm_;
+    };// struct CommSync
 
 public:
 
@@ -156,18 +172,24 @@ public:
      *          synchronizes on the specified SyncInfo object.
      */
     template <typename BackendT, Device D>
-    typename BackendT::comm_type /*const*/&
-    GetComm(SyncInfo<D> const& syncinfo) const
+    CommSync<BackendT> // typename BackendT::comm_type /*const*/&
+    GetComm(SyncInfo<D> const& syncinfo_in) const
     {
         using comm_type = typename BackendT::comm_type;
+        using comm_sync_type = CommSync<BackendT>;
 
         constexpr size_t idx
             = internal::IndexInTypeList<BackendT,backend_list>::value;
 
         auto& comm_map = std::get<idx>(al_comms_);
 
-        using value_type =
-            typename std::decay<decltype(comm_map)>::type::value_type;
+        // Single-stream communication
+        auto const& syncinfo = internal::BackendSyncInfo<BackendT>();
+        //auto multisync = MakeMultiSync(syncinfo_in, syncinfo);
+
+        using map_type_raw = decltype(comm_map);
+        using map_type = typename std::decay<map_type_raw>::type;
+        using value_type = typename map_type::value_type;
         auto it = std::find_if(
             std::begin(comm_map), std::end(comm_map),
             [&syncinfo](value_type const& x)
@@ -182,10 +204,11 @@ public:
                 std::make_pair(syncinfo,
                                MakeWithSyncInfo<comm_type>(
                                    this->GetMPIComm(), syncinfo)));
-            return *(comm_map.front().second);
+            return comm_sync_type(syncinfo, syncinfo_in,
+                                  *(comm_map.front().second));
         }
 
-        return *it->second;
+        return comm_sync_type(syncinfo, syncinfo_in, *it->second);
     }
 
     ///@}

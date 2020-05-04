@@ -560,9 +560,6 @@ if (Hydrogen_ENABLE_ROCM)
     )
 endif (Hydrogen_ENABLE_ROCM)
 
-target_compile_definitions(Hydrogen_CXX PUBLIC
-  "-D__HIP_PLATFORM_HCC__")
-
 # Add the CXX library to "Hydrogen"
 set(HYDROGEN_LIBRARIES Hydrogen_CXX)
 

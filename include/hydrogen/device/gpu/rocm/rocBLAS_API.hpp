@@ -24,6 +24,19 @@ namespace rocblas
               int n, ScalarType const* X, int incx,     \
               ScalarType* Y, int incy)
 
+#define ADD_DOT_DECL(ScalarType)                \
+    void Dot(rocblasHandle_t handle,            \
+             int n,                             \
+             ScalarType const* X, int incx,     \
+             ScalarType const* Y, int incy,     \
+             ScalarType* output)
+
+#define ADD_NRM2_DECL(ScalarType)               \
+    void Nrm2(rocblasHandle_t handle,           \
+              int n,                            \
+              ScalarType const* X, int incx,    \
+              ScalarType* output)
+
 #define ADD_SCALE_DECL(ScalarType)                       \
     void Scale(rocblas_handle handle,                    \
                int n, ScalarType const& alpha,           \

@@ -20,9 +20,9 @@
         H_SYNC_CUDA();                                                  \
         auto h_check_cuda_error_code__ = cmd;                           \
         H_ASSERT(h_check_cuda_error_code__ == cudaSuccess,              \
-                 CUDAError,                                             \
+                 ::hydrogen::CUDAError,                                 \
                  (cudaDeviceReset(),                                    \
-                  cuda::BuildCUDAErrorMessage(                          \
+                  ::hydrogen::cuda::BuildCUDAErrorMessage(              \
                       #cmd, h_check_cuda_error_code__)));               \
         H_SYNC_CUDA();                                                  \
     } while (false)

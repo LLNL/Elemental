@@ -16,9 +16,12 @@ enum class BLAS_Op
     AXPY,
     COPY,
     DGMM,
+    DOT,
     GEAM,
     GEMM,
+    GEMMSTRIDEDBATCHED,
     GEMV,
+    NRM2,
     SCAL,
     /** @brief Axpy for 2D data with leading dimension */
     AXPY2D,
@@ -74,5 +77,17 @@ enum class SideMode
     RIGHT,
 };
 
+/** @brief Describes where pointers point. */
+enum class PointerMode
+{
+    HOST,
+    DEVICE,
+};// enum class PointerMode
+
+namespace gpu_blas
+{
+/** @brief Set the pointer mode of the underlying library. */
+void SetPointerMode(PointerMode mode);
+}
 }// namespace hydrogen
 #endif // HYDROGEN_BLAS_COMMON_HPP_

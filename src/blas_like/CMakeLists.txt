@@ -10,3 +10,4 @@ add_subdirectory(level3)
 
 # Propagate the files up the tree
 set(SOURCES "${SOURCES}" "${THIS_DIR_SOURCES}" PARENT_SCOPE)
+set(CATCH2_TESTS "${CATCH2_TESTS}" "${THIS_DIR_CATCH2_TESTS}" PARENT_SCOPE)

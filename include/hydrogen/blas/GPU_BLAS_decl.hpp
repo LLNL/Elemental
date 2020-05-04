@@ -256,6 +256,49 @@ void Copy(SizeT num_rows, SizeT num_cols,
           T* B, SizeT row_stride_B, SizeT ldb,
           SyncInfo<Device::GPU> const& syncinfo);
 
+/** @brief A dot-product operation for 1-D memory.
+ *
+ *  @tparam T (Inferred) The type of data.
+ *  @tparam SizeT (Inferred) The type used to express size information.
+ *
+ *  @param num_entries The number of entries in X and Y.
+ *  @param X The first vector (device memory).
+ *  @param stride_X The stride of X.
+ *  @param Y The second vector (device memory).
+ *  @param stride_Y The stride of Y.
+ *  @param result The result of the dot product (host or device memory).
+ *  @param[in] syncinfo The synchronization information for this
+ *                      operation.
+ *
+ *  @ingroup device_blas
+ */
+template <typename T, typename SizeT>
+void Dot(SizeT num_entries,
+         T const* X, SizeT stride_X,
+         T const* Y, SizeT stride_Y,
+         T* result,
+         SyncInfo<Device::GPU> const& syncinfo);
+
+/** @brief Computes the 2-norm of 1-D memory.
+ *
+ *  @tparam T (Inferred) The type of data.
+ *  @tparam SizeT (Inferred) The type used to express size information.
+ *
+ *  @param num_entries The number of entries in X.
+ *  @param X The vector (device memory).
+ *  @param stride_X The stride of X.
+ *  @param result The result of the dot product (host or device memory).
+ *  @param[in] syncinfo The synchronization information for this
+ *                      operation.
+ *
+ *  @ingroup device_blas
+ */
+template <typename T, typename SizeT>
+void Nrm2(SizeT num_entries,
+          T const* X, SizeT stride_X,
+          T* result,
+          SyncInfo<Device::GPU> const& syncinfo);
+
 /** @brief 1-D Scale operation in GPU memory.
  *
  *  This is in-place scaling:
@@ -390,6 +433,53 @@ void Gemm(
     T const& beta,
     T* C, SizeT ldc,
     SyncInfo<Device::GPU> const& syncinfo);
+
+/** @brief Batched, strided matrix-matrix product in GPU memory.
+ *
+ *  @todo Write documentation.
+ *
+ *  @tparam T (Inferred) The type of the data. Should be a field.
+ *  @tparam SizeT (Inferred) The type used to express size information.
+ *  @tparam StrideT (Inferred) The type used to express stride information.
+ *
+ *  @param[in] transpA The operation flag for `A` indicating `NORMAL`,
+ *                     `TRANSPOSE`, or `CONJ_TRANSPOSE`.
+ *  @param[in] transpB The operation flag for `B` indicating `NORMAL`,
+ *                     `TRANSPOSE`, or `CONJ_TRANSPOSE`.
+ *  @param[in] m The number of rows in `op(A)` and C.
+ *  @param[in] n The number of columns in `op(B)` and C.
+ *  @param[in] k The number of columns in `op(A)` and rows in `op(B)`.
+ *  @param[in] alpha The scaling term on the multiplicative term.
+ *  @param[in] A A matrix in column-major format.
+ *  @param[in] lda The leading dimension of A.
+ *  @param[in] strideA The between A matrices.
+ *  @param[in] B A matrix in column-major format.
+ *  @param[in] ldb The leading dimension of B
+ *  @param[in] strideB The between B matrices.
+ *  @param[in] beta The scaling applied to the input value of the
+ *                  target matrix.
+ *  @param[in,out] C The target matrix. Inital values are scaled by
+ *                   beta and updated with the result of the product.
+ *  @param[in] ldc The leading dimension of C.
+ *  @param[in] strideC The between C matrices.
+ *  @param[in] batchCount The number of GEMMs in the batch.
+ *  @param[in] syncinfo The synchronization information for this
+ *                      operation.
+ *
+ *  @ingroup device_blas
+ */
+template <typename T, typename SizeT, typename StrideT>
+void GemmStridedBatched(
+    TransposeMode transpA, TransposeMode transpB,
+    SizeT m, SizeT n, SizeT k,
+    T const& alpha,
+    T const* A, SizeT lda, StrideT strideA,
+    T const* B, SizeT ldb, StrideT strideB,
+    T const& beta,
+    T* C, SizeT ldc, StrideT strideC,
+    SizeT batchCount,
+    SyncInfo<Device::GPU> const& syncinfo);
+
 
 ///@}
 /** @name BLAS-like Extension Routines */

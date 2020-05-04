@@ -5,10 +5,19 @@
 
 #ifdef HYDROGEN_HAVE_ALUMINUM
 #include <Al.hpp>
+
+#ifdef HYDROGEN_HAVE_NVPROF
+#include "nvToolsExt.h"
+#include "nvToolsExtCuda.h"
+#include "nvToolsExtCudaRt.h"
+#endif // HYDROGEN_HAVE_NVPROF
+
 #endif // HYDROGEN_HAVE_ALUMINUM
 
 namespace El
 {
+// "Real" declaration is in include/El/core/environment/impl.hpp
+extern void break_on_me();
 
 // FIXME: This is a lame shortcut to save some
 // metaprogramming. Deadlines are the worst.
@@ -231,6 +240,83 @@ struct BestBackendT
 
 template <typename T, Device D, Collective C>
 using BestBackend = typename BestBackendT<T,D,C>::type;
+
+namespace mpi
+{
+namespace internal
+{
+template <Device D>
+struct SyncInfoManager;
+
+template <>
+struct SyncInfoManager<Device::CPU>
+{
+    SyncInfoManager(std::string const&)
+    {}
+
+    SyncInfo<Device::CPU> si_;
+};
+
+#ifdef HYDROGEN_HAVE_GPU
+template <>
+struct SyncInfoManager<Device::GPU>
+{
+    SyncInfoManager(std::string const& backend_name)
+        : si_{CreateNewSyncInfo<Device::GPU>()}
+    {
+#ifdef HYDROGEN_HAVE_NVPROF
+        // Name the stream for debugging purposes
+        std::string const stream_name
+            = "H: Comm (" + backend_name + ")";
+        nvtxNameCudaStreamA(si_.Stream(), stream_name.c_str());
+#else
+        (void) backend_name;
+#endif // HYDROGEN_HAVE_NVPROF
+    }
+    ~SyncInfoManager()
+    {
+        try
+        {
+            DestroySyncInfo(si_);
+        }
+        catch (std::exception const& e)
+        {
+            std::cerr << "Error detected in ~SyncInfoManager():\n\n"
+                      << e.what() << std::endl
+                      << "std::terminate() will be called."
+                      << std::endl;
+            break_on_me();
+            std::terminate();
+
+        }
+        catch (...)
+        {
+            std::cerr << "Unknown error detected in ~SyncInfoManager().\n\n"
+                      << "std::terminate() will be called."
+                      << std::endl;
+            break_on_me();
+            std::terminate();
+        }
+    }
+    SyncInfoManager(SyncInfoManager const&) = delete;
+    SyncInfoManager(SyncInfoManager&&) = delete;
+    SyncInfoManager& operator=(SyncInfoManager const&) = delete;
+    SyncInfoManager& operator=(SyncInfoManager &&) = delete;
+
+    SyncInfo<Device::GPU> si_;
+};
+#endif // HYDROGEN_HAVE_GPU
+
+template <typename BackendT>
+SyncInfo<DeviceForBackend<BackendT>()> const& BackendSyncInfo()
+{
+    constexpr Device D = DeviceForBackend<BackendT>();
+    static SyncInfoManager<D> si_mgr_(BackendT::Name());
+    return si_mgr_.si_;
+}
+
+}// namespace internal
+}// namespace mpi
 
 #endif // ndefined(HYDROGEN_HAVE_ALUMINUM)
 

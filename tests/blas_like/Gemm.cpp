@@ -20,8 +20,8 @@ void TestAssociativity
  DistMatrix<T,MC,MR,ELEMENT,D> const& CFinal,
  bool print)
 {
-    EL_DEBUG_ONLY(CallStackEntry cse("TestAssociativity"))
-
+    EL_DEBUG_ONLY(CallStackEntry cse("TestAssociativity"));
+    InitializeRandom();
     // Test (alpha op(A) op(B) + beta C) X = alpha op(A) (op(B) X) + beta C X
     const Int numRHS = 100;
     const Int n = COrig.Width();
@@ -119,14 +119,19 @@ void TestGemm
     C.Align(colAlignC, rowAlignC);
 
     if (orientA == NORMAL)
-        Uniform(A, m, k, TypeTraits<T>::Zero(), TypeTraits<Base<T>>::One());
+        Gaussian(A, m, k);
     else
-        Uniform(A, k, m, TypeTraits<T>::Zero(), TypeTraits<Base<T>>::One());
+        Gaussian(A, k, m);
     if (orientB == NORMAL)
-        Uniform(B, k, n, TypeTraits<T>::Zero(), TypeTraits<Base<T>>::One());
+        Gaussian(B, k, n);
     else
-        Uniform(B, n, k, TypeTraits<T>::Zero(), TypeTraits<Base<T>>::One());
-    Uniform(COrig, m, n, TypeTraits<T>::Zero(), TypeTraits<Base<T>>::One());
+        Gaussian(B, n, k);
+    Gaussian(COrig, m, n);
+
+#ifdef HYDROGEN_HAVE_CUDA
+    H_CHECK_CUDA(cudaDeviceSynchronize());
+#endif // HYDROGEN_HAVE_CUDA
+
     if (print)
     {
         Print(A, "A");
@@ -157,93 +162,15 @@ void TestGemm
 #endif
 
     // Test the variant of Gemm that keeps A stationary
-    C = COrig;
-    OutputFromRoot(g.Comm(),"Stationary A algorithm:");
-    PushIndent();
-    mpi::Barrier(g.Comm());
-    timer.Start();
-    START_CUDA_TIMER;
-    Gemm(orientA, orientB, alpha, A, B, beta, C, GEMM_SUMMA_A);
-    STOP_CUDA_TIMER;
-
-    mpi::Barrier(g.Comm());
-    runTime = timer.Stop();
-    realGFlops = 2.*double(m)*double(n)*double(k)/(1.e9*runTime);
-    gFlops = (IsComplex<T>::value ? 4*realGFlops : realGFlops);
-    if (D == Device::CPU)
-      OutputFromRoot
-          (g.Comm(),"Finished in ",runTime," seconds (",gFlops," GFlop/s)");
-    SUMMARIZE_CUDA_TIMER;
-
-    if (print)
-        Print(C, BuildString("C := ",alpha," A B + ",beta," C"));
-    if (correctness)
-        TestAssociativity(orientA, orientB, alpha, A, B, beta, COrig, C, print);
-    PopIndent();
-
-    // Test the variant of Gemm that keeps B stationary
-    C = COrig;
-    OutputFromRoot(g.Comm(),"Stationary B Algorithm:");
-    PushIndent();
-    mpi::Barrier(g.Comm());
-    timer.Start();
-    START_CUDA_TIMER;
-    Gemm(orientA, orientB, alpha, A, B, beta, C, GEMM_SUMMA_B);
-    STOP_CUDA_TIMER;
-
-    mpi::Barrier(g.Comm());
-    runTime = timer.Stop();
-    realGFlops = 2.*double(m)*double(n)*double(k)/(1.e9*runTime);
-    gFlops = (IsComplex<T>::value ? 4*realGFlops : realGFlops);
-
-    if (D == Device::CPU)
-      OutputFromRoot
-          (g.Comm(),"Finished in ",runTime," seconds (",gFlops," GFlop/s)");
-    SUMMARIZE_CUDA_TIMER;
-
-    if (print)
-        Print(C, BuildString("C := ",alpha," A B + ",beta," C"));
-    if (correctness)
-        TestAssociativity(orientA, orientB, alpha, A, B, beta, COrig, C, print);
-    PopIndent();
-    flush(std::cout);
-
-    // Test the variant of Gemm that keeps C stationary
-    C = COrig;
-    OutputFromRoot(g.Comm(),"Stationary C Algorithm:");
-    PushIndent();
-    mpi::Barrier(g.Comm());
-    timer.Start();
-    START_CUDA_TIMER;
-    Gemm(orientA, orientB, alpha, A, B, beta, C, GEMM_SUMMA_C);
-    STOP_CUDA_TIMER;
-
-    mpi::Barrier(g.Comm());
-    runTime = timer.Stop();
-    realGFlops = 2.*double(m)*double(n)*double(k)/(1.e9*runTime);
-    gFlops = (IsComplex<T>::value ? 4*realGFlops : realGFlops);
-    if (D == Device::CPU)
-        OutputFromRoot
-            (g.Comm(),"Finished in ",runTime," seconds (",gFlops," GFlop/s)");
-    SUMMARIZE_CUDA_TIMER;
-    if (print)
-        Print(C, BuildString("C := ",alpha," A B + ",beta," C"));
-    if (correctness)
-        TestAssociativity
-            (orientA, orientB, alpha, A, B, beta, COrig, C, print);
-    PopIndent();
-    flush(std::cout);
-
-    if (orientA == NORMAL && orientB == NORMAL)
+    for (int ii = 0; ii < 6; ++ii)
     {
-        // Test the variant of Gemm for panel-panel dot products
-        OutputFromRoot(g.Comm(),"Dot Product Algorithm:");
-        PushIndent();
         C = COrig;
+        OutputFromRoot(g.Comm(),"Stationary A algorithm:");
+        PushIndent();
         mpi::Barrier(g.Comm());
         timer.Start();
         START_CUDA_TIMER;
-        Gemm(NORMAL, NORMAL, alpha, A, B, beta, C, GEMM_SUMMA_DOT);
+        Gemm(orientA, orientB, alpha, A, B, beta, C, GEMM_SUMMA_A);
         STOP_CUDA_TIMER;
 
         mpi::Barrier(g.Comm());
@@ -252,19 +179,118 @@ void TestGemm
         gFlops = (IsComplex<T>::value ? 4*realGFlops : realGFlops);
         if (D == Device::CPU)
             OutputFromRoot
-                (g.Comm(),"Finished in ",runTime," seconds (",gFlops,
-                 " GFlop/s)");
+                (g.Comm(),"Finished in ",runTime," seconds (",gFlops," GFlop/s)");
         SUMMARIZE_CUDA_TIMER;
 
+        flush(std::cout);
+
+        if (print)
+            Print(C, BuildString("C := ",alpha," A B + ",beta," C"));
+        if (correctness)
+            TestAssociativity(orientA, orientB, alpha, A, B, beta, COrig, C, print);
+        PopIndent();
+
+        flush(std::cout);
+    }
+
+    // Test the variant of Gemm that keeps B stationary
+    for (int ii = 0; ii < 6; ++ii)
+    {
+        C = COrig;
+        OutputFromRoot(g.Comm(),"Stationary B Algorithm:");
+        PushIndent();
+        mpi::Barrier(g.Comm());
+        timer.Start();
+        Synchronize(SyncInfoFromMatrix(C.Matrix()));
+        START_CUDA_TIMER;
+        Gemm(orientA, orientB, alpha, A, B, beta, C, GEMM_SUMMA_B);
+        Synchronize(SyncInfoFromMatrix(C.Matrix()));
+        STOP_CUDA_TIMER;
+
+        mpi::Barrier(g.Comm());
+        runTime = timer.Stop();
+        realGFlops = 2.*double(m)*double(n)*double(k)/(1.e9*runTime);
+        gFlops = (IsComplex<T>::value ? 4*realGFlops : realGFlops);
+
+        if (D == Device::CPU)
+            OutputFromRoot
+                (g.Comm(),"Finished in ",runTime," seconds (",gFlops," GFlop/s)");
+        SUMMARIZE_CUDA_TIMER;
+
+        if (print)
+            Print(C, BuildString("C := ",alpha," A B + ",beta," C"));
+        if (correctness)
+            TestAssociativity(orientA, orientB, alpha, A, B, beta, COrig, C, print);
+        PopIndent();
+
+        flush(std::cout);
+    }
+
+    // Test the variant of Gemm that keeps C stationary
+    for (int ii = 0; ii < 6; ++ii)
+    {
+        C = COrig;
+        OutputFromRoot(g.Comm(),"Stationary C Algorithm:");
+        PushIndent();
+        mpi::Barrier(g.Comm());
+        timer.Start();
+        START_CUDA_TIMER;
+        Gemm(orientA, orientB, alpha, A, B, beta, C, GEMM_SUMMA_C);
+        STOP_CUDA_TIMER;
+
+        mpi::Barrier(g.Comm());
+        runTime = timer.Stop();
+        realGFlops = 2.*double(m)*double(n)*double(k)/(1.e9*runTime);
+        gFlops = (IsComplex<T>::value ? 4*realGFlops : realGFlops);
+        if (D == Device::CPU)
+            OutputFromRoot
+                (g.Comm(),"Finished in ",runTime," seconds (",gFlops," GFlop/s)");
+        SUMMARIZE_CUDA_TIMER;
         if (print)
             Print(C, BuildString("C := ",alpha," A B + ",beta," C"));
         if (correctness)
             TestAssociativity
                 (orientA, orientB, alpha, A, B, beta, COrig, C, print);
         PopIndent();
+
         flush(std::cout);
     }
+
+    if (orientA == NORMAL && orientB == NORMAL)
+    {
+        for (int ii = 0; ii < 0; ++ii)
+        {
+            // Test the variant of Gemm for panel-panel dot products
+            OutputFromRoot(g.Comm(),"Dot Product Algorithm:");
+            PushIndent();
+            C = COrig;
+            mpi::Barrier(g.Comm());
+            timer.Start();
+            START_CUDA_TIMER;
+            Gemm(NORMAL, NORMAL, alpha, A, B, beta, C, GEMM_SUMMA_DOT);
+            STOP_CUDA_TIMER;
+
+            mpi::Barrier(g.Comm());
+            runTime = timer.Stop();
+            realGFlops = 2.*double(m)*double(n)*double(k)/(1.e9*runTime);
+            gFlops = (IsComplex<T>::value ? 4*realGFlops : realGFlops);
+            if (D == Device::CPU)
+                OutputFromRoot
+                    (g.Comm(),"Finished in ",runTime," seconds (",gFlops,
+                     " GFlop/s)");
+            SUMMARIZE_CUDA_TIMER;
+
+            if (print)
+                Print(C, BuildString("C := ",alpha," A B + ",beta," C"));
+            if (correctness)
+                TestAssociativity
+                    (orientA, orientB, alpha, A, B, beta, COrig, C, print);
+            PopIndent();
+            flush(std::cout);
+        }
+    }
     PopIndent();
+
 #ifdef HYDROGEN_HAVE_CUDA
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
@@ -319,7 +345,7 @@ main(int argc, char* argv[])
 #ifdef HYDROGEN_HAVE_GPU
         if (testGPU)
         {
-#ifdef HYDROGEN_GPU_USE_FP16
+#if defined HYDROGEN_HAVE_HALF && defined HYDROGEN_GPU_USE_FP16
             TestGemm<gpu_half_type,Device::GPU>
                 (orientA, orientB,
                  m, n, k,
@@ -329,7 +355,7 @@ main(int argc, char* argv[])
                  colAlignA, rowAlignA,
                  colAlignB, rowAlignB,
                  colAlignC, rowAlignC);
-#endif // HYDROGEN_GPU_USE_FP16
+#endif // defined HYDROGEN_HAVE_HALF && defined HYDROGEN_GPU_USE_FP16
             TestGemm<float,Device::GPU>
                 (orientA, orientB,
                  m, n, k,

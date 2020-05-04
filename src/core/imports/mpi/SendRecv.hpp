@@ -12,7 +12,7 @@ void SendRecv(const T* sbuf, int sc, int to,
               T* rbuf, int rc, int from, Comm const& comm,
               SyncInfo<D> const& syncInfo)
 {
-    EL_DEBUG_CSE
+    EL_DEBUG_CSE;
 
     using Backend = BestBackend<T,D,Collective::SENDRECV>;
     Al::SendRecv<Backend>(
@@ -25,7 +25,7 @@ template <typename T, Device D,
 void SendRecv(T* buf, int count, int to, int from, Comm const& comm,
               SyncInfo<D> const& syncInfo)
 {
-    EL_DEBUG_CSE
+    EL_DEBUG_CSE;
 
     using Backend = BestBackend<T,D,Collective::SENDRECV>;
     // Not sure if Al is ok with this bit

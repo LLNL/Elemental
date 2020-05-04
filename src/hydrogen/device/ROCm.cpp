@@ -38,12 +38,6 @@ void FreeEvent(hipEvent_t event)
         H_CHECK_HIP(hipEventDestroy(event));
 }
 
-void DestroySyncInfo(SyncInfo<Device::GPU>& si)
-{
-    FreeStream(si.Stream());
-    FreeEvent(si.Event());
-}
-
 int ComputeMyDeviceId(unsigned int device_count)
 {
     if (device_count == 0U)
@@ -87,7 +81,7 @@ void Initialize()
 void Finalize()
 {
     El::DestroyPinnedHostMemoryPool();
-    DestroySyncInfo(default_syncinfo_);
+    DestroySyncInfo_(default_syncinfo_);
     rocm_initialized_ = false;
 }
 
@@ -151,4 +145,19 @@ hipStream_t GetDefaultStream() noexcept
 }
 
 }// namespace rocm
+
+template <>
+SyncInfo<Device::GPU> CreateNewSyncInfo<Device::GPU>()
+{
+    return SyncInfo<Device::GPU>{gpu::GetNewStream(), gpu::GetNewEvent()};
+}
+
+void DestroySyncInfo(SyncInfo<Device::GPU>& si)
+{
+    gpu::FreeStream(si.Stream());
+    gpu::FreeEvent(si.Event());
+    si.stream_ = nullptr;
+    si.event_ = nullptr;
+}
+
 }// namespace hydrogen

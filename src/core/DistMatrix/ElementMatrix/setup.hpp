@@ -50,6 +50,7 @@ DM::DistMatrix(const DM& A)
     : EM(A.Grid())
 {
     EL_DEBUG_CSE
+    SetSyncInfo(this->Matrix(), SyncInfoFromMatrix(A.LockedMatrix()));
     if (COLDIST != CIRC || ROWDIST != CIRC)
         this->Matrix().FixSize();
     this->SetShifts();
@@ -64,7 +65,8 @@ template<Dist U,Dist V>
 DM::DistMatrix(const DistMatrix<T,U,V,ELEMENT,D>& A)
     : EM(A.Grid())
 {
-    EL_DEBUG_CSE
+    EL_DEBUG_CSE;
+    SetSyncInfo(this->Matrix(), SyncInfoFromMatrix(A.LockedMatrix()));
     if (COLDIST != CIRC || ROWDIST != CIRC)
         this->Matrix().FixSize();
     this->SetShifts();
@@ -179,19 +181,31 @@ DistMatrix<T,COLDIST,ROWDIST,ELEMENT,D>* DM::Copy() const
 template <typename T, Device D>
 DistMatrix<T,COLDIST,ROWDIST,ELEMENT,D>* DM::Construct
 (const El::Grid& g, int root) const
-{ return new DistMatrix<T,COLDIST,ROWDIST,ELEMENT,D>(g,root); }
+{
+    auto* x = new DistMatrix<T,COLDIST,ROWDIST,ELEMENT,D>(g,root);
+    SetSyncInfo(x->Matrix(), SyncInfoFromMatrix(LockedMatrix()));
+    return x;
+}
 
 template <typename T, Device D>
 DistMatrix<T,ROWDIST,COLDIST,ELEMENT,D>* DM::ConstructTranspose
 (const El::Grid& g, int root) const
-{ return new DistMatrix<T,ROWDIST,COLDIST,ELEMENT,D>(g,root); }
+{
+    auto* x = new DistMatrix<T,ROWDIST,COLDIST,ELEMENT,D>(g,root);
+    SetSyncInfo(x->Matrix(), SyncInfoFromMatrix(LockedMatrix()));
+    return x;
+}
 
 template <typename T, Device D>
 typename DM::diagType*
 DM::ConstructDiagonal
 (const El::Grid& g, int root) const
-{ return new DistMatrix<T,DiagCol<COLDIST,ROWDIST>(),
-                        DiagRow<COLDIST,ROWDIST>(),ELEMENT,D>(g,root); }
+{
+    auto x = new DistMatrix<T,DiagCol<COLDIST,ROWDIST>(),
+                            DiagRow<COLDIST,ROWDIST>(),ELEMENT,D>(g,root);
+    SetSyncInfo(x->Matrix(), SyncInfoFromMatrix(LockedMatrix()));
+    return x;
+}
 
 template <typename T, Device D>
 template <Device D2, typename>

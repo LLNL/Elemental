@@ -35,6 +35,7 @@ public:
     hipStream_t Stream() const noexcept { return stream_; }
     hipEvent_t Event() const noexcept { return event_; }
 private:
+    friend void DestroySyncInfo(SyncInfo<Device::GPU>&);
     hipStream_t stream_;
     hipEvent_t event_;
 };// struct SyncInfo<Device::GPU>
@@ -44,7 +45,9 @@ inline void AddSynchronizationPoint(SyncInfo<Device::GPU> const& syncInfo)
     H_CHECK_HIP(hipEventRecord(syncInfo.Event(), syncInfo.Stream()));
 }
 
-inline void AddSynchronizationPoint(
+namespace details
+{
+inline void AddSyncPoint(
     SyncInfo<Device::CPU> const& master,
     SyncInfo<Device::GPU> const& dependent)
 {
@@ -55,7 +58,7 @@ inline void AddSynchronizationPoint(
         "or it should use Al::GPUWait.");
 }
 
-inline void AddSynchronizationPoint(
+inline void AddSyncPoint(
     SyncInfo<Device::GPU> const& master,
     SyncInfo<Device::CPU> const& dependent)
 {
@@ -67,28 +70,26 @@ inline void AddSynchronizationPoint(
 // completion.
 template <typename... Ts>
 inline
-EnableWhen<AllMatch<SyncInfo<Device::GPU>,Ts...>>
-AddSynchronizationPoint(
-    SyncInfo<Device::GPU> const& master, Ts&&... others)
+void AddSyncPoint(
+    SyncInfo<Device::GPU> const& master, SyncInfo<Device::GPU> const& other)
 {
-    AddSynchronizationPoint(master);
-
-    auto sync_other = [&master](SyncInfo<Device::GPU> const& x)
-        {
-            if (master.Stream() != x.Stream())
-                H_CHECK_HIP(
-                    hipStreamWaitEvent(x.Stream(), master.Event(), 0));
-            return 0;
-        };
-
-    int dummy[] = { sync_other(others)... };
-    (void) dummy;
+    if (master.Stream() != other.Stream())
+        H_CHECK_HIP(
+            hipStreamWaitEvent(other.Stream(), master.Event(), 0));
 }
+}// namespace details
 
 inline void Synchronize(SyncInfo<Device::GPU> const& syncInfo)
 {
     H_CHECK_HIP(hipStreamSynchronize(syncInfo.Stream()));
 }
+
+/** @brief Create a new CPU SyncInfo object. */
+template <>
+SyncInfo<Device::GPU> CreateNewSyncInfo<Device::GPU>();
+
+/** @brief Destroy the GPU SyncInfo. */
+void DestroySyncInfo(SyncInfo<Device::GPU>&);
 
 }// namespace hydrogen
 #endif // HYDROGEN_DEVICE_GPU_ROCM_SYNCINFO_HPP_

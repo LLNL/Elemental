@@ -25,13 +25,46 @@ void Axpy(cublasHandle_t handle,
           __half const* X, int incx,
           __half* Y, int incy)
 {
+    float alpha_tmp(alpha);
     H_CHECK_CUBLAS(
         cublasAxpyEx(
             handle,
-            n, &alpha, CUDA_R_16F,
+            n, &alpha_tmp, CUDA_R_32F,
             X, CUDA_R_16F, incx,
             Y, CUDA_R_16F, incy,
             CUDA_R_32F));
+}
+
+void Dot(cublasHandle_t handle,
+         int n,
+         __half const* X, int incx,
+         __half const* Y, int incy,
+         __half& output)
+{
+    H_CHECK_CUBLAS(
+        cublasDotEx(
+            handle,
+            n,
+            X, /*xtype=*/CUDA_R_16F, incx,
+            Y, /*ytype=*/CUDA_R_16F, incy,
+            &output,
+            /*resulttype=*/CUDA_R_16F,
+            /*executiontype=*/CUDA_R_32F));
+}
+
+void Nrm2(cublasHandle_t handle,
+          int n,
+          __half const* X, int incx,
+          __half& output)
+{
+    H_CHECK_CUBLAS(
+        cublasNrm2Ex(
+            handle,
+            n,
+            X, /*xtype=*/CUDA_R_16F, incx,
+            &output,
+            /*resulttype=*/CUDA_R_16F,
+            /*executiontype=*/CUDA_R_32F));
 }
 
 void Scale(cublasHandle_t handle,
@@ -65,6 +98,72 @@ void Scale(cublasHandle_t handle,
             cublas ## TypeChar ## copy(                 \
                 handle,                                 \
                 n, X, incx, Y, incy));                  \
+    }
+
+#define ADD_DOT_IMPL(ScalarType, TypeChar)                      \
+    void Dot(cublasHandle_t handle,                             \
+             int n, ScalarType const* X, int incx,              \
+             ScalarType const* Y, int incy,                     \
+             ScalarType* output)                                \
+    {                                                           \
+        H_CHECK_CUBLAS(                                         \
+            cublas ## TypeChar ## dot(                          \
+                handle,                                         \
+                n, X, incx, Y, incy, output));                  \
+    }
+
+template <typename T>
+struct RealTypeT
+{
+    using type = T;
+};
+
+template <>
+struct RealTypeT<cuComplex>
+{
+    using type = float;
+};
+
+template <>
+struct RealTypeT<cuDoubleComplex>
+{
+    using type = double;
+};
+
+template <typename T>
+using RealType = typename RealTypeT<T>::type;
+
+#define ADD_COMPLEX_DOT_IMPL(ScalarType, TypeChar)              \
+    void Dotu(cublasHandle_t handle,                            \
+              int n, ScalarType const* X, int incx,             \
+              ScalarType const* Y, int incy,                    \
+              ScalarType* output)                               \
+    {                                                           \
+        H_CHECK_CUBLAS(                                         \
+            cublas ## TypeChar ## dotu(                         \
+                handle,                                         \
+                n, X, incx, Y, incy, output));                  \
+    }                                                           \
+    void Dotc(cublasHandle_t handle,                            \
+             int n, ScalarType const* X, int incx,              \
+             ScalarType const* Y, int incy,                     \
+             ScalarType* output)                                \
+    {                                                           \
+        H_CHECK_CUBLAS(                                         \
+            cublas ## TypeChar ## dotc(                         \
+                handle,                                         \
+                n, X, incx, Y, incy, output));                  \
+    }
+
+#define ADD_NRM2_IMPL(ScalarType, TypeChar)                     \
+    void Nrm2(cublasHandle_t handle,                            \
+              int n, ScalarType const* X, int incx,             \
+              ScalarType const* Y, int incy,                    \
+              RealType<ScalarType>* output)                     \
+    {                                                           \
+        H_CHECK_CUBLAS(                                         \
+            cublas ## TypeChar ## nrm2(                         \
+                handle, n, X, incx, output));                   \
     }
 
 #define ADD_SCALE_IMPL(ScalarType, TypeChar)               \
@@ -113,12 +212,39 @@ void Scale(cublasHandle_t handle,
         ScalarType const& beta,                         \
         ScalarType* C, int ldc)                         \
     {                                                   \
-        H_CHECK_CUBLAS(                                \
+        H_CHECK_CUBLAS(                                 \
             cublas ## TypeChar ## gemm(                 \
-                handle,                                 \
-                transpA, transpB,                       \
+            handle,                                     \
+            transpA, transpB,                           \
                 m, n, k, &alpha, A, lda, B, ldb,        \
                 &beta, C, ldc));                        \
+    }
+
+#define ADD_GEMM_STRIDED_BATCHED_IMPL(ScalarType, TypeChar)     \
+    void GemmStridedBatched(                                    \
+        cublasHandle_t handle,                                  \
+        cublasOperation_t transpA,                              \
+        cublasOperation_t transpB,                              \
+        int m, int n, int k,                                    \
+        ScalarType const* alpha,                                \
+        ScalarType const* A, int lda,                           \
+        long long int strideA,                                  \
+        ScalarType const* B, int ldb,                           \
+        long long int strideB,                                  \
+        ScalarType const* beta,                                 \
+        ScalarType* C, int ldc,                                 \
+        long long int strideC,                                  \
+        int batchCount)                                         \
+    {                                                           \
+        H_CHECK_CUBLAS(                                         \
+            cublas ## TypeChar ## gemmStridedBatched(           \
+                handle, transpA, transpB,                       \
+                m, n, k,                                        \
+                alpha,                                          \
+                A, lda, strideA, B, ldb, strideB,               \
+                beta,                                           \
+                C, ldc, strideC,                                \
+                batchCount));                                   \
     }
 
 //
@@ -136,7 +262,7 @@ void Scale(cublasHandle_t handle,
         ScalarType const* B, int ldb,           \
         ScalarType* C, int ldc)                 \
     {                                           \
-        H_CHECK_CUBLAS(                        \
+        H_CHECK_CUBLAS(                         \
             cublas ## TypeChar ## geam(         \
                 handle,                         \
                 transpA, transpB,               \
@@ -155,7 +281,7 @@ void Scale(cublasHandle_t handle,
         ScalarType const* X, int incx,                  \
         ScalarType* C, int ldc)                         \
     {                                                   \
-        H_CHECK_CUBLAS(                                \
+        H_CHECK_CUBLAS(                                 \
             cublas ## TypeChar ## dgmm(                 \
                 handle,                                 \
                 side, m, n, A, lda, X, incx, C, ldc));  \
@@ -171,6 +297,16 @@ ADD_COPY_IMPL(float, S)
 ADD_COPY_IMPL(double, D)
 ADD_COPY_IMPL(cuComplex, C)
 ADD_COPY_IMPL(cuDoubleComplex, Z)
+
+ADD_DOT_IMPL(float, S)
+ADD_DOT_IMPL(double, D)
+ADD_COMPLEX_DOT_IMPL(cuComplex, C)
+ADD_COMPLEX_DOT_IMPL(cuDoubleComplex, Z)
+
+ADD_NRM2_IMPL(float, S)
+ADD_NRM2_IMPL(double, D)
+ADD_NRM2_IMPL(cuComplex, Sc)
+ADD_NRM2_IMPL(cuDoubleComplex, Dz)
 
 ADD_SCALE_IMPL(float, S)
 ADD_SCALE_IMPL(double, D)
@@ -189,6 +325,12 @@ ADD_GEMM_IMPL(float, S)
 ADD_GEMM_IMPL(double, D)
 ADD_GEMM_IMPL(cuComplex, C)
 ADD_GEMM_IMPL(cuDoubleComplex, Z)
+
+ADD_GEMM_STRIDED_BATCHED_IMPL(__half, H)
+ADD_GEMM_STRIDED_BATCHED_IMPL(float, S)
+ADD_GEMM_STRIDED_BATCHED_IMPL(double, D)
+ADD_GEMM_STRIDED_BATCHED_IMPL(cuComplex, C)
+ADD_GEMM_STRIDED_BATCHED_IMPL(cuDoubleComplex, Z)
 
 // BLAS-like extension
 ADD_GEAM_IMPL(float, S)
@@ -214,38 +356,53 @@ ADD_DGMM_IMPL(cuDoubleComplex, Z)
 ASSERT_SUPPORT(float, BLAS_Op::AXPY);
 ASSERT_SUPPORT(float, BLAS_Op::COPY);
 ASSERT_SUPPORT(float, BLAS_Op::DGMM);
+ASSERT_SUPPORT(float, BLAS_Op::DOT);
 ASSERT_SUPPORT(float, BLAS_Op::GEAM);
 ASSERT_SUPPORT(float, BLAS_Op::GEMM);
+ASSERT_SUPPORT(float, BLAS_Op::GEMMSTRIDEDBATCHED);
 ASSERT_SUPPORT(float, BLAS_Op::GEMV);
+ASSERT_SUPPORT(float, BLAS_Op::NRM2);
 ASSERT_SUPPORT(float, BLAS_Op::SCAL);
 
 ASSERT_SUPPORT(double, BLAS_Op::AXPY);
 ASSERT_SUPPORT(double, BLAS_Op::COPY);
 ASSERT_SUPPORT(double, BLAS_Op::DGMM);
+ASSERT_SUPPORT(double, BLAS_Op::DOT);
 ASSERT_SUPPORT(double, BLAS_Op::GEAM);
 ASSERT_SUPPORT(double, BLAS_Op::GEMM);
+ASSERT_SUPPORT(double, BLAS_Op::GEMMSTRIDEDBATCHED);
 ASSERT_SUPPORT(double, BLAS_Op::GEMV);
+ASSERT_SUPPORT(double, BLAS_Op::NRM2);
 ASSERT_SUPPORT(double, BLAS_Op::SCAL);
 
 ASSERT_SUPPORT(std::complex<float>, BLAS_Op::AXPY);
 ASSERT_SUPPORT(std::complex<float>, BLAS_Op::COPY);
 ASSERT_SUPPORT(std::complex<float>, BLAS_Op::DGMM);
+ASSERT_SUPPORT(std::complex<float>, BLAS_Op::DOT);
 ASSERT_SUPPORT(std::complex<float>, BLAS_Op::GEAM);
 ASSERT_SUPPORT(std::complex<float>, BLAS_Op::GEMM);
+ASSERT_SUPPORT(std::complex<float>, BLAS_Op::GEMMSTRIDEDBATCHED);
 ASSERT_SUPPORT(std::complex<float>, BLAS_Op::GEMV);
+ASSERT_SUPPORT(std::complex<float>, BLAS_Op::NRM2);
 ASSERT_SUPPORT(std::complex<float>, BLAS_Op::SCAL);
 
 ASSERT_SUPPORT(std::complex<double>, BLAS_Op::AXPY);
 ASSERT_SUPPORT(std::complex<double>, BLAS_Op::COPY);
 ASSERT_SUPPORT(std::complex<double>, BLAS_Op::DGMM);
+ASSERT_SUPPORT(std::complex<double>, BLAS_Op::DOT);
 ASSERT_SUPPORT(std::complex<double>, BLAS_Op::GEAM);
 ASSERT_SUPPORT(std::complex<double>, BLAS_Op::GEMM);
+ASSERT_SUPPORT(std::complex<double>, BLAS_Op::GEMMSTRIDEDBATCHED);
 ASSERT_SUPPORT(std::complex<double>, BLAS_Op::GEMV);
+ASSERT_SUPPORT(std::complex<double>, BLAS_Op::NRM2);
 ASSERT_SUPPORT(std::complex<double>, BLAS_Op::SCAL);
 
 #ifdef HYDROGEN_GPU_USE_FP16
 ASSERT_SUPPORT(__half, BLAS_Op::AXPY);
+ASSERT_SUPPORT(__half, BLAS_Op::DOT);
 ASSERT_SUPPORT(__half, BLAS_Op::GEMM);
+ASSERT_SUPPORT(__half, BLAS_Op::GEMMSTRIDEDBATCHED);
+ASSERT_SUPPORT(__half, BLAS_Op::NRM2);
 ASSERT_SUPPORT(__half, BLAS_Op::SCAL);
 ASSERT_NO_SUPPORT(__half, BLAS_Op::COPY);
 ASSERT_NO_SUPPORT(__half, BLAS_Op::DGMM);
@@ -267,9 +424,12 @@ ASSERT_NO_SUPPORT(cpu_half_type, BLAS_Op::GEMV);
 ASSERT_NO_SUPPORT(int, BLAS_Op::AXPY);
 ASSERT_NO_SUPPORT(int, BLAS_Op::COPY);
 ASSERT_NO_SUPPORT(int, BLAS_Op::DGMM);
+ASSERT_NO_SUPPORT(int, BLAS_Op::DOT);
 ASSERT_NO_SUPPORT(int, BLAS_Op::GEAM);
 ASSERT_NO_SUPPORT(int, BLAS_Op::GEMM);
+ASSERT_NO_SUPPORT(int, BLAS_Op::GEMMSTRIDEDBATCHED);
 ASSERT_NO_SUPPORT(int, BLAS_Op::GEMV);
+ASSERT_NO_SUPPORT(int, BLAS_Op::NRM2);
 
 } // namespace cublas
 

@@ -6,6 +6,7 @@ set_full_path(THIS_DIR_SOURCES
   Dot.cpp
   EntrywiseMap.cpp
   Gemm.cpp
+  Gemm_Suite.cpp
   Gemv.cpp
   Hadamard.cpp
 #  MaxAbs.cpp

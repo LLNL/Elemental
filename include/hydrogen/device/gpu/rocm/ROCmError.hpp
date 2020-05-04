@@ -20,9 +20,9 @@
         H_SYNC_HIP();                                                   \
         auto h_check_hip_error_code__ = cmd;                            \
         H_ASSERT(h_check_hip_error_code__ == hipSuccess,                \
-                 HipError,                                              \
+                 ::hydrogen::HipError,                                  \
                  (hipDeviceReset(),                                     \
-                  rocm::BuildHipErrorMessage(                          \
+                  ::hydrogen::rocm::BuildHipErrorMessage(               \
                       #cmd, h_check_hip_error_code__)));                \
         H_SYNC_HIP();                                                   \
     } while (false)
@@ -33,7 +33,7 @@ namespace hydrogen
 /** @class HipError
  *  @brief Exception class describing an error in the HIP environment
  */
-H_ADD_BASIC_EXCEPTION_CLASS(HipError, GPUError);
+H_ADD_BASIC_EXCEPTION_CLASS(HIPError, GPUError);
 
 namespace rocm
 {

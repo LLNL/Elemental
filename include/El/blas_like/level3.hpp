@@ -22,8 +22,11 @@ template<typename T> Int LocalTrr2kBlocksize();
 namespace GemmAlgorithmNS {
 enum GemmAlgorithm {
   GEMM_DEFAULT,
+  GEMM_SUMMA_A_MS,
   GEMM_SUMMA_A,
+  GEMM_SUMMA_B_MS,
   GEMM_SUMMA_B,
+  GEMM_SUMMA_C_MS,
   GEMM_SUMMA_C,
   GEMM_SUMMA_DOT,
   GEMM_CANNON

@@ -7,6 +7,12 @@
 #include "hydrogen/device/gpu/cuda/CUB.hpp"
 #endif // HYDROGEN_HAVE_CUB
 
+#ifdef HYDROGEN_HAVE_NVPROF
+#include "nvToolsExt.h"
+#include "nvToolsExtCuda.h"
+#include "nvToolsExtCudaRt.h"
+#endif // HYDROGEN_HAVE_NVPROF
+
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
@@ -91,6 +97,10 @@ GPUManager::GPUManager(int device)
     H_FORCE_CHECK_CUDA_NOSYNC(cudaSetDevice(device_));
     H_FORCE_CHECK_CUDA(cudaStreamCreate(&stream_));
     H_FORCE_CHECK_CUDA(cudaEventCreate(&event_));
+#ifdef HYDROGEN_HAVE_NVPROF
+    // Name the stream for debugging purposes
+    nvtxNameCudaStreamA(stream_, "H: GPUManager");
+#endif // HYDROGEN_HAVE_NVPROF
 }
 
 void GPUManager::InitializeCUBLAS()

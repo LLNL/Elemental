@@ -111,7 +111,7 @@ inline void MpiError(
     int mpi_error_code, std::string const& function,
     std::string const& file, int line)
 {
-    //El::break_on_me();
+    El::break_on_me();
     throw MpiException{mpi_error_code, function, file, line};
 }
 

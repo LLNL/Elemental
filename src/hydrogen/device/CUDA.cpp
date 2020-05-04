@@ -93,12 +93,6 @@ SyncInfo<Device::GPU> GetNewSyncInfo()
     return SyncInfo<Device::GPU>{GetNewStream(), GetNewEvent()};
 }
 
-void DestroySyncInfo(SyncInfo<Device::GPU>& si)
-{
-    FreeStream(si.Stream());
-    FreeEvent(si.Event());
-}
-
 int ComputeMyDeviceId(unsigned int device_count)
 {
     if (device_count == 0U)
@@ -210,8 +204,22 @@ std::string BuildCUDAErrorMessage(
     return oss.str();
 }
 
-cudaEvent_t GetDefaultEvent() noexcept { return gpu::DefaultSyncInfo().Event(); }
-cudaStream_t GetDefaultStream() noexcept { return gpu::DefaultSyncInfo().Stream(); }
+cudaEvent_t GetDefaultEvent() noexcept
+{
+    return gpu::DefaultSyncInfo().Event();
+}
+cudaStream_t GetDefaultStream() noexcept
+{
+    return gpu::DefaultSyncInfo().Stream();
+}
+}// namespace cuda
+
+void DestroySyncInfo(SyncInfo<Device::GPU>& si)
+{
+    gpu::FreeStream(si.stream_);
+    gpu::FreeEvent(si.event_);
+    si.stream_ = nullptr;
+    si.event_ = nullptr;
 }
 
 }// namespace hydrogen

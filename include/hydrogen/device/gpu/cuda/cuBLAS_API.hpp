@@ -24,6 +24,19 @@ namespace cublas
               int n, ScalarType const* X, int incx,     \
               ScalarType* Y, int incy)
 
+#define ADD_DOT_DECL(ScalarType)                \
+    void Dot(cublasHandle_t handle,             \
+             int n,                             \
+             ScalarType const* X, int incx,     \
+             ScalarType const* Y, int incy,     \
+             ScalarType& output)
+
+#define ADD_NRM2_DECL(ScalarType)               \
+    void Nrm2(cublasHandle_t handle,            \
+              int n,                            \
+              ScalarType const* X, int incx,    \
+              ScalarType& output)
+
 #define ADD_SCALE_DECL(ScalarType)                       \
     void Scale(cublasHandle_t handle,                    \
                int n, ScalarType const& alpha,           \
@@ -41,6 +54,22 @@ ADD_COPY_DECL(float);
 ADD_COPY_DECL(double);
 ADD_COPY_DECL(cuComplex);
 ADD_COPY_DECL(cuDoubleComplex);
+
+#ifdef HYDROGEN_GPU_USE_FP16
+ADD_DOT_DECL(__half);
+#endif // HYDROGEN_GPU_USE_FP16
+ADD_DOT_DECL(float);
+ADD_DOT_DECL(double);
+ADD_DOT_DECL(cuComplex);
+ADD_DOT_DECL(cuDoubleComplex);
+
+#ifdef HYDROGEN_GPU_USE_FP16
+ADD_NRM2_DECL(__half);
+#endif // HYDROGEN_GPU_USE_FP16
+ADD_NRM2_DECL(float);
+ADD_NRM2_DECL(double);
+ADD_NRM2_DECL(cuComplex);
+ADD_NRM2_DECL(cuDoubleComplex);
 
 #ifdef HYDROGEN_GPU_USE_FP16
 ADD_SCALE_DECL(__half);
@@ -85,6 +114,22 @@ ADD_GEMV_DECL(cuDoubleComplex);
         ScalarType const& beta,                 \
         ScalarType* C, int ldc)
 
+#define ADD_GEMM_STRIDED_BATCHED_DECL(ScalarType)       \
+    void GemmStridedBatched(                            \
+        cublasHandle_t handle,                          \
+        cublasOperation_t transpA,                      \
+        cublasOperation_t transpB,                      \
+        int m, int n, int k,                            \
+        ScalarType const* alpha,                        \
+        ScalarType const* A, int lda,                   \
+        long long int strideA,                          \
+        ScalarType const* B, int ldb,                   \
+        long long int strideB,                          \
+        ScalarType const* beta,                         \
+        ScalarType* C, int ldc,                         \
+        long long int strideC,                          \
+        int batchCount)
+
 #ifdef HYDROGEN_GPU_USE_FP16
 ADD_GEMM_DECL(__half);
 #endif // HYDROGEN_GPU_USE_FP16
@@ -92,6 +137,14 @@ ADD_GEMM_DECL(float);
 ADD_GEMM_DECL(double);
 ADD_GEMM_DECL(cuComplex);
 ADD_GEMM_DECL(cuDoubleComplex);
+
+#ifdef HYDROGEN_GPU_USE_FP16
+ADD_GEMM_STRIDED_BATCHED_DECL(__half);
+#endif // HYDROGEN_GPU_USE_FP16
+ADD_GEMM_STRIDED_BATCHED_DECL(float);
+ADD_GEMM_STRIDED_BATCHED_DECL(double);
+ADD_GEMM_STRIDED_BATCHED_DECL(cuComplex);
+ADD_GEMM_STRIDED_BATCHED_DECL(cuDoubleComplex);
 
 ///@}
 /** @name BLAS-like Extension Routines */

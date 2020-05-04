@@ -35,6 +35,7 @@ public:
     cudaStream_t Stream() const noexcept { return stream_; }
     cudaEvent_t Event() const noexcept { return event_; }
 private:
+    friend void DestroySyncInfo(SyncInfo<Device::GPU>&);
     cudaStream_t stream_;
     cudaEvent_t event_;
 };// struct SyncInfo<Device::GPU>
@@ -44,7 +45,10 @@ inline void AddSynchronizationPoint(SyncInfo<Device::GPU> const& syncInfo)
     H_CHECK_CUDA(cudaEventRecord(syncInfo.Event(), syncInfo.Stream()));
 }
 
-inline void AddSynchronizationPoint(
+
+namespace details
+{
+inline void AddSyncPoint(
     SyncInfo<Device::CPU> const& master,
     SyncInfo<Device::GPU> const& dependent)
 {
@@ -55,7 +59,7 @@ inline void AddSynchronizationPoint(
         "or it should use Al::GPUWait.");
 }
 
-inline void AddSynchronizationPoint(
+inline void AddSyncPoint(
     SyncInfo<Device::GPU> const& master,
     SyncInfo<Device::CPU> const& dependent)
 {
@@ -67,28 +71,35 @@ inline void AddSynchronizationPoint(
 // completion.
 template <typename... Ts>
 inline
-EnableWhen<AllMatch<SyncInfo<Device::GPU>,Ts...>>
-AddSynchronizationPoint(
-    SyncInfo<Device::GPU> const& master, Ts&&... others)
+void AddSyncPoint(
+    SyncInfo<Device::GPU> const& master, SyncInfo<Device::GPU> const& other)
 {
-    AddSynchronizationPoint(master);
-
-    auto sync_other = [&master](SyncInfo<Device::GPU> const& x)
-        {
-            if (master.Stream() != x.Stream())
-                H_CHECK_CUDA(
-                    cudaStreamWaitEvent(x.Stream(), master.Event(), 0));
-            return 0;
-        };
-
-    int dummy[] = { sync_other(others)... };
-    (void) dummy;
+    if (master.Stream() != other.Stream())
+        H_CHECK_CUDA(
+            cudaStreamWaitEvent(other.Stream(), master.Event(), 0));
 }
+}// namespace details
 
 inline void Synchronize(SyncInfo<Device::GPU> const& syncInfo)
 {
     H_CHECK_CUDA(cudaStreamSynchronize(syncInfo.Stream()));
 }
+
+/** @brief Create a new GPU SyncInfo object. */
+template <>
+inline SyncInfo<Device::GPU> CreateNewSyncInfo<Device::GPU>()
+{
+    cudaEvent_t event;
+    cudaStream_t stream;
+    H_CHECK_CUDA(
+        cudaEventCreateWithFlags(&event, cudaEventDisableTiming));
+    H_CHECK_CUDA(
+        cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking));
+    return SyncInfo<Device::GPU>{stream, event};
+}
+
+/** @brief Destroy a GPU SyncInfo object. */
+void DestroySyncInfo(SyncInfo<Device::GPU>&);
 
 }// namespace hydrogen
 #endif // HYDROGEN_DEVICE_GPU_CUDA_SYNCINFO_HPP_

@@ -1,9 +1,34 @@
 // ReduceScatter
+#ifdef HYDROGEN_HAVE_GPU
+#include "hydrogen/device/gpu/BasicCopy.hpp"
+#endif // HYDROGEN_HAVE_GPU
 
 namespace El
 {
 namespace mpi
 {
+namespace
+{
+template <typename T>
+void LocalCopy(T const* EL_RESTRICT src,
+               T* EL_RESTRICT dest,
+               size_t size,
+               SyncInfo<Device::CPU> const&)
+{
+    return std::copy_n(src, size, dest);
+}
+
+#ifdef HYDROGEN_HAVE_GPU
+template <typename T>
+void LocalCopy(T const* EL_RESTRICT src,
+               T* EL_RESTRICT dest,
+               size_t size,
+               SyncInfo<Device::GPU> const& si)
+{
+    gpu::Copy1DIntraDevice(src, dest, size, si);
+}
+#endif // HYDROGEN_HAVE_GPU
+}
 
 // IsValidAluminumDeviceType should mean both that the device/type
 // combo is valid and that the backend supports this collective.
@@ -18,6 +43,8 @@ void ReduceScatter(T const* sbuf, T* rbuf, int count, Op op, Comm const& comm,
     EL_DEBUG_CSE
     if (count == 0)
         return;
+    if (comm.Size() == 1)
+        return LocalCopy(sbuf, rbuf, count, syncInfo);
 
     using Backend = BestBackend<T,D,Collective::REDUCESCATTER>;
     Al::Reduce_scatter<Backend>(
@@ -127,7 +154,7 @@ void ReduceScatter(T* buf, int count, Op op, Comm const& comm,
                    SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
-    if (count == 0)
+    if (count == 0 || Size(comm) == 1)
         return;
 
     using Backend = BestBackend<T,D,Collective::REDUCESCATTER>;

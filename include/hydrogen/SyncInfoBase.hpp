@@ -3,10 +3,7 @@
 
 #include <El/hydrogen_config.h>
 
-#include <hydrogen/Device.hpp>
-#include <hydrogen/meta/IndexSequence.hpp>
-
-#include <tuple>
+#include "Device.hpp"
 
 namespace hydrogen
 {
@@ -31,11 +28,16 @@ namespace hydrogen
  *  dispatch, where the tags possibly contain some extra
  *  device-specific helpers.
  */
-template <Device D> struct SyncInfo
+template <Device D>
+class SyncInfo;
+
+template <>
+class SyncInfo<Device::CPU>
 {
-    SyncInfo() = default;
-    ~SyncInfo() = default;
-};// struct SyncInfo<D>
+public:
+    SyncInfo() noexcept = default;
+    ~SyncInfo() noexcept = default;
+};// struct SyncInfo<Device::CPU>
 
 template <Device D>
 bool operator==(SyncInfo<D> const&, SyncInfo<D> const&)
@@ -61,85 +63,67 @@ bool operator!=(SyncInfo<D1> const&, SyncInfo<D2> const&)
     return true;
 }
 
-// This synchronizes the additional SyncInfos to the "master". That
-// is, the execution streams described by the "others" will wait
-// for the "master" stream.
+/** @brief Get a new instance of a certain SyncInfo class.
+ *
+ *  For CPU, this will be empty, as usual. For GPU, this will have a
+ *  *new* stream and event.
+ */
+template <Device D>
+SyncInfo<D> CreateNewSyncInfo();
+
+/** @brief Create a new CPU SyncInfo object. */
+template <>
+inline SyncInfo<Device::CPU> CreateNewSyncInfo<Device::CPU>()
+{
+    return SyncInfo<Device::CPU>{};
+}
+
+/** @brief Reset any internal state in the SyncInfo object.
+ *
+ *  For CPU, this will do nothing. For GPU, this will destroy the
+ *  stream and event.
+ */
+template <Device D>
+void DestroySyncInfo(SyncInfo<D>&);
+
+/** @brief Destroy the CPU SyncInfo. */
+inline void DestroySyncInfo(SyncInfo<Device::CPU>&) noexcept {}
+
+/** @brief Synchronize the SyncInfo with the main (CPU) thread. */
+template <Device D>
+void Synchronize(SyncInfo<D> const&);
+
+inline void Synchronize(SyncInfo<Device::CPU> const&) {}
+
+/** @brief Add information to the SyncInfo object identifying this
+ *         execution point.
+ */
 template <Device D, Device... Ds>
 void AddSynchronizationPoint(
-    SyncInfo<D> const& /* master */,
-    SyncInfo<Ds>... /* others */)
-{
-}
+    SyncInfo<D> const& master,
+    SyncInfo<Ds> const&... others);
 
-// Synchronizing is a no-op by default
-template <Device D>
-void Synchronize(SyncInfo<D> const&)
+inline void AddSynchronizationPoint(SyncInfo<Device::CPU> const&)
 {}
 
-template <Device D, Device... Ds>
-void AllWaitOnMaster(
-    SyncInfo<D> const& master, SyncInfo<Ds> const&... others)
+inline void AddSynchronizationPoint(SyncInfo<Device::CPU> const&,
+                                    SyncInfo<Device::CPU> const&)
+{}
+
+inline void AddSynchronizationPoint(SyncInfo<Device::CPU> const&,
+                                    SyncInfo<Device::CPU> const&,
+                                    SyncInfo<Device::CPU> const&)
+{}
+
+namespace details
 {
-    AddSynchronizationPoint(master, others...);
-}
+template <Device D1, Device D2>
+void AddSyncPoint(SyncInfo<D1> const&, SyncInfo<D2> const&);
 
-template <Device D, Device... Ds>
-void MasterWaitOnAll(
-    SyncInfo<D> const& master,
-    SyncInfo<Ds> const&... others)
-{
-    int dummy[] = {
-        (AddSynchronizationPoint(others, master), 0)...};
-    (void) dummy;
-}
+inline void AddSyncPoint(SyncInfo<Device::CPU> const&,
+                         SyncInfo<Device::CPU> const&) noexcept
+{}
 
-/** \class MultiSync
- *  \brief RAII class to wrap a bunch of SyncInfo objects.
- *
- *  Provides basic synchronization for the common case in which an
- *  operation may act upon objects that exist on multiple distinct
- *  synchronous processing elements (e.g., cudaStreams) but actual
- *  computation can only occur on one of them.
- *
- *  Constructing an object of this class will cause the master
- *  processing element to wait on the others, asynchronously with
- *  respect to the CPU, if possible. Symmetrically, destruction of
- *  this object will cause the other processing elements to wait on
- *  the master processing element, asynchronously with respect to the
- *  CPU, if possible.
- *
- *  The master processing element is assumed to be the first SyncInfo
- *  passed into the constructor.
- */
-template <Device... Ds>
-class MultiSync
-{
-public:
-    MultiSync(SyncInfo<Ds> const&... syncInfos)
-        : syncInfos_{syncInfos...}
-    {
-        MasterWaitOnAll(syncInfos...);
-    }
-
-    ~MultiSync()
-    {
-        DTorImpl_(MakeIndexSequence<sizeof...(Ds)>());
-    }
-private:
-    template <size_t... Is>
-    void DTorImpl_(IndexSequence<Is...>)
-    {
-        AllWaitOnMaster(std::get<Is>(syncInfos_)...);
-    }
-
-    std::tuple<SyncInfo<Ds>...> syncInfos_;
-};// class MultiSync
-
-template <Device... Ds>
-auto MakeMultiSync(SyncInfo<Ds> const&... syncInfos) -> MultiSync<Ds...>
-{
-    return MultiSync<Ds...>(syncInfos...);
-}
-
+}// namespace details
 }// namespace hydrogen
 #endif // HYDROGEN_SYNCINFOBASE_HPP_

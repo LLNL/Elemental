@@ -43,5 +43,12 @@ add_subdirectory(Gemm)
 #add_subdirectory(TwoSidedTrmm)
 #add_subdirectory(TwoSidedTrsm)
 
+if (HYDROGEN_HAVE_GPU AND HYDROGEN_HAVE_ALUMINUM)
+  set_full_path(THIS_DIR_CATCH2_TESTS
+    sync_info_pool_test.cpp
+    )
+endif ()
+
 # Propagate the files up the tree
 set(SOURCES "${SOURCES}" "${THIS_DIR_SOURCES}" PARENT_SCOPE)
+set(CATCH2_TESTS "${CATCH2_TESTS}" "${THIS_DIR_CATCH2_TESTS}" PARENT_SCOPE)

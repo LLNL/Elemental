@@ -247,6 +247,9 @@ void TransposeDist(DistMatrix<T,U,V,ELEMENT,Device::GPU> const& A,
             DistMatrix<T,ProductDist<V,U>(),ProductDistPartner<V,U>(),
                        ELEMENT,Device::GPU>
                 A_ProdDistB(g);
+            SetSyncInfo(A_ProdDistB.Matrix(),
+                        SyncInfoFromMatrix(A.LockedMatrix()));
+
             A_ProdDistB.AlignColsWith(B);
             A_ProdDistB = A_ProdDistA;
             A_ProdDistA.Empty();
@@ -260,6 +263,8 @@ void TransposeDist(DistMatrix<T,U,V,ELEMENT,Device::GPU> const& A,
             DistMatrix<T,ProductDistPartner<U,V>(),ProductDist<U,V>(),
                        ELEMENT,Device::GPU>
                 A_ProdDistA(g);
+            SetSyncInfo(A_ProdDistA.Matrix(),
+                        SyncInfoFromMatrix(A.LockedMatrix()));
 
             A_ProdDistA.AlignRowsWith(B);
             A_ProdDistA = A_ProdDistB;

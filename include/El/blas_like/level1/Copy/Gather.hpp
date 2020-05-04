@@ -14,11 +14,14 @@ namespace copy {
 
 template<typename T,Device D>
 void Gather(
-    ElementalMatrix<T> const& A,
+    ElementalMatrix<T> const& Apre,
     DistMatrix<T,CIRC,CIRC,ELEMENT,D>& B)
 {
     EL_DEBUG_CSE
-    AssertSameGrids(A, B);
+    AssertSameGrids(Apre, B);
+
+    AbstractDistMatrixReadDeviceProxy<T, D> Aprox(Apre);
+    auto const& A = static_cast<ElementalMatrix<T> const&>(Aprox.GetLocked());
 
     if (A.GetLocalDevice() != D)
         LogicError("Gather: Inter-device gather not implemented.");

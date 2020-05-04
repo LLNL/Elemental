@@ -99,7 +99,15 @@ struct IsSupportedType_Base<cuDoubleComplex, op> : std::true_type {};
 template <>
 struct IsSupportedType_Base<__half, BLAS_Op::AXPY> : std::true_type {};
 template <>
+struct IsSupportedType_Base<__half, BLAS_Op::DOT> : std::true_type {};
+template <>
 struct IsSupportedType_Base<__half, BLAS_Op::GEMM> : std::true_type {};
+template <>
+struct IsSupportedType_Base<__half, BLAS_Op::GEMMSTRIDEDBATCHED>
+    : std::true_type
+{};
+template <>
+struct IsSupportedType_Base<__half, BLAS_Op::NRM2> : std::true_type {};
 template <>
 struct IsSupportedType_Base<__half, BLAS_Op::SCAL> : std::true_type {};
 #endif // HYDROGEN_GPU_USE_FP16

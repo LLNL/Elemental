@@ -29,6 +29,7 @@ std::string GetrocBLASErrorString(rocblas_status status)
 
 namespace hydrogen
 {
+
 namespace rocblas
 {
 namespace // <anon2>
@@ -124,4 +125,17 @@ std::string BuildrocBLASErrorMessage(
 }
 
 }// namespace rocblas
+
+namespace gpu_blas
+{
+void SetPointerMode(PointerMode mode)
+{
+    H_CHECK_ROCBLAS(
+        rocblas_set_pointer_mode(rocblas::GetLibraryHandle(),
+                                 (mode == PointerMode::HOST
+                                  ? rocblas_pointer_mode_host
+                                  : rocblas_pointer_mode_device)));
+}
+}// namespace gpu_blas
+
 }// namespace hydrogen

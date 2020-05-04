@@ -7,6 +7,10 @@
    http://opensource.org/licenses/BSD-2-Clause
 */
 
+#ifdef HYDROGEN_HAVE_MS_GEMM
+#include "TN_Multistream.hpp"
+#endif // HYDROGEN_HAVE_MS_GEMM
+
 namespace El {
 namespace gemm {
 
@@ -93,6 +97,41 @@ void SUMMA_TNA
     }
 }
 
+template<typename T>
+void SUMMA_TNA_MS(
+    Orientation orientA,
+    T alpha,
+    AbstractDistMatrix<T> const& APre,
+    AbstractDistMatrix<T> const& BPre,
+    AbstractDistMatrix<T>& CPre)
+{
+    EL_DEBUG_CSE;
+#ifndef HYDROGEN_HAVE_MS_GEMM
+    OutputFromRoot(CPre.Grid().Comm(),
+                   "WARNING: Multistream support not available; "
+                   "requires GPU and Aluminum.");
+    SUMMA_TNA(orientA, alpha, APre, BPre, CPre);
+#else
+
+    switch (CPre.GetLocalDevice())
+    {
+    case Device::CPU:
+        OutputFromRoot(
+            CPre.Grid().Comm(),
+            "WARNING: CPU doesn't support \"multistream\" variants.");
+        SUMMA_TNA_impl<Device::CPU>(orientA, alpha, APre, BPre, CPre);
+        break;
+#ifdef HYDROGEN_HAVE_CUDA
+    case Device::GPU:
+        SUMMA_TNA_impl_multistream(orientA, alpha, APre, BPre, CPre);
+        break;
+#endif // HYDROGEN_HAVE_CUDA
+    default:
+        LogicError("SUMMA_TNA_MS: Bad device.");
+    }
+#endif // HYDROGEN_HAVE_MS_GEMM
+}
+
 // Transpose Normal Gemm that avoids communicating the matrix B
 template <Device D, typename T, typename=EnableIf<IsDeviceValidType<T,D>>>
 void SUMMA_TNB_impl
@@ -173,6 +212,41 @@ void SUMMA_TNB
     }
 }
 
+template<typename T>
+void SUMMA_TNB_MS(
+    Orientation orientA,
+    T alpha,
+    AbstractDistMatrix<T> const& APre,
+    AbstractDistMatrix<T> const& BPre,
+    AbstractDistMatrix<T>& CPre)
+{
+    EL_DEBUG_CSE;
+#ifndef HYDROGEN_HAVE_MS_GEMM
+    OutputFromRoot(CPre.Grid().Comm(),
+                   "WARNING: Multistream support not available; "
+                   "requires GPU and Aluminum.");
+    SUMMA_TNB(orientA, alpha, APre, BPre, CPre);
+#else
+
+    switch (CPre.GetLocalDevice())
+    {
+    case Device::CPU:
+        OutputFromRoot(
+            CPre.Grid().Comm(),
+            "WARNING: CPU doesn't support \"multistream\" variants.");
+        SUMMA_TNB_impl<Device::CPU>(orientA, alpha, APre, BPre, CPre);
+        break;
+#ifdef HYDROGEN_HAVE_CUDA
+    case Device::GPU:
+        SUMMA_TNB_impl_multistream(orientA, alpha, APre, BPre, CPre);
+        break;
+#endif // HYDROGEN_HAVE_CUDA
+    default:
+        LogicError("SUMMA_TNB_MS: Bad device.");
+    }
+#endif // HYDROGEN_HAVE_MS_GEMM
+}
+
 // Transpose Normal Gemm that avoids communicating the matrix C
 template <Device D, typename T, typename=EnableIf<IsDeviceValidType<T,D>>>
 void SUMMA_TNC_impl
@@ -251,6 +325,41 @@ void SUMMA_TNC
     default:
         LogicError("SUMMA_TNA: Bad device.");
     }
+}
+
+template<typename T>
+void SUMMA_TNC_MS(
+    Orientation orientA,
+    T alpha,
+    AbstractDistMatrix<T> const& APre,
+    AbstractDistMatrix<T> const& BPre,
+    AbstractDistMatrix<T>& CPre)
+{
+    EL_DEBUG_CSE;
+#ifndef HYDROGEN_HAVE_MS_GEMM
+    OutputFromRoot(CPre.Grid().Comm(),
+                   "WARNING: Multistream support not available; "
+                   "requires GPU and Aluminum.");
+    SUMMA_TNC(orientA, alpha, APre, BPre, CPre);
+#else
+
+    switch (CPre.GetLocalDevice())
+    {
+    case Device::CPU:
+        OutputFromRoot(
+            CPre.Grid().Comm(),
+            "WARNING: CPU doesn't support \"multistream\" variants.");
+        SUMMA_TNC_impl<Device::CPU>(orientA, alpha, APre, BPre, CPre);
+        break;
+#ifdef HYDROGEN_HAVE_CUDA
+    case Device::GPU:
+        SUMMA_TNC_impl_multistream(orientA, alpha, APre, BPre, CPre);
+        break;
+#endif // HYDROGEN_HAVE_CUDA
+    default:
+        LogicError("SUMMA_TNC_MS: Bad device.");
+    }
+#endif // HYDROGEN_HAVE_MS_GEMM
 }
 
 // Transpose Normal Gemm for panel-panel dot products
@@ -379,23 +488,41 @@ void SUMMA_TN
     // TODO(poulson): Make this tunable
     const Int blockSizeDot = 2000;
 
+    if (alg == GEMM_DEFAULT)
+    {
+#ifdef HYDROGEN_HAVE_MS_GEMM
+        bool const multistream =
+            (C.GetLocalDevice() == Device::GPU
+             && GetSyncInfoPool(C.Grid()).Size() > 1);
+#else
+        bool constexpr multistream = false;
+#endif // HYDROGEN_HAVE_MS_GEMM
+        if(weightAwayFromDot*m <= sumDim && weightAwayFromDot*n <= sumDim)
+            alg = GEMM_SUMMA_DOT;
+        else if(m <= n && weightTowardsC*m <= sumDim)
+            alg = (multistream ? GEMM_SUMMA_B_MS : GEMM_SUMMA_B);
+        else if(n <= m && weightTowardsC*n <= sumDim)
+            alg = (multistream ? GEMM_SUMMA_A_MS : GEMM_SUMMA_A);
+        else
+            alg = (multistream ? GEMM_SUMMA_C_MS : GEMM_SUMMA_C);
+    }
+
     switch(alg)
     {
     case GEMM_DEFAULT:
-        if(weightAwayFromDot*m <= sumDim && weightAwayFromDot*n <= sumDim)
-            SUMMA_TNDot(orientA, alpha, A, B, C, blockSizeDot);
-        else if(m <= n && weightTowardsC*m <= sumDim)
-            SUMMA_TNB(orientA, alpha, A, B, C);
-        else if(n <= m && weightTowardsC*n <= sumDim)
-            SUMMA_TNA(orientA, alpha, A, B, C);
-        else
-            SUMMA_TNC(orientA, alpha, A, B, C);
+        LogicError("This shouldn't happen.");
         break;
-    case GEMM_SUMMA_A: SUMMA_TNA(orientA, alpha, A, B, C); break;
-    case GEMM_SUMMA_B: SUMMA_TNB(orientA, alpha, A, B, C); break;
-    case GEMM_SUMMA_C: SUMMA_TNC(orientA, alpha, A, B, C); break;
-    case GEMM_SUMMA_DOT: SUMMA_TNDot(orientA, alpha, A, B, C); break;
-    default: LogicError("Unsupported Gemm option");
+    case GEMM_SUMMA_A_MS: SUMMA_TNA_MS(orientA, alpha, A, B, C); break;
+    case GEMM_SUMMA_A:    SUMMA_TNA(orientA, alpha, A, B, C); break;
+    case GEMM_SUMMA_B_MS: SUMMA_TNB_MS(orientA, alpha, A, B, C); break;
+    case GEMM_SUMMA_B:    SUMMA_TNB(orientA, alpha, A, B, C); break;
+    case GEMM_SUMMA_C_MS: SUMMA_TNC_MS(orientA, alpha, A, B, C); break;
+    case GEMM_SUMMA_C:    SUMMA_TNC(orientA, alpha, A, B, C); break;
+    case GEMM_SUMMA_DOT:
+        SUMMA_TNDot(orientA, alpha, A, B, C, blockSizeDot);
+        break;
+    default:
+        LogicError("Unsupported Gemm option");
     }
 }
 

@@ -7,6 +7,13 @@
    http://opensource.org/licenses/BSD-2-Clause
 */
 
+#include <El/matrices.hpp>
+#include <El/io.hpp>
+
+#ifdef HYDROGEN_HAVE_MS_GEMM
+#include "NN_Multistream.hpp"
+#endif // HYDROGEN_HAVE_MS_GEMM
+
 namespace El {
 namespace gemm {
 
@@ -157,13 +164,13 @@ void SUMMA_NNA_impl(T alpha,
 }
 
 template <typename T>
-void SUMMA_NNA
-(T alpha,
- AbstractDistMatrix<T> const& APre,
- AbstractDistMatrix<T> const& BPre,
- AbstractDistMatrix<T>& CPre)
+void SUMMA_NNA(
+    T alpha,
+    AbstractDistMatrix<T> const& APre,
+    AbstractDistMatrix<T> const& BPre,
+    AbstractDistMatrix<T>& CPre)
 {
-    EL_DEBUG_CSE
+    EL_DEBUG_CSE;
 
     switch (CPre.GetLocalDevice())
     {
@@ -178,6 +185,41 @@ void SUMMA_NNA
     default:
         LogicError("SUMMA_NNA: Bad device.");
     }
+}
+
+template <typename T>
+void SUMMA_NNA_MS(
+    T alpha,
+    AbstractDistMatrix<T> const& APre,
+    AbstractDistMatrix<T> const& BPre,
+    AbstractDistMatrix<T>& CPre)
+{
+    EL_DEBUG_CSE;
+#ifndef HYDROGEN_HAVE_MS_GEMM
+    OutputFromRoot(CPre.Grid().Comm(),
+                   "WARNING: Multistream support not available; "
+                   "requires GPU and Aluminum.");
+    SUMMA_NNA(alpha, APre, BPre, CPre);
+#else
+
+    switch (CPre.GetLocalDevice())
+    {
+    case Device::CPU:
+        OutputFromRoot(
+            CPre.Grid().Comm(),
+            "WARNING: CPU doesn't support \"multistream\" variants.");
+        SUMMA_NNA_impl<Device::CPU>(alpha, APre, BPre, CPre);
+        break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+        SUMMA_NNA_impl_multistream(alpha, APre, BPre, CPre);
+        break;
+#endif // HYDROGEN_HAVE_GPU
+    default:
+        LogicError("SUMMA_NNA: Bad device.");
+    }
+
+#endif // HYDROGEN_HAVE_MS_GEMM
 }
 
 // Normal Normal Gemm that avoids communicating the matrix B
@@ -261,6 +303,40 @@ void SUMMA_NNB
     }
 }
 
+template <typename T>
+void SUMMA_NNB_MS(
+    T alpha,
+    AbstractDistMatrix<T> const& APre,
+    AbstractDistMatrix<T> const& BPre,
+    AbstractDistMatrix<T>& CPre)
+{
+    EL_DEBUG_CSE;
+#ifndef HYDROGEN_HAVE_MS_GEMM
+    OutputFromRoot(CPre.Grid().Comm(),
+                   "WARNING: Multistream support not available; "
+                   "requires GPU and Aluminum.");
+    SUMMA_NNB(alpha, APre, BPre, CPre);
+#else
+
+    switch (CPre.GetLocalDevice())
+    {
+    case Device::CPU:
+        OutputFromRoot(
+            CPre.Grid().Comm(),
+            "WARNING: CPU doesn't support \"multistream\" variants.");
+        SUMMA_NNB_impl<Device::CPU>(alpha, APre, BPre, CPre);
+        break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+        SUMMA_NNB_impl_multistream(alpha, APre, BPre, CPre);
+        break;
+#endif // HYDROGEN_HAVE_GPU
+    default:
+        LogicError("SUMMA_NNB: Bad device.");
+    }
+#endif // HYDROGEN_HAVE_MS_GEMM
+}
+
 // Normal Normal Gemm that avoids communicating the matrix C
 template <Device D, typename T, typename=EnableIf<IsDeviceValidType<T,D>>>
 void SUMMA_NNC_impl(T alpha,
@@ -268,11 +344,12 @@ void SUMMA_NNC_impl(T alpha,
                     AbstractDistMatrix<T> const& BPre,
                     AbstractDistMatrix<T>& CPre)
 {
-    EL_DEBUG_CSE
+    EL_DEBUG_CSE;
     AUTO_PROFILE_REGION(
         "SUMMA.NNC",
         SyncInfoFromMatrix(
             static_cast<Matrix<T,D> const&>(CPre.LockedMatrix())));
+
     const Int sumDim = APre.Width();
     const Int bsize = Blocksize();
     const Grid& g = APre.Grid();
@@ -301,8 +378,9 @@ void SUMMA_NNC_impl(T alpha,
         //           = alpha A1[MC,*] B1[*,MR]
         A1_MC_STAR = A1;
         Transpose(B1, B1Trans_MR_STAR);
-        LocalGemm
-        (NORMAL, TRANSPOSE, alpha, A1_MC_STAR, B1Trans_MR_STAR, TypeTraits<T>::One(), C);
+        LocalGemm(NORMAL, TRANSPOSE,
+                  alpha, A1_MC_STAR, B1Trans_MR_STAR,
+                  TypeTraits<T>::One(), C);
     }
 }
 
@@ -339,6 +417,40 @@ void SUMMA_NNC
         LogicError("SUMMA_NNC: Bad device.");
     }
 
+}
+
+template <typename T>
+void SUMMA_NNC_MS(
+    T alpha,
+    AbstractDistMatrix<T> const& APre,
+    AbstractDistMatrix<T> const& BPre,
+    AbstractDistMatrix<T>& CPre)
+{
+    EL_DEBUG_CSE;
+#ifndef HYDROGEN_HAVE_MS_GEMM
+    OutputFromRoot(CPre.Grid().Comm(),
+                   "WARNING: Multistream support not available; "
+                   "requires GPU and Aluminum.");
+    SUMMA_NNC(alpha, APre, BPre, CPre);
+#else
+
+    switch (CPre.GetLocalDevice())
+    {
+    case Device::CPU:
+        OutputFromRoot(
+            CPre.Grid().Comm(),
+            "WARNING: CPU doesn't support \"multistream\" variants.");
+        SUMMA_NNC_impl<Device::CPU>(alpha, APre, BPre, CPre);
+        break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+        SUMMA_NNC_impl_multistream(alpha, APre, BPre, CPre);
+        break;
+#endif // HYDROGEN_HAVE_GPU
+    default:
+        LogicError("SUMMA_NNC: Bad device.");
+    }
+#endif // HYDROGEN_HAVE_MS_GEMM
 }
 
 // Normal Normal Gemm for panel-panel dot products
@@ -436,14 +548,14 @@ void SUMMA_NNDot
 }
 
 template<typename T>
-void SUMMA_NN
-(T alpha,
-  const AbstractDistMatrix<T>& A,
-  const AbstractDistMatrix<T>& B,
-        AbstractDistMatrix<T>& C,
-  GemmAlgorithm alg=GEMM_DEFAULT)
+void SUMMA_NN(
+    T alpha,
+    AbstractDistMatrix<T> const& A,
+    AbstractDistMatrix<T> const& B,
+    AbstractDistMatrix<T>& C,
+    GemmAlgorithm alg=GEMM_DEFAULT)
 {
-    EL_DEBUG_CSE
+    EL_DEBUG_CSE;
     EL_DEBUG_ONLY(
       AssertSameGrids(A, B, C);
       if (A.Height() != C.Height() ||
@@ -465,27 +577,42 @@ void SUMMA_NN
     // TODO(poulson): Make this tunable
     const Int blockSizeDot = 2000;
 
+    // Until a real profile-based heuristic is derived, we will use
+    // the historical heuristic. If multiple streams are available, we
+    // will use the multistream versions.
+    if (alg == GEMM_DEFAULT)
+    {
+#ifdef HYDROGEN_HAVE_MS_GEMM
+        bool const multistream =
+            (C.GetLocalDevice() == Device::GPU
+             && GetSyncInfoPool(C.Grid()).Size() > 1);
+#else
+        bool constexpr multistream = false;
+#endif
+        if (weightAwayFromDot*m <= sumDim && weightAwayFromDot*n <= sumDim)
+            alg = GEMM_SUMMA_DOT;
+        else if (m <= n && weightTowardsC*m <= sumDim)
+            alg = (multistream ? GEMM_SUMMA_B_MS : GEMM_SUMMA_B);
+        else if (n <= m && weightTowardsC*n <= sumDim)
+            alg = (multistream ? GEMM_SUMMA_A_MS : GEMM_SUMMA_A);
+        else
+            alg = (multistream ? GEMM_SUMMA_C_MS : GEMM_SUMMA_C);
+    }
+
     switch(alg)
     {
     case GEMM_DEFAULT:
-        if (weightAwayFromDot*m <= sumDim && weightAwayFromDot*n <= sumDim)
-        {
-            // FIXME (trb 03/27/18): There's a correctness issue with
-            // this method. This exception is for your own safety.
-            SUMMA_NNDot(alpha, A, B, C, blockSizeDot);
-        }
-        else if (m <= n && weightTowardsC*m <= sumDim)
-            SUMMA_NNB(alpha, A, B, C);
-        else if (n <= m && weightTowardsC*n <= sumDim)
-            SUMMA_NNA(alpha, A, B, C);
-        else
-            SUMMA_NNC(alpha, A, B, C);
+        LogicError("This shouldn't happen.");
         break;
-    case GEMM_SUMMA_A:   SUMMA_NNA(alpha, A, B, C); break;
-    case GEMM_SUMMA_B:   SUMMA_NNB(alpha, A, B, C); break;
-    case GEMM_SUMMA_C:   SUMMA_NNC(alpha, A, B, C); break;
-    case GEMM_SUMMA_DOT: SUMMA_NNDot(alpha, A, B, C, blockSizeDot); break;
-    default: LogicError("Unsupported Gemm option");
+    case GEMM_SUMMA_A_MS: SUMMA_NNA_MS(alpha, A, B, C); break;
+    case GEMM_SUMMA_A:    SUMMA_NNA(alpha, A, B, C); break;
+    case GEMM_SUMMA_B_MS: SUMMA_NNB_MS(alpha, A, B, C); break;
+    case GEMM_SUMMA_B:    SUMMA_NNB(alpha, A, B, C); break;
+    case GEMM_SUMMA_C_MS: SUMMA_NNC_MS(alpha, A, B, C); break;
+    case GEMM_SUMMA_C:    SUMMA_NNC(alpha, A, B, C); break;
+    case GEMM_SUMMA_DOT:  SUMMA_NNDot(alpha, A, B, C, blockSizeDot); break;
+    default:
+        LogicError("Unsupported Gemm option (this shouldn't be possible)");
     }
 }
 

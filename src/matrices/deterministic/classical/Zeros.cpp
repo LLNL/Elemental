@@ -71,7 +71,7 @@ void Zeros( AbstractDistMatrix<T>& A, Int m, Int n )
 
 #ifdef HYDROGEN_GPU_USE_FP16
 PROTO(gpu_half_type)
-#endif
+#endif // HYDROGEN_GPU_USE_FP16
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE
