@@ -20,7 +20,7 @@
         H_SYNC_HIP();                                                   \
         auto h_check_hip_error_code__ = cmd;                            \
         H_ASSERT(h_check_hip_error_code__ == hipSuccess,                \
-                 ::hydrogen::HipError,                                  \
+                 ::hydrogen::HIPError,                                  \
                  (hipDeviceReset(),                                     \
                   ::hydrogen::rocm::BuildHipErrorMessage(               \
                       #cmd, h_check_hip_error_code__)));                \

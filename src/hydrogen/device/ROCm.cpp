@@ -81,7 +81,7 @@ void Initialize()
 void Finalize()
 {
     El::DestroyPinnedHostMemoryPool();
-    DestroySyncInfo_(default_syncinfo_);
+    DestroySyncInfo(default_syncinfo_);
     rocm_initialized_ = false;
 }
 
