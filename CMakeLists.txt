@@ -553,12 +553,6 @@ target_link_libraries(
   $<TARGET_NAME_IF_EXISTS:EP::extended_precision>
   $<TARGET_NAME_IF_EXISTS:cuda::toolkit>
   )
-if (Hydrogen_ENABLE_ROCM)
-  target_link_libraries(
-    Hydrogen_CXX PUBLIC
-    /opt/rocm/hip/lib/libhip_hcc.so
-    )
-endif (Hydrogen_ENABLE_ROCM)
 
 # Add the CXX library to "Hydrogen"
 set(HYDROGEN_LIBRARIES Hydrogen_CXX)
