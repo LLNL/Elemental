@@ -7,13 +7,15 @@
 # [0.87 1.0.0)
 # [1.0.0 1.1.0)
 # [1.1.0 1.2.0)
-# [1.2.0 ???)
+# [1.2.0 1.3.0)
+# [1.3.0 1.4.0)
+# [1.4.0 ???)
 #
 # IMPORTANT: IF YOU MAKE A BREAKING CHANGE TO HYDROGEN, THE UPDATE
 # MUST BE GIVEN A NEW VERSION NUMBER, WHICH THEN MUST BE APPENDED TO
 # THIS LIST.
 
-set(_version_compat_ranges 0.0.0 0.87.0 1.0.0 1.1.0 1.2.0)
+set(_version_compat_ranges 0.0.0 0.87.0 1.0.0 1.1.0 1.2.0 1.3.0 1.4.0)
 
 # This is the version that has been installed.
 set(PACKAGE_VERSION "@HYDROGEN_VERSION@")
