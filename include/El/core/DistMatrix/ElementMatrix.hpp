@@ -28,13 +28,13 @@ public:
 
     virtual ~ElementalMatrix();
 
-    virtual type* Copy() const = 0;
+    virtual type* Copy() const override = 0;
     virtual type* Construct
-    (const El::Grid& grid, int root) const = 0;
+    (const El::Grid& grid, int root) const override = 0;
     virtual type* ConstructTranspose
-    (const El::Grid& grid, int root) const = 0;
+    (const El::Grid& grid, int root) const override = 0;
     virtual type* ConstructDiagonal
-    (const El::Grid& grid, int root) const = 0;
+    (const El::Grid& grid, int root) const override = 0;
 
     // Assignment and reconfiguration
     // ==============================
