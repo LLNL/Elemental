@@ -30,13 +30,13 @@
 
 // CUDA stuff
 #cmakedefine HYDROGEN_HAVE_CUDA
-#cmakedefine HYDROGEN_HAVE_CUB
-#cmakedefine HYDROGEN_CUBLAS_USE_TENSOR_OP_MATH
 
 // ROCm stuff
 #cmakedefine HYDROGEN_HAVE_ROCM
 
 // General GPU stuff
+#cmakedefine HYDROGEN_HAVE_CUB
+#cmakedefine HYDROGEN_GPU_USE_TENSOR_OP_MATH
 #cmakedefine HYDROGEN_GPU_USE_FP16
 
 // Aluminum stuff

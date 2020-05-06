@@ -154,23 +154,23 @@ option(Hydrogen_ENABLE_CUDA
   "Search for CUDA support and enable related features if found."
   OFF)
 
-if (Hydrogen_ENABLE_CUDA)
+option(Hydrogen_ENABLE_ROCM
+  "Search for ROCm/HIP support and enable related features if found."
+  OFF)
+
+if (Hydrogen_ENABLE_CUDA OR Hydrogen_ENABLE_ROCM)
   option(Hydrogen_ENABLE_CUB
     "Search for CUB support and enable related features if found."
     ON)
-
-  option(Hydrogen_ENABLE_CUBLAS_TENSOR_MATH
-    "Use the cuBLAS tensor operation math."
+  
+  option(Hydrogen_ENABLE_GPU_TENSOR_MATH
+    "Use the GPU tensor operations when available."
     OFF)
-
+  
   option(Hydrogen_ENABLE_GPU_FP16
     "Enable FP16 arithmetic in GPU code."
     ON)
 endif ()
-
-option(Hydrogen_ENABLE_ROCM
-  "Search for ROCm/HIP support and enable related features if found."
-  OFF)
 
 if (Hydrogen_ENABLE_ROCM AND Hydrogen_ENABLE_CUDA)
   message(FATAL_ERROR
@@ -346,8 +346,8 @@ if (Hydrogen_ENABLE_CUDA)
     find_package(CUDA REQUIRED) # Enable all the macros
     find_package(NVML REQUIRED)
 
-    if (Hydrogen_ENABLE_CUBLAS_TENSOR_MATH)
-      set(HYDROGEN_CUBLAS_USE_TENSOR_OP_MATH TRUE)
+    if (Hydrogen_ENABLE_GPU_TENSOR_MATH)
+      set(HYDROGEN_GPU_USE_TENSOR_OP_MATH TRUE)
     endif ()
 
     if (Hydrogen_ENABLE_GPU_FP16)
@@ -404,6 +404,14 @@ endif (Hydrogen_ENABLE_CUDA)
 if (Hydrogen_ENABLE_ROCM)
   set(CMAKE_MODULE_PATH "/opt/rocm/hip/cmake" ${CMAKE_MODULE_PATH})
   find_package(HIP REQUIRED)
+
+  if (Hydrogen_ENABLE_CUB)
+    find_package(hipCUB REQUIRED)
+    set(HYDROGEN_HAVE_CUB TRUE)
+  else ()
+    set(HYDROGEN_HAVE_CUB FALSE)
+  endif ()
+
   if (HIP_FOUND)
     set(CMAKE_CXX_EXTENSIONS FALSE)
     find_package(ROCBLAS REQUIRED)

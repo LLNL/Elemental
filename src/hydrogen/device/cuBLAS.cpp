@@ -65,13 +65,13 @@ void Initialize(cublasHandle_t handle)
         H_CHECK_CUBLAS(
             cublasSetPointerMode(
                 GetLibraryHandle(), CUBLAS_POINTER_MODE_HOST));
-#ifdef HYDROGEN_CUBLAS_USE_TENSOR_OP_MATH
+#ifdef HYDROGEN_GPU_USE_TENSOR_OP_MATH
         H_CHECK_CUBLAS(
             cublasSetMathMode(GetLibraryHandle(),CUBLAS_TENSOR_OP_MATH));
 #else
         H_CHECK_CUBLAS(
             cublasSetMathMode(GetLibraryHandle(),CUBLAS_DEFAULT_MATH));
-#endif // HYDROGEN_CUBLAS_USE_TENSOR_OP_MATH
+#endif // HYDROGEN_GPU_USE_TENSOR_OP_MATH
 
         cublas_is_initialized_ = true;
     }

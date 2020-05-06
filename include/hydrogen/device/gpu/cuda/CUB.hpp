@@ -1,13 +1,24 @@
 #ifndef HYDROGEN_IMPORTS_CUB_HPP_
 #define HYDROGEN_IMPORTS_CUB_HPP_
 
+#include "El/hydrogen_config.h"
+
+#ifdef HYDROGEN_HAVE_CUDA
 #include <cuda_runtime.h>
 #include <cub/util_allocator.cuh>
+#elif defined HYDROGEN_HAVE_ROCM
+#include <hipcub/hipcub.hpp>
+#endif // HYDROGEN_HAVE_CUB
 
 namespace hydrogen
 {
 namespace cub
 {
+#ifdef HYDROGEN_HAVE_CUDA
+namespace cub_impl = ::cub;
+#elif defined HYDROGEN_HAVE_ROCM
+namespace cub_impl = ::hipcub;
+#endif // HYDROGEN_HAVE_CUDA
 
     /** @brief Get singleton instance of CUB memory pool.
      *
@@ -27,7 +38,7 @@ namespace cub
      *  redirect output on a per-rank basis, either through the
      *  features exposed by their MPI launcher or by some other means.
      */
-    ::cub::CachingDeviceAllocator& MemoryPool();
+    cub_impl::CachingDeviceAllocator& MemoryPool();
     /** Destroy singleton instance of CUB memory pool. */
     void DestroyMemoryPool();
 

@@ -172,8 +172,13 @@ void Delete( G*& ptr, unsigned int mode, SyncInfo<Device::GPU> const& )
 #endif
 #ifdef HYDROGEN_HAVE_CUB
     case 1:
+#if defined HYDROGEN_HAVE_CUDA
         H_CHECK_CUDA(
             hydrogen::cub::MemoryPool().DeviceFree(ptr));
+#elif defined HYDROGEN_HAVE_ROCM
+        H_CHECK_HIP(
+            hydrogen::cub::MemoryPool().DeviceFree(ptr));
+#endif
         break;
 #endif // HYDROGEN_HAVE_CUB
     default: RuntimeError("Invalid GPU memory deallocation mode");
