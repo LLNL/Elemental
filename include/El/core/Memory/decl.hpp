@@ -35,9 +35,9 @@ constexpr unsigned DefaultMemoryMode<Device::GPU>()
     return 1;
 #else
     return 0;
-#endif
-}
 #endif // HYDROGEN_HAVE_CUB
+}
+#endif // HYDROGEN_HAVE_GPU
 
 template<typename G, Device D=Device::CPU>
 class Memory

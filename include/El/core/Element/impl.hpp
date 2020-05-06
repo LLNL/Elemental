@@ -135,7 +135,7 @@ inline void UpdateRealPart<gpu_half_type, void>(
 {
     alpha = float(alpha)+float(beta);
 }
-#endif // HYDROGEN_HAVE_GPU
+#endif // HYDROGEN_GPU_USE_FP16
 
 template<typename Real>
 void UpdateRealPart( Complex<Real>& alpha, const Real& beta )

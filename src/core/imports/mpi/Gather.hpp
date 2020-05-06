@@ -138,7 +138,7 @@ void Gather(const T*, int, T*, int, int, Comm const&, SyncInfo<D> const&)
 #define MPI_COLLECTIVE_COMPLEX_PROTO(T) \
     MPI_COLLECTIVE_COMPLEX_PROTO_DEV(T,Device::CPU) \
     MPI_COLLECTIVE_COMPLEX_PROTO_DEV(T,Device::GPU)
-#endif
+#endif // HYDROGEN_HAVE_GPU
 
 MPI_COLLECTIVE_PROTO(byte)
 MPI_COLLECTIVE_PROTO(int)
