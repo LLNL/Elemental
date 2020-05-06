@@ -29,8 +29,8 @@ namespace hydrogen
  *  @param[in,out] buffer The array.
  *  @param[in] stride The number of `T`s between entries in the input
  *      array.
- *  @param[in] stream The CUDA stream on which the kernel should be
- *      launched.
+ *  @param[in] sync_info The sync info wrapping the stream on which
+ *      the kernel should be launched.
  *
  *  @throws std::logic_error If the type is not supported on GPU.
  */
@@ -40,7 +40,7 @@ void Scale_GPU_impl(
     SizeT num_entries,
     T const& alpha,
     T* buffer, SizeT stride,
-    gpuStream_t stream);
+    SyncInfo<Device::GPU> const& sync_info);
 
 template <typename T, typename SizeT,
           typename=EnableUnless<IsStorageType<T,Device::GPU>>,
@@ -49,7 +49,7 @@ void Scale_GPU_impl(
     SizeT const&,
     T const&,
     T const* const&, SizeT const&,
-    gpuStream_t const&)
+    SyncInfo<Device::GPU> const&)
 {
     throw std::logic_error("Scale: Type not valid on GPU");
 }
@@ -67,8 +67,8 @@ void Scale_GPU_impl(
  *  @param[in] alpha The scaling parameter.
  *  @param[in,out] buffer The matrix, in column-major ordering.
  *  @param[in] ldim The leading dimension of the data in buffer.
- *  @param[in] stream The CUDA stream on which the kernel should be
- *      launched.
+ *  @param[in] sync_info The sync info wrapping the stream on which
+ *      the kernel should be launched.
  *
  *  @todo See if we can statically assert that the operator*= will
  *        succeed on the device.
@@ -79,14 +79,14 @@ void Scale_GPU_impl(
     SizeT num_rows, SizeT num_cols,
     T const& alpha,
     T* buffer, SizeT ldim,
-    gpuStream_t stream);
+    SyncInfo<Device::GPU> const& sync_info);
 
 template <typename T, typename SizeT,
           typename=EnableUnless<IsStorageType<T,Device::GPU>>,
           typename=void>
 void Scale_GPU_impl(SizeT const&, SizeT const&,
                     T const&, T const* const&, SizeT const&,
-                    gpuStream_t const&)
+                    SyncInfo<Device::GPU> const&)
 {
     throw std::logic_error("Scale: Type not valid on GPU.");
 }

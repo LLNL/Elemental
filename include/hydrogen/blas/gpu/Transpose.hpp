@@ -32,8 +32,8 @@ namespace hydrogen
  *  @param[out] dest The destination matrix, in column-major ordering. Must not
  *      overlap with the source matrix. Contents will be overwritten.
  *  @param[in] ldb The leading dimension of B.
- *  @param stream The CUDA stream on which the kernel should be
- *      launched.
+ *  @param[in] sync_info The sync info wrapping the stream on which
+ *      the kernel should be launched.
  */
 template <typename T, typename SizeT,
           typename=EnableWhen<IsStorageType<T,Device::GPU>>>
@@ -41,7 +41,7 @@ void Transpose_GPU_impl(
     SizeT num_rows, SizeT num_cols,
     T const* A, SizeT lda,
     T* B, SizeT ldb,
-    gpuStream_t stream);
+    SyncInfo<Device::GPU> const& sync_info);
 
 template <typename T, typename SizeT,
           typename=EnableUnless<IsStorageType<T,Device::GPU>>,
@@ -50,7 +50,7 @@ void Transpose_GPU_impl(
     SizeT const&, SizeT const&,
     T const* const&, SizeT const&,
     T* const&, SizeT const&,
-    gpuStream_t const&)
+    SyncInfo<Device::GPU> const&)
 {
     throw std::logic_error("Copy: Type not valid on GPU.");
 }

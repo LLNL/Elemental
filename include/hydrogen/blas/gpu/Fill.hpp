@@ -22,14 +22,14 @@ namespace hydrogen
 template <typename T, typename=EnableWhen<IsStorageType<T,Device::GPU>>>
 void Fill_GPU_impl(size_t height, size_t width,
                    T const& alpha, T* buffer, size_t ldim,
-                   gpuStream_t stream);
+                   SyncInfo<Device::GPU> const& sync_info);
 
 template <typename T,
           typename=EnableUnless<IsDeviceValidType<T,Device::GPU>>,
           typename=void>
 void Fill_GPU_impl(size_t const&, size_t const&,
                    T const&, T* const&, size_t const&,
-                   gpuStream_t const&)
+                   SyncInfo<Device::GPU> const&)
 {
     throw std::logic_error("Fill: Type not valid on GPU.");
 }
@@ -37,9 +37,9 @@ void Fill_GPU_impl(size_t const&, size_t const&,
 template <typename T, typename=EnableWhen<IsStorageType<T,Device::GPU>>>
 void Fill_GPU_1D_impl(T* buffer, size_t const& size,
                       T const& alpha,
-                      gpuStream_t stream)
+                      SyncInfo<Device::GPU> const& sync_info)
 {
-    Fill_GPU_impl(size, 1, alpha, buffer, size, stream);
+    Fill_GPU_impl(size, 1, alpha, buffer, size, sync_info);
 }
 
 }// namespace hydrogen

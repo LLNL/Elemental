@@ -4,11 +4,9 @@
 #ifdef HYDROGEN_HAVE_CUDA
 #include <hydrogen/device/gpu/CUDA.hpp>
 #include <cuda_runtime.h>
-using gpuStream_t = cudaStream_t;
 #elif defined(HYDROGEN_HAVE_ROCM)
 #include <hydrogen/device/gpu/ROCm.hpp>
 #include <hip/hip_runtime.h>
-using gpuStream_t = hipStream_t;
 #endif
 
 namespace
@@ -68,7 +66,7 @@ void Hadamard_GPU_impl(
     T const* X, size_t colStrideX, size_t rowStrideX,
     T const* Y, size_t colStrideY, size_t rowStrideY,
     T* Z, size_t colStrideZ, size_t rowStrideZ,
-    gpuStream_t stream)
+    SyncInfo<Device::GPU> const& sync_info)
 {
     if (height <= 0 || width <= 0) { return; }
     size_t size = height * width;
@@ -82,21 +80,21 @@ void Hadamard_GPU_impl(
         {
             gpu::LaunchKernel(
                 MultAssign_kernel<T>,
-                gridDim, blockDim, 0, SyncInfo<Device::GPU>(stream, nullptr),
+                gridDim, blockDim, 0, sync_info,
                 size, Y, Z);
         }
         else if (Y == Z)
         {
             gpu::LaunchKernel(
                 MultAssign_kernel<T>,
-                gridDim, blockDim, 0, SyncInfo<Device::GPU>(stream, nullptr),
+                gridDim, blockDim, 0, sync_info,
                 size, X, Z);
         }
         else
         {
             gpu::LaunchKernel(
                 Hadamard1D_kernel<T>,
-                gridDim, blockDim, 0, SyncInfo<Device::GPU>(stream, nullptr),
+                gridDim, blockDim, 0, sync_info,
                 size, X, Y, Z);
         }
     }
@@ -104,7 +102,7 @@ void Hadamard_GPU_impl(
     {
         gpu::LaunchKernel(
             Hadamard2D_kernel<T>,
-            gridDim, blockDim, 0, SyncInfo<Device::GPU>(stream, nullptr),
+            gridDim, blockDim, 0, sync_info,
             height, width,
             X, colStrideX, rowStrideX,
             Y, colStrideY, rowStrideY,
@@ -113,12 +111,12 @@ void Hadamard_GPU_impl(
 
 }
 
-#define ETI(T)                                  \
-    template void Hadamard_GPU_impl(            \
-        size_t, size_t,                         \
-        T const*, size_t, size_t,               \
-        T const*, size_t, size_t,               \
-        T*, size_t, size_t, gpuStream_t)
+#define ETI(T)                                              \
+    template void Hadamard_GPU_impl(                        \
+        size_t, size_t,                                     \
+        T const*, size_t, size_t,                           \
+        T const*, size_t, size_t,                           \
+        T*, size_t, size_t, SyncInfo<Device::GPU> const&)
 
 #ifdef HYDROGEN_GPU_USE_FP16
 ETI(gpu_half_type);

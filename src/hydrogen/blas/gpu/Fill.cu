@@ -6,11 +6,9 @@
 #ifdef HYDROGEN_HAVE_CUDA
 #include <hydrogen/device/gpu/CUDA.hpp>
 #include <cuda_runtime.h>
-using gpuStream_t = cudaStream_t;
 #elif defined(HYDROGEN_HAVE_ROCM)
 #include <hydrogen/device/gpu/ROCm.hpp>
 #include <hip/hip_runtime.h>
-using gpuStream_t = hipStream_t;
 #endif
 
 namespace hydrogen
@@ -49,7 +47,7 @@ template <typename T, typename>
 void Fill_GPU_impl(
     size_t height, size_t width, T const& value,
     T* buffer, size_t ldim,
-    gpuStream_t stream)
+    SyncInfo<Device::GPU> const& sync_info)
 {
     if (height <= 0 || width <= 0)
         return;
@@ -62,22 +60,23 @@ void Fill_GPU_impl(
     {
         gpu::LaunchKernel(
             Fill1D_kernel<T>,
-            gridDim, blockDim, 0, SyncInfo<Device::GPU>(stream,nullptr),
+            gridDim, blockDim, 0, sync_info,
             size, value, buffer);
     }
     else
     {
         gpu::LaunchKernel(
             Fill2D_kernel<T>,
-            gridDim, blockDim, 0, SyncInfo<Device::GPU>(stream, nullptr),
+            gridDim, blockDim, 0, sync_info,
             height, width, value, buffer, ldim);
     }
 
 }
 
-#define ETI(T)                                                          \
-    template void Fill_GPU_impl(                                        \
-        size_t, size_t, T const&, T*, size_t, gpuStream_t)
+#define ETI(T)                                 \
+    template void Fill_GPU_impl(               \
+        size_t, size_t, T const&, T*, size_t,  \
+        SyncInfo<Device::GPU> const&)
 
 #ifdef HYDROGEN_GPU_USE_FP16
 ETI(gpu_half_type);

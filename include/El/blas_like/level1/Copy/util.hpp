@@ -260,7 +260,7 @@ void InterleaveMatrix(
         hydrogen::Copy_GPU_impl(height, width,
                                 A, colStrideA, rowStrideA,
                                 B, colStrideB, rowStrideB,
-                                syncInfo.Stream());
+                                syncInfo);
     }
 }
 

@@ -24,27 +24,27 @@ namespace hydrogen
  *  @tparam T (Inferred) The type of data. Must be the same for source
  *      and destination matrices.
  *
- *  @param num_rows The number of rows in the matrix
- *  @param num_cols The number of columns in the matrix
- *  @param alpha The scaling factor
- *  @param src The source matrix, in column-major ordering. Must not
- *      overlap with the destination matrix.
- *  @param src_row_stride The number of `T`s between rows in a column
- *      of the source matrix. For "traditional" packed matrices, this
- *      will be "1".
- *  @param src_col_stride The number of `T`s between columns in a row
- *      of the source matrix. For "traditional" packed matrices, this
- *      will be the leading dimension.
- *  @param dest The destination matrix, in column-major ordering. Must not
- *      overlap with the source matrix.
- *  @param dest_row_stride The number of `T`s between rows in a column
- *      of the destination matrix. For "traditional" packed matrices,
- *      this will be "1".
- *  @param dest_col_stride The number of `T`s between columns in a row
- *      of the destination matrix. For "traditional" packed matrices,
+ *  @param[in] num_rows The number of rows in the matrix.
+ *  @param[in] num_cols The number of columns in the matrix.
+ *  @param[in] alpha The scaling factor.
+ *  @param[in] src The source matrix, in column-major ordering. Must
+ *      not overlap with the destination matrix.
+ *  @param[in] src_row_stride The number of `T`s between rows in a
+ *      column of the source matrix. For "traditional" packed
+ *      matrices, this will be "1".
+ *  @param[in] src_col_stride The number of `T`s between columns in a
+ *      row of the source matrix. For "traditional" packed matrices,
  *      this will be the leading dimension.
- *  @param stream The CUDA stream on which the kernel should be
- *      launched.
+ *  @param[out] dest The destination matrix, in column-major
+ *      ordering. Must not overlap with the source matrix.
+ *  @param[in] dest_row_stride The number of `T`s between rows in a
+ *      column of the destination matrix. For "traditional" packed
+ *      matrices, this will be "1".
+ *  @param[in] dest_col_stride The number of `T`s between columns in a
+ *      row of the destination matrix. For "traditional" packed
+ *      matrices, this will be the leading dimension.
+ *  @param[in] sync_info The sync info wrapping the stream on which
+ *      the kernel should be launched.
  */
 template <typename T, typename SizeT,
           typename=EnableWhen<IsComputeType<T,Device::GPU>>>
@@ -52,7 +52,7 @@ void Axpy_GPU_impl(
     SizeT num_rows, SizeT num_cols, T alpha,
     T const* src, SizeT src_row_stride, SizeT src_col_stride,
     T* dest, SizeT dest_row_stride, SizeT dest_col_stride,
-    gpuStream_t stream);
+    SyncInfo<Device::GPU> const& sync_info);
 
 template <typename T, typename SizeT,
           typename=EnableUnless<IsComputeType<T,Device::GPU>>,
@@ -60,7 +60,7 @@ template <typename T, typename SizeT,
 void Axpy_GPU_impl(
     SizeT, SizeT, T,
     T const*, SizeT, SizeT, T*, SizeT, SizeT,
-    gpuStream_t)
+    SyncInfo<Device::GPU> const&)
 {
     throw std::logic_error("Axpy: Type not valid on GPU.");
 }
@@ -84,8 +84,8 @@ void Axpy_GPU_impl(
  *  @param[in,out] B The destination matrix, in column-major
  *      ordering. Must not overlap with the source matrix.
  *  @param[in] ldb The leading dimension of B.
- *  @param[in] stream The CUDA stream on which the kernel should be
- *      launched.
+ *  @param[in] sync_info The sync info wrapping the stream on which
+ *      the kernel should be launched.
  */
 template <typename T, typename SizeT,
           typename=EnableWhen<IsComputeType<T,Device::GPU>>>
@@ -93,7 +93,7 @@ void Axpy_GPU_impl(
     TransposeMode transpA,
     SizeT num_rows, SizeT num_cols,
     T alpha, T const* A, SizeT lda, T* B, SizeT ldb,
-    gpuStream_t stream);
+    SyncInfo<Device::GPU> const& sync_info);
 
 }// namespace hydrogen
 #endif // HYDROGEN_BLAS_GPU_AXPY_HPP_

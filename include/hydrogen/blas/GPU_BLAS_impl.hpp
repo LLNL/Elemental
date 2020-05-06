@@ -340,7 +340,7 @@ void Axpy2DImpl(SizeT nrows, SizeT ncols,
 {
     Axpy_GPU_impl(nrows, ncols,
                   alpha, A, SizeT(1), lda,
-                  B, SizeT(1), ldb, si.Stream());
+                  B, SizeT(1), ldb, si);
 }
 
 template <typename T, typename SizeT,
@@ -354,7 +354,7 @@ void Axpy2DImplTranspose(TransposeMode transpA,
                          SyncInfo<Device::GPU> const& si)
 {
     Axpy_GPU_impl(
-        transpA, nrows, ncols, alpha, A, lda, B, ldb, si.Stream());
+        transpA, nrows, ncols, alpha, A, lda, B, ldb, si);
 }
 
 template <typename T, typename SizeT,
@@ -365,7 +365,7 @@ void CopyImpl(SizeT size,
               T* Y, SizeT incy,
               SyncInfo<Device::GPU> const& si)
 {
-    Copy_GPU_impl(size, X, incx, Y, incy, si.Stream());
+    Copy_GPU_impl(size, X, incx, Y, incy, si);
 }
 
 template <typename T, typename SizeT,
@@ -382,12 +382,12 @@ void Copy2DImpl(SizeT nrows, SizeT ncols,
     case TransposeMode::NORMAL:
         Copy_GPU_impl(nrows, ncols,
                       A, SizeT(1), lda,
-                      B, SizeT(1), ldb, si.Stream());
+                      B, SizeT(1), ldb, si);
         break;
     case TransposeMode::TRANSPOSE:
         // This kernel is a bit funny and takes the dimensions of A,
         // so we must reverse nrows and ncols.
-        Transpose_GPU_impl(ncols, nrows, A, lda, B, ldb, si.Stream());
+        Transpose_GPU_impl(ncols, nrows, A, lda, B, ldb, si);
         break;
     default:
         throw std::logic_error("Copy2DImpl: TransposeMode not supported!");
@@ -406,7 +406,7 @@ void Copy2DImpl(SizeT nrows, SizeT ncols,
     case TransposeMode::NORMAL:
         Copy_GPU_impl(nrows, ncols,
                       A, SizeT(1), lda,
-                      B, SizeT(1), ldb, si.Stream());
+                      B, SizeT(1), ldb, si);
         break;
     case TransposeMode::TRANSPOSE:
         throw std::logic_error(
@@ -429,7 +429,7 @@ void Copy2DStridedImpl(
     Copy_GPU_impl(nrows, ncols,
                   A, rowstride_A, lda,
                   B, rowstride_B, ldb,
-                  si.Stream());
+                  si);
 }
 
 template <typename T, typename SizeT,
@@ -440,7 +440,7 @@ void ScaleImpl(SizeT size,
                T* X, SizeT incx,
                SyncInfo<Device::GPU> const& si)
 {
-    Scale_GPU_impl(size, alpha, X, incx, si.Stream());
+    Scale_GPU_impl(size, alpha, X, incx, si);
 }
 
 template <typename T, typename SizeT,
@@ -451,7 +451,7 @@ void Scale2DImpl(SizeT nrows, SizeT ncols,
                  T* A, SizeT lda,
                  SyncInfo<Device::GPU> const& si)
 {
-    Scale_GPU_impl(nrows, ncols, alpha, A, lda, si.Stream());
+    Scale_GPU_impl(nrows, ncols, alpha, A, lda, si);
 }
 
 //

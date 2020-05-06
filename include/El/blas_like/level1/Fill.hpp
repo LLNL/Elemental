@@ -54,7 +54,7 @@ void Fill( AbstractMatrix<T>& A, T alpha )
         hydrogen::Fill_GPU_impl(
             m, n, alpha, ABuf, ALDim,
             SyncInfoFromMatrix(
-                static_cast<Matrix<T,Device::GPU>&>(A)).Stream());
+                static_cast<Matrix<T,Device::GPU>&>(A)));
         break;
 #endif // HYDROGEN_HAVE_GPU
     default:

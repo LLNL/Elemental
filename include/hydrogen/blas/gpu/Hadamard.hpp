@@ -25,7 +25,7 @@ void Hadamard_GPU_impl(
     T const* A, size_t row_stride_A, size_t lda,
     T const* B, size_t row_stride_B, size_t ldb,
     T* C, size_t row_stride_C, size_t ldc,
-    gpuStream_t stream);
+    SyncInfo<Device::GPU> const& sync_info);
 
 template <typename T,
           typename=EnableUnless<IsComputeType<T,Device::GPU>>,
@@ -35,7 +35,7 @@ void Hadamard_GPU_impl(
     T const* const&, size_t const&, size_t const&,
     T const* const&, size_t const&, size_t const&,
     T* const&, size_t const&, size_t const&,
-    gpuStream_t const&)
+    SyncInfo<Device::GPU> const&)
 {
     throw std::logic_error("Hadamard: Type not valid on GPU.");
 }

@@ -6,11 +6,9 @@
 #ifdef HYDROGEN_HAVE_CUDA
 #include <hydrogen/device/gpu/CUDA.hpp>
 #include <cuda_runtime.h>
-using gpuStream_t = cudaStream_t;
 #elif defined(HYDROGEN_HAVE_ROCM)
 #include <hydrogen/device/gpu/ROCm.hpp>
 #include <hip/hip_runtime.h>
-using gpuStream_t = hipStream_t;
 #endif
 
 namespace
@@ -87,7 +85,7 @@ void Copy_GPU_impl(
     SizeT num_entries,
     SrcT const* src, SizeT src_stride,
     DestT * dest, SizeT dest_stride,
-    gpuStream_t stream)
+    SyncInfo<Device::GPU> const& sync_info)
 {
     if (num_entries <= TypeTraits<SizeT>::Zero())
         return;
@@ -108,7 +106,7 @@ void Copy_GPU_impl(
     gpu::LaunchKernel(
         copy_1d_kernel<SrcT,DestT,SizeT>,
         blocks, threads_per_block,
-        0, SyncInfo<Device::GPU>(stream,nullptr),
+        0, sync_info,
         num_entries, src, src_stride, dest, dest_stride);
 }
 
@@ -117,7 +115,7 @@ void Copy_GPU_impl(
     SizeT num_rows, SizeT num_cols,
     SrcT const* src, SizeT src_row_stride, SizeT src_col_stride,
     DestT* dest, SizeT dest_row_stride, SizeT dest_col_stride,
-    gpuStream_t stream)
+    SyncInfo<Device::GPU> const& sync_info)
 {
   if (num_rows == 0 || num_cols == 0)
     return;
@@ -141,20 +139,20 @@ void Copy_GPU_impl(
 
     gpu::LaunchKernel(
         copy_2d_kernel<TILE_SIZE,BLK_COLS,SrcT,DestT,SizeT>,
-        blks, thds, 0, SyncInfo<Device::GPU>(stream,nullptr),
+        blks, thds, 0, sync_info,
         num_rows, num_cols,
         src, src_row_stride, src_col_stride,
         dest, dest_row_stride, dest_col_stride);
 }
 
-#define ETI(SourceType, DestType, SizeType)             \
-    template void Copy_GPU_impl(                        \
-        SizeType, SourceType const*, SizeType,          \
-        DestType*, SizeType, gpuStream_t);              \
-    template void Copy_GPU_impl(                        \
-        SizeType, SizeType,                             \
-        SourceType const*, SizeType, SizeType,          \
-        DestType*, SizeType, SizeType, gpuStream_t)
+#define ETI(SourceType, DestType, SizeType)                          \
+    template void Copy_GPU_impl(                                     \
+        SizeType, SourceType const*, SizeType,                       \
+        DestType*, SizeType, SyncInfo<Device::GPU> const&);          \
+    template void Copy_GPU_impl(                                     \
+        SizeType, SizeType,                                          \
+        SourceType const*, SizeType, SizeType,                       \
+        DestType*, SizeType, SizeType, SyncInfo<Device::GPU> const&)
 
 ETI(float, float, int);
 ETI(float, float, long);

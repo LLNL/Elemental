@@ -7,11 +7,9 @@
 #include <cuda_runtime.h>
 #include <cooperative_groups.h>
 namespace cg = cooperative_groups;
-using gpuStream_t = cudaStream_t;
 #elif defined(HYDROGEN_HAVE_ROCM)
 #include <hydrogen/device/gpu/ROCm.hpp>
 #include <hip/hip_runtime.h>
-using gpuStream_t = hipStream_t;
 #endif
 
 namespace
@@ -105,7 +103,7 @@ namespace hydrogen
 template <typename T, typename SizeT, typename>
 void Transpose_GPU_impl(
     SizeT m, SizeT n, T const* A, SizeT lda, T* B, SizeT ldb,
-    gpuStream_t stream)
+    SyncInfo<Device::GPU> const& sync_info)
 {
     if (m == TypeTraits<SizeT>::Zero() || n == TypeTraits<SizeT>::Zero())
         return;
@@ -120,16 +118,15 @@ void Transpose_GPU_impl(
 
     gpu::LaunchKernel(
         transpose_kernel<TILE_DIM,BLK_COLS,T,SizeT>,
-        blks, thds, 0,
-        SyncInfo<Device::GPU>(stream, nullptr),
+        blks, thds, 0, sync_info,
         m, n, A, lda, B, ldb);
 }
 
-#define ETI(DataType, SizeType)                 \
-    template void Transpose_GPU_impl(           \
-        SizeType, SizeType,                     \
-        DataType const*, SizeType,              \
-        DataType*, SizeType, gpuStream_t)
+#define ETI(DataType, SizeType)                            \
+    template void Transpose_GPU_impl(                      \
+        SizeType, SizeType,                                \
+        DataType const*, SizeType,                         \
+        DataType*, SizeType, SyncInfo<Device::GPU> const&)
 
 ETI(float, int);
 ETI(float, long);

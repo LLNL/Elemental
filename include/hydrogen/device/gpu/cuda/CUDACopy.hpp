@@ -28,7 +28,7 @@ template <typename T>
 void Fill1DBuffer(T* buffer, size_t num_elements, T value,
                   SyncInfo<Device::GPU> const& si)
 {
-    Fill_GPU_1D_impl(buffer, num_elements, value, si.Stream());
+    Fill_GPU_1D_impl(buffer, num_elements, value, si);
 }
 
 template <typename T>

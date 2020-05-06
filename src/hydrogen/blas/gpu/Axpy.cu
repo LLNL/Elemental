@@ -8,11 +8,9 @@
 #include <cuda_runtime.h>
 #include <cooperative_groups.h>
 namespace cg = cooperative_groups;
-using gpuStream_t = cudaStream_t;
 #elif defined(HYDROGEN_HAVE_ROCM)
 #include <hydrogen/device/gpu/ROCm.hpp>
 #include <hip/hip_runtime.h>
-using gpuStream_t = hipStream_t;
 #endif
 
 namespace
@@ -122,7 +120,7 @@ void Axpy_GPU_impl(
     T alpha,
     T const* X, SizeT colStrideX, SizeT rowStrideX,
     T* Y, SizeT colStrideY, SizeT rowStrideY,
-    gpuStream_t stream)
+    SyncInfo<Device::GPU> const& sync_info)
 {
     if (height == TypeTraits<SizeT>::Zero()
         || width == TypeTraits<SizeT>::Zero())
@@ -143,10 +141,10 @@ void Axpy_GPU_impl(
 
     gpu::LaunchKernel(
         axpy_2d_tiled_kernel<TILE_SIZE, BLK_COLS, T, SizeT>,
-        blks, thds, 0, SyncInfo<Device::GPU>(stream, nullptr),
+        blks, thds, 0, sync_info,
         height, width, alpha,
         X, colStrideX, rowStrideX,
-        Y, colStrideY, rowStrideY );
+        Y, colStrideY, rowStrideY);
 }
 
 template <typename T, typename SizeT, typename>
@@ -156,7 +154,7 @@ void Axpy_GPU_impl(
     T alpha,
     T const* A, SizeT lda,
     T* B, SizeT ldb,
-    gpuStream_t stream)
+    SyncInfo<Device::GPU> const& sync_info)
 {
     // Short-circuit
     if (height <= TypeTraits<SizeT>::Zero()
@@ -169,7 +167,7 @@ void Axpy_GPU_impl(
         return Axpy_GPU_impl(
             height, width, alpha,
             A, TypeTraits<SizeT>::One(), lda,
-            B, TypeTraits<SizeT>::One(), ldb, stream);
+            B, TypeTraits<SizeT>::One(), ldb, sync_info);
 
     constexpr int TILE_SIZE = 32;
     constexpr int BLK_COLS = 8;
@@ -180,19 +178,19 @@ void Axpy_GPU_impl(
 
     gpu::LaunchKernel(
         axpy_2d_transpose_tiled_kernel<TILE_SIZE, BLK_COLS, T, SizeT>,
-        blks, thds, 0, SyncInfo<Device::GPU>(stream, nullptr),
+        blks, thds, 0, sync_info,
         height, width, alpha, A, lda, B, ldb);
 }
 
-#define ETI(ScalarT, SizeT)                             \
-    template void Axpy_GPU_impl(                        \
-        SizeT, SizeT, ScalarT,                          \
-        ScalarT const*, SizeT, SizeT,                   \
-        ScalarT*, SizeT, SizeT, gpuStream_t);           \
-    template void Axpy_GPU_impl(                        \
-        TransposeMode, SizeT, SizeT, ScalarT,           \
-        ScalarT const*, SizeT,                          \
-        ScalarT*, SizeT, gpuStream_t)
+#define ETI(ScalarT, SizeT)                                    \
+    template void Axpy_GPU_impl(                               \
+        SizeT, SizeT, ScalarT,                                 \
+        ScalarT const*, SizeT, SizeT,                          \
+        ScalarT*, SizeT, SizeT, SyncInfo<Device::GPU> const&); \
+    template void Axpy_GPU_impl(                               \
+        TransposeMode, SizeT, SizeT, ScalarT,                  \
+        ScalarT const*, SizeT,                                 \
+        ScalarT*, SizeT, SyncInfo<Device::GPU> const&)
 
 
 #ifdef HYDROGEN_GPU_USE_FP16

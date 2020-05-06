@@ -47,7 +47,7 @@ void InterleaveMatrixUpdate(
     hydrogen::Axpy_GPU_impl(height, width, alpha,
                             A, colStrideA, rowStrideA,
                             B, colStrideB, rowStrideB,
-                            syncInfo.Stream());
+                            syncInfo);
 }
 #endif // HYDROGEN_HAVE_GPU
 

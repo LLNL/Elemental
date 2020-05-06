@@ -93,7 +93,7 @@ void Hadamard(AbstractMatrix<T> const& A, AbstractMatrix<T> const& B,
         hydrogen::Hadamard_GPU_impl(height, width,
                                     ABuf, 1, ALDim, BBuf, 1, BLDim,
                                     CBuf, 1, CLDim,
-                                    si_C.Stream());
+                                    si_C);
     }
     break;
 #endif // HYDROGEN_HAVE_GPU
