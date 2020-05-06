@@ -1,20 +1,21 @@
 #ifndef HYDROGEN_MEMORYPOOL_HPP_
 #define HYDROGEN_MEMORYPOOL_HPP_
 
-#include <stddef.h>
-#include <cstdlib>
-#include <stdexcept>
-#include <vector>
-#include <set>
-#include <unordered_map>
-#include <mutex>
-
 #include "El/hydrogen_config.h"
 #if defined(HYDROGEN_HAVE_CUDA)
 #include <cuda_runtime.h>
 #elif defined(HYDROGEN_HAVE_ROCM)
 #include <hip/hip_runtime.h>
 #endif
+
+#include <cstddef>
+#include <cstdlib>
+#include <mutex>
+#include <set>
+#include <sstream>
+#include <stdexcept>
+#include <unordered_map>
+#include <vector>
 
 namespace El
 {

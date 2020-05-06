@@ -9,92 +9,18 @@ namespace hydrogen
 {
 namespace gpu
 {
-namespace
-{
-
-hipStream_t GetNewStream()
-{
-    hipStream_t stream;
-    H_CHECK_HIP(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
-    return stream;
-}
-
-hipEvent_t GetNewEvent()
-{
-    hipEvent_t event;
-    H_CHECK_HIP(hipEventCreate(&event));
-    return event;
-}
-
-void FreeStream(hipStream_t stream)
-{
-    if (stream)
-        H_CHECK_HIP(hipStreamDestroy(stream));
-}
-
-void FreeEvent(hipEvent_t event)
-{
-    if (event)
-        H_CHECK_HIP(hipEventDestroy(event));
-}
-
-int ComputeMyDeviceId(unsigned int device_count)
-{
-    if (device_count == 0U)
-        return -1;
-    if (device_count == 1U)
-        return 0;
-
-    // Get local rank (rank within compute node)
-    //
-    // TODO: Update to not rely on env vars
-    // TODO: Use HWLOC or something to pick "closest GPU"
-    int local_rank = 0;
-    char* env = nullptr;
-    if (!env) { env = std::getenv("SLURM_LOCALID"); }
-    if (!env) { env = std::getenv("MV2_COMM_WORLD_LOCAL_RANK"); }
-    if (!env) { env = std::getenv("OMPI_COMM_WORLD_LOCAL_RANK"); }
-    if (env) { local_rank = std::atoi(env); }
-
-    // Try assigning GPUs to local ranks in round-robin fashion
-    return local_rank % device_count;
-}
-
-//
-// Global variables
-//
-
-bool rocm_initialized_ = false;
-SyncInfo<Device::GPU> default_syncinfo_;
-}// namespace <anon>
-
-void Initialize()
-{
-    if (IsInitialized())
-        return;
-    SetDevice(ComputeMyDeviceId(DeviceCount()));
-
-    default_syncinfo_ = SyncInfo<Device::GPU>(GetNewStream(), GetNewEvent());
-    rocm_initialized_ = true;
-}
-
-void Finalize()
-{
-    El::DestroyPinnedHostMemoryPool();
-    DestroySyncInfo(default_syncinfo_);
-    rocm_initialized_ = false;
-}
-
-bool IsInitialized() noexcept
-{
-    return rocm_initialized_;
-}
 
 size_t DeviceCount()
 {
     int count;
     H_CHECK_HIP(hipGetDeviceCount(&count));
     return count;
+}
+
+int DefaultDevice()
+{
+    static int device_id = ComputeDeviceId(DeviceCount());
+    return device_id;
 }
 
 int CurrentDevice()
@@ -112,11 +38,6 @@ void SetDevice(int device_id)
 void SynchronizeDevice()
 {
     H_CHECK_HIP(hipDeviceSynchronize());
-}
-
-SyncInfo<Device::GPU> const& DefaultSyncInfo() noexcept
-{
-    return default_syncinfo_;
 }
 
 }// namespace gpu
@@ -144,20 +65,37 @@ hipStream_t GetDefaultStream() noexcept
     return gpu::DefaultSyncInfo().Stream();
 }
 
+hipStream_t GetNewStream()
+{
+    hipStream_t stream;
+    H_CHECK_HIP(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
+    return stream;
+}
+
+hipEvent_t GetNewEvent()
+{
+    hipEvent_t event;
+    H_CHECK_HIP(hipEventCreateWithFlags(&event, hipEventDisableTiming));
+    return event;
+}
+
+void FreeStream(hipStream_t& stream)
+{
+    if (stream)
+    {
+        H_CHECK_HIP(hipStreamDestroy(stream));
+        stream = nullptr;
+    }
+}
+
+void FreeEvent(hipEvent_t& event)
+{
+    if (event)
+    {
+        H_CHECK_HIP(hipEventDestroy(event));
+        event = nullptr;
+    }
+}
+
 }// namespace rocm
-
-template <>
-SyncInfo<Device::GPU> CreateNewSyncInfo<Device::GPU>()
-{
-    return SyncInfo<Device::GPU>{gpu::GetNewStream(), gpu::GetNewEvent()};
-}
-
-void DestroySyncInfo(SyncInfo<Device::GPU>& si)
-{
-    gpu::FreeStream(si.Stream());
-    gpu::FreeEvent(si.Event());
-    si.stream_ = nullptr;
-    si.event_ = nullptr;
-}
-
 }// namespace hydrogen

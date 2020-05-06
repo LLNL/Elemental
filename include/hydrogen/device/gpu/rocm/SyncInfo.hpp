@@ -84,12 +84,5 @@ inline void Synchronize(SyncInfo<Device::GPU> const& syncInfo)
     H_CHECK_HIP(hipStreamSynchronize(syncInfo.Stream()));
 }
 
-/** @brief Create a new CPU SyncInfo object. */
-template <>
-SyncInfo<Device::GPU> CreateNewSyncInfo<Device::GPU>();
-
-/** @brief Destroy the GPU SyncInfo. */
-void DestroySyncInfo(SyncInfo<Device::GPU>&);
-
 }// namespace hydrogen
 #endif // HYDROGEN_DEVICE_GPU_ROCM_SYNCINFO_HPP_

@@ -13,6 +13,10 @@ namespace rocm
 {
 hipEvent_t GetDefaultEvent() noexcept;
 hipStream_t GetDefaultStream() noexcept;
+hipEvent_t GetNewEvent();
+hipStream_t GetNewStream();
+void FreeEvent(hipEvent_t& event);
+void FreeStream(hipStream_t& stream);
 }// namespace rocm
 }// namespace hydrogen
 #endif // HYDROGEN_DEVICE_GPU_ROCMMANAGEMENT_HPP_

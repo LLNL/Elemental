@@ -91,6 +91,21 @@ size_t DeviceCount();
  */
 int CurrentDevice();
 
+/** @brief Get the ID of the default GPU.
+ *  @throws GPUError If the runtime detects any errors.
+ *  @ingroup gpu_mgmt
+ */
+int DefaultDevice();
+
+/** @brief Get the device ID we should be using.
+ *  @details This uses environment variables set by most MPI libraries
+ *      and/or launchers (slurm,lsf) to determine a device ID. Devices
+ *      are assigned round-robin based on local rank.
+ *  @param[in] device_count Number of visible devices.
+ *  @ingroup gpu_mgmt
+ */
+int ComputeDeviceId(unsigned int device_count) noexcept;
+
 /** @brief Select the given device.
  *
  *  @param[in] device_id The ID of the device to select. Must be less
@@ -131,5 +146,18 @@ SyncInfo<Device::GPU> const& DefaultSyncInfo() noexcept;
 ///@}
 
 }// namespace gpu
+
+/** @name SyncInfo management */
+///@{
+
+/** @brief Create a new CPU SyncInfo object. */
+template <>
+SyncInfo<Device::GPU> CreateNewSyncInfo<Device::GPU>();
+
+/** @brief Destroy the GPU SyncInfo. */
+void DestroySyncInfo(SyncInfo<Device::GPU>&);
+
+///@}
+
 }// namespace hydrogen
 #endif // HYDROGEN_DEVICE_GPU_HPP_

@@ -1,4 +1,4 @@
-#include <hydrogen/device/gpu/cuda/CUB.hpp>
+#include "hydrogen/device/gpu/CUB.hpp"
 
 #include <memory>
 

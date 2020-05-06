@@ -23,7 +23,7 @@
 #endif // HYDROGEN_HAVE_GPU
 
 #ifdef HYDROGEN_HAVE_CUB
-#include <hydrogen/device/gpu/cuda/CUB.hpp>
+#include <hydrogen/device/gpu/CUB.hpp>
 #endif
 
 #include "decl.hpp"

@@ -3,10 +3,12 @@ if (HYDROGEN_HAVE_GPU)
     set_full_path(THIS_DIR_CXX_SOURCES
       CUDA.cpp
       cuBLAS.cpp
-      cuBLAS_API.cpp)
+      cuBLAS_API.cpp
+      GPU.cpp)
   endif ()
   if (HYDROGEN_HAVE_ROCM)
     set_full_path(THIS_DIR_CXX_SOURCES
+      GPU.cpp
       ROCm.cpp
       rocBLAS.cpp
       rocBLAS_API.cpp

@@ -13,6 +13,10 @@ namespace cuda
 {
 cudaEvent_t GetDefaultEvent() noexcept;
 cudaStream_t GetDefaultStream() noexcept;
+cudaEvent_t GetNewEvent();
+cudaStream_t GetNewStream();
+void FreeEvent(cudaEvent_t& event);
+void FreeStream(cudaStream_t& stream);
 }// namespace cuda
 }// namespace hydrogen
 #endif // HYDROGEN_DEVICE_GPU_CUDAMANAGEMENT_HPP_

@@ -85,21 +85,5 @@ inline void Synchronize(SyncInfo<Device::GPU> const& syncInfo)
     H_CHECK_CUDA(cudaStreamSynchronize(syncInfo.Stream()));
 }
 
-/** @brief Create a new GPU SyncInfo object. */
-template <>
-inline SyncInfo<Device::GPU> CreateNewSyncInfo<Device::GPU>()
-{
-    cudaEvent_t event;
-    cudaStream_t stream;
-    H_CHECK_CUDA(
-        cudaEventCreateWithFlags(&event, cudaEventDisableTiming));
-    H_CHECK_CUDA(
-        cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking));
-    return SyncInfo<Device::GPU>{stream, event};
-}
-
-/** @brief Destroy a GPU SyncInfo object. */
-void DestroySyncInfo(SyncInfo<Device::GPU>&);
-
 }// namespace hydrogen
 #endif // HYDROGEN_DEVICE_GPU_CUDA_SYNCINFO_HPP_

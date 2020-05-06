@@ -31,7 +31,7 @@ void Fill1DBuffer(T* buffer, size_t num_elements, T value,
     if (num_elements == 0UL)
         return;
 
-    Fill_GPU_1D_impl(buffer, num_elements, value, si.Stream());
+    Fill_GPU_1D_impl(buffer, num_elements, value, si);
 }
 
 template <typename T>
