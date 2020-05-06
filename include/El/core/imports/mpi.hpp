@@ -143,6 +143,36 @@ struct Types
     static void Destroy();
 };
 
+// Silence clang warnings. These are ETI'd in src/core/mpi_register.hpp.
+#if !defined H_INSTANTIATING_MPI_TYPES_STRUCT
+extern template struct Types<byte>;
+extern template struct Types<short>;
+extern template struct Types<unsigned>;
+extern template struct Types<unsigned long>;
+#ifdef EL_USE_64BIT_INTS
+extern template struct Types<int>; // Avoid conflict with Int
+#endif
+extern template struct Types<long int>;
+extern template struct Types<unsigned long long>;
+#ifndef EL_USE_64BIT_INTS
+extern template struct Types<long long int>; // Avoid conflict with Int
+#endif
+
+#define PROTO(T)                                \
+    extern template struct Types<T>;            \
+    extern template struct Types<ValueInt<T>>;  \
+    extern template struct Types<Entry<T>>;
+
+#define EL_ENABLE_DOUBLEDOUBLE
+#define EL_ENABLE_QUADDOUBLE
+#define EL_ENABLE_QUAD
+#define EL_ENABLE_BIGINT
+#define EL_ENABLE_BIGFLOAT
+#define EL_ENABLE_HALF
+#include <El/macros/Instantiate.h>
+#undef PROTO
+#endif // !defined H_INSTANTIATING_MPI_TYPES_STRUCT
+
 template<typename T>
 struct MPIBaseHelper { typedef T value; };
 template<typename T>
