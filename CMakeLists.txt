@@ -162,11 +162,11 @@ if (Hydrogen_ENABLE_CUDA OR Hydrogen_ENABLE_ROCM)
   option(Hydrogen_ENABLE_CUB
     "Search for CUB support and enable related features if found."
     ON)
-  
+
   option(Hydrogen_ENABLE_GPU_TENSOR_MATH
     "Use the GPU tensor operations when available."
     OFF)
-  
+
   option(Hydrogen_ENABLE_GPU_FP16
     "Enable FP16 arithmetic in GPU code."
     ON)
@@ -406,6 +406,10 @@ if (Hydrogen_ENABLE_ROCM)
   find_package(HIP REQUIRED)
 
   if (Hydrogen_ENABLE_CUB)
+    set(CMAKE_PREFIX_PATH "/opt/rocm/hip" ${CMAKE_PREFIX_PATH})
+    set(HIP_FOUND FALSE)
+    find_package(HIP CONFIG REQUIRED)
+    find_package(rocPRIM REQUIRED)
     find_package(hipCUB REQUIRED)
     set(HYDROGEN_HAVE_CUB TRUE)
   else ()
@@ -560,6 +564,8 @@ target_link_libraries(
   $<TARGET_NAME_IF_EXISTS:LAPACK::lapack>
   $<TARGET_NAME_IF_EXISTS:EP::extended_precision>
   $<TARGET_NAME_IF_EXISTS:cuda::toolkit>
+  $<TARGET_NAME_IF_EXISTS:hip::rocprim_hip>
+  $<TARGET_NAME_IF_EXISTS:hip::hipcub>
   )
 
 # Add the CXX library to "Hydrogen"
