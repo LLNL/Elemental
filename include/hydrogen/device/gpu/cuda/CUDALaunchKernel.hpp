@@ -19,7 +19,7 @@ void LaunchKernel(
     size_t sharedMem, SyncInfo<Device::GPU> const& si,
     Args... kernel_args)
 {
-    void* args[] = { reinterpret_cast<void*>(&kernel_args)... };
+    void* args[] = { const_cast<void*>(reinterpret_cast<const void*>(&kernel_args))... };
     H_CHECK_CUDA(
         cudaLaunchKernel(
             (void const*) kernel,

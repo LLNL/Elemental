@@ -81,6 +81,7 @@ void Finalize()
 {
     if (default_cublas_handle_)
         H_CHECK_CUBLAS(cublasDestroy(default_cublas_handle_));
+    default_cublas_handle_ = nullptr;
     cublas_is_initialized_ = false;
 }
 
@@ -96,8 +97,9 @@ void ReplaceLibraryHandle(cublasHandle_t handle)
              "hydrogen::cublas::ReplaceLibraryHandle(): "
              "cuBLAS must be initialized before calling this function.");
 
-    if (IsInitialized())
-        default_cublas_handle_ = handle;
+    if (default_cublas_handle_)
+        H_CHECK_CUBLAS(cublasDestroy(default_cublas_handle_));
+    default_cublas_handle_ = handle;
 }
 
 SyncManager::SyncManager(cublasHandle_t handle,

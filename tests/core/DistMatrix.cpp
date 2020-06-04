@@ -86,11 +86,6 @@ void CheckAll_device(DistMatrix<T,U,V,ELEMENT,D>& A, bool print)
       Check(A_CIRC_CIRC, A, print);
     }
 
-    if (D == Device::GPU)
-    {
-        hydrogen::break_on_me();
-    }
-
     {
       DistMatrix<T,MC,MR,ELEMENT,CopyD> A_MC_MR(A.Grid());
       Check(A_MC_MR, A, print);

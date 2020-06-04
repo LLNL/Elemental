@@ -20,7 +20,7 @@
 #elif defined(HYDROGEN_HAVE_ROCM)
 #include <hip/hip_runtime.h>
 #include <hydrogen/device/gpu/ROCm.hpp>
-#endif // HYDROGEN_HAVE_GPU
+#endif // defined(HYDROGEN_HAVE_CUDA)
 
 #ifdef HYDROGEN_HAVE_CUB
 #include <hydrogen/device/gpu/CUB.hpp>

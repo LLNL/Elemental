@@ -72,6 +72,7 @@ void Finalize()
 {
     if (default_rocblas_handle_)
         H_CHECK_ROCBLAS(rocblas_destroy_handle(default_rocblas_handle_));
+    default_rocblas_handle_ = nullptr;
     rocblas_is_initialized_ = false;
 }
 
@@ -87,8 +88,9 @@ void ReplaceLibraryHandle(rocblas_handle handle)
              "hydrogen::rocblas::ReplaceLibraryHandle(): "
              "rocBLAS must be initialized before calling this function.");
 
-    if (IsInitialized())
-        default_rocblas_handle_ = handle;
+    if (default_rocblas_handle_)
+        H_CHECK_ROCBLAS(rocblas_destroy_handle(default_rocblas_handle_));
+    default_rocblas_handle_ = handle;
 }
 
 SyncManager::SyncManager(rocblas_handle handle,
