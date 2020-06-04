@@ -52,11 +52,6 @@ inline void AddSyncPoint(
     SyncInfo<Device::CPU> const& master,
     SyncInfo<Device::GPU> const& dependent)
 {
-    // The GPU must wait for the CPU.
-    // This probably requires Aluminum, but it might also just be a logic error.
-    throw std::logic_error(
-        "Either this function doesn't make sense "
-        "or it should use Al::GPUWait.");
 }
 
 inline void AddSyncPoint(
