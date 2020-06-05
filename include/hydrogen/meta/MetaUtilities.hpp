@@ -131,24 +131,5 @@ template <typename EnumT, EnumT A>
 struct EnumSame<EnumT,A,A> : std::true_type {};
 
 ///@}
-/** @brief Miscellaneous metafunctions */
-///@{
-
-/** @brief Metafunction for determining whether all types match a
- *         given type.
- */
-template <typename... Ts> struct AllMatch : std::false_type {};
-
-// Base
-template <typename T>
-struct AllMatch<T> : std::true_type {};
-
-// Recursive step
-template <typename T, typename U, typename... Us>
-struct AllMatch<T,U,Us...>
-    : And<IsSame<T,U>, AllMatch<T,Us...>>
-{};
-
-///@}
 }// namespace hydrogen
 #endif // HYDROGEN_META_METAUTILITIES_HPP_
