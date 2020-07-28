@@ -34,16 +34,17 @@ include (FindAndVerifyMPI)
 set(_HYDROGEN_HAVE_ALUMINUM @HYDROGEN_HAVE_ALUMINUM@)
 set(_HYDROGEN_HAVE_NCCL2 @HYDROGEN_HAVE_NCCL2@)
 set(_HYDROGEN_HAVE_AL_MPI_CUDA @HYDROGEN_HAVE_AL_MPI_CUDA@)
+set(_HYDROGEN_HAVE_AL_HOST_XFER @HYDROGEN_HAVE_AL_HOST_XFER@)
 if (_HYDROGEN_HAVE_ALUMINUM)
   if (NOT Aluminum_FOUND)
-    find_package(Aluminum 0.4.0 NO_MODULE QUIET
+    find_package(Aluminum 0.5.0 NO_MODULE QUIET
       HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
       $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
       PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
       NO_DEFAULT_PATH)
     if (NOT Aluminum_FOUND)
       set(Aluminum_DIR "@Aluminum_DIR@")
-      find_package(Aluminum 0.4.0 NO_MODULE REQUIRED)
+      find_package(Aluminum 0.5.0 NO_MODULE REQUIRED)
     endif ()
   endif ()
 
@@ -51,6 +52,11 @@ if (_HYDROGEN_HAVE_ALUMINUM)
     message(FATAL_ERROR
       "Hydrogen expects NCCL2 support "
       "but Aluminum does not have NCCL2 support.")
+  endif ()
+  if (_HYDROGEN_HAVE_AL_MPI_CUDA AND NOT AL_HAS_HOST_TRANSFER)
+    message(FATAL_ERROR
+      "Hydrogen expects HostTransfer support "
+      "but Aluminum does not have HostTransfer support.")
   endif ()
   if (_HYDROGEN_HAVE_AL_MPI_CUDA AND NOT AL_HAS_MPI_CUDA)
     message(FATAL_ERROR
