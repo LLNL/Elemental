@@ -114,6 +114,46 @@ struct IsTrueForAll
     : And<Pred<T,Head<List>>, IsTrueForAll<Tail<List>,T,Pred>>
 {};
 
+// Add a new element to the front of a typelist
+template <typename List, typename T>
+struct ConsT;
+
+template <typename List, typename T>
+using Cons = typename ConsT<List,T>::type;
+
+// Cons
+template <typename T, typename... Ts>
+struct ConsT<T, TypeList<Ts...>>
+{
+    using type = TypeList<T, Ts...>;
+};
+
+// Remove all instances of T from the list.
+template <typename List, typename T>
+struct RemoveAllT;
+
+template <typename List, typename T>
+using RemoveAll = typename RemoveAllT<List,T>::type;
+
+// Base Case
+template <typename T>
+struct RemoveAllT<TypeList<>, T>
+{
+    using type = TypeList<>;
+};
+
+// Match case
+template <typename T, typename... Ts>
+struct RemoveAllT<TypeList<T, Ts...>, T>
+    : RemoveAllT<TypeList<Ts...>, T>
+{};
+
+// Recursive call
+template <typename S, typename... Ts, typename T>
+struct RemoveAllT<TypeList<S, Ts...>, T>
+    : ConsT<S, RemoveAll<TypeList<Ts...>, T>>
+{};
+
 ///@}
 
 }// namespace hydrogen

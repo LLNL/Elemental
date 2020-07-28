@@ -93,6 +93,11 @@ template <typename T>
 struct IsAlTypeT<T, Al::MPICUDABackend> : IsAlTypeT<T, Al::MPIBackend> {};
 #endif // HYDROGEN_HAVE_AL_MPI_CUDA
 
+#ifdef HYDROGEN_HAVE_AL_HOST_XFER
+template <typename T>
+struct IsAlTypeT<T, Al::HostTransferBackend> : IsAlTypeT<T, Al::MPIBackend> {};
+#endif // HYDROGEN_HAVE_AL_HOST_XFER
+
 //
 // Setup collective support
 //
@@ -101,7 +106,15 @@ template <Collective C, typename BackendT>
 struct IsBackendSupported : std::false_type {};
 
 // MPI backend only supports AllReduce
-//ADD_ALUMINUM_COLLECTIVE(    Collective::ALLREDUCE, Al::MPIBackend);
+ADD_ALUMINUM_COLLECTIVE(    Collective::ALLGATHER, Al::MPIBackend);
+ADD_ALUMINUM_COLLECTIVE(    Collective::ALLREDUCE, Al::MPIBackend);
+ADD_ALUMINUM_COLLECTIVE(     Collective::ALLTOALL, Al::MPIBackend);
+ADD_ALUMINUM_COLLECTIVE(    Collective::BROADCAST, Al::MPIBackend);
+ADD_ALUMINUM_COLLECTIVE(       Collective::GATHER, Al::MPIBackend);
+ADD_ALUMINUM_COLLECTIVE(       Collective::REDUCE, Al::MPIBackend);
+ADD_ALUMINUM_COLLECTIVE(Collective::REDUCESCATTER, Al::MPIBackend);
+ADD_ALUMINUM_COLLECTIVE(      Collective::SCATTER, Al::MPIBackend);
+ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::MPIBackend);
 
 #ifdef HYDROGEN_HAVE_NCCL2
 // NCCL backend supports these
@@ -112,18 +125,18 @@ ADD_ALUMINUM_COLLECTIVE(       Collective::REDUCE, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(Collective::REDUCESCATTER, Al::NCCLBackend);
 #endif // HYDROGEN_HAVE_NCCL2
 
-#ifdef HYDROGEN_HAVE_AL_MPI_CUDA
+#ifdef HYDROGEN_HAVE_AL_HOST_XFER
 // MPICUDA backend only supports AllReduce
-ADD_ALUMINUM_COLLECTIVE(    Collective::ALLGATHER, Al::MPICUDABackend);
-ADD_ALUMINUM_COLLECTIVE(    Collective::ALLREDUCE, Al::MPICUDABackend);
-ADD_ALUMINUM_COLLECTIVE(     Collective::ALLTOALL, Al::MPICUDABackend);
-ADD_ALUMINUM_COLLECTIVE(    Collective::BROADCAST, Al::MPICUDABackend);
-ADD_ALUMINUM_COLLECTIVE(       Collective::GATHER, Al::MPICUDABackend);
-ADD_ALUMINUM_COLLECTIVE(       Collective::REDUCE, Al::MPICUDABackend);
-ADD_ALUMINUM_COLLECTIVE(Collective::REDUCESCATTER, Al::MPICUDABackend);
-ADD_ALUMINUM_COLLECTIVE(      Collective::SCATTER, Al::MPICUDABackend);
-ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::MPICUDABackend);
-#endif // HYDROGEN_HAVE_AL_MPI_CUDA
+ADD_ALUMINUM_COLLECTIVE(    Collective::ALLGATHER, Al::HostTransferBackend);
+ADD_ALUMINUM_COLLECTIVE(    Collective::ALLREDUCE, Al::HostTransferBackend);
+ADD_ALUMINUM_COLLECTIVE(     Collective::ALLTOALL, Al::HostTransferBackend);
+ADD_ALUMINUM_COLLECTIVE(    Collective::BROADCAST, Al::HostTransferBackend);
+ADD_ALUMINUM_COLLECTIVE(       Collective::GATHER, Al::HostTransferBackend);
+ADD_ALUMINUM_COLLECTIVE(       Collective::REDUCE, Al::HostTransferBackend);
+ADD_ALUMINUM_COLLECTIVE(Collective::REDUCESCATTER, Al::HostTransferBackend);
+ADD_ALUMINUM_COLLECTIVE(      Collective::SCATTER, Al::HostTransferBackend);
+ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::HostTransferBackend);
+#endif // HYDROGEN_HAVE_AL_HOST_XFER
 
 template <Device D>
 struct BackendsForDeviceT;
@@ -134,22 +147,40 @@ struct BackendsForDeviceT<Device::CPU>
     using type = hydrogen::TypeList<Al::MPIBackend>;
 };// struct BackendsForDeviceT<Device::CPU>
 
-// Prefer the NCCL2 backend
+namespace details
+{
+struct BackendNotDefined;
+}
+
+#ifdef HYDROGEN_HAVE_NCCL2
+using AluminumNCCLBackendIfDefined = Al::NCCLBackend;
+#else
+using AluminumNCCLBackendIfDefined = details::BackendNotDefined;
+#endif
+
+#ifdef HYDROGEN_AL_HAVE_HOST_XFER
+using AluminumHostTransferBackendIfDefined = Al::HostTransferBackend;
+#else
+using AluminumHostTransferBackendIfDefined = details::BackendNotDefined;
+#endif
+
+#ifdef HYDROGEN_AL_HAVE_MPI_CUDA
+using AluminumMPICUDABackendIfDefined = Al::MPICUDABackend;
+#else
+using AluminumMPICUDABackendIfDefined = details::BackendNotDefined;
+#endif
+
+// Prefer the NCCL2, then host transfer, then MPI-CUDA backend
 #ifdef HYDROGEN_HAVE_GPU
 template <>
 struct BackendsForDeviceT<Device::GPU>
 {
-    using type = hydrogen::TypeList<
-#ifdef HYDROGEN_HAVE_NCCL2
-        Al::NCCLBackend
-#ifdef HYDROGEN_HAVE_AL_MPI_CUDA
-        ,
-#endif // HYDROGEN_HAVE_AL_MPI_CUDA
-#endif // HYDROGEN_HAVE_NCCL2
-#ifdef HYDROGEN_HAVE_AL_MPI_CUDA
-        Al::MPICUDABackend
-#endif // HYDROGEN_HAVE_AL_MPI_CUDA
-        >;
+    using type = hydrogen::RemoveAll<
+        hydrogen::TypeList<
+          AluminumNCCLBackendIfDefined,
+          AluminumHostTransferBackendIfDefined,
+          AluminumMPICUDABackendIfDefined>,
+        details::BackendNotDefined>;
 };// struct BackendsForDeviceT<Device::GPU>
 #endif // HYDROGEN_HAVE_GPU
 
@@ -181,6 +212,13 @@ struct DeviceForBackendT<Al::NCCLBackend>
     constexpr static Device value = Device::GPU;
 };
 #endif // HYDROGEN_HAVE_NCCL2
+#ifdef HYDROGEN_HAVE_AL_HOST_XFER
+template <>
+struct DeviceForBackendT<Al::HostTransferBackend>
+{
+    constexpr static Device value = Device::GPU;
+};
+#endif // HYDROGEN_HAVE_AL_HOST_XFER
 #ifdef HYDROGEN_HAVE_AL_MPI_CUDA
 template <>
 struct DeviceForBackendT<Al::MPICUDABackend>

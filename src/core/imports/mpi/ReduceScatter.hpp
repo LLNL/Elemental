@@ -15,7 +15,7 @@ void LocalCopy(T const* EL_RESTRICT src,
                size_t size,
                SyncInfo<Device::CPU> const&)
 {
-    return std::copy_n(src, size, dest);
+    std::copy_n(src, size, dest);
 }
 
 #ifdef HYDROGEN_HAVE_GPU

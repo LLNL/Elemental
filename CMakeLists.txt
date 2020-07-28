@@ -431,13 +431,13 @@ if (HYDROGEN_HAVE_CUDA OR HYDROGEN_HAVE_ROCM)
 endif ()
 
 if (Hydrogen_ENABLE_ALUMINUM)
-  find_package(Aluminum 0.4.0 NO_MODULE
+  find_package(Aluminum 0.5.0 NO_MODULE
     HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
     $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
     PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
     NO_DEFAULT_PATH)
   if (NOT Aluminum_FOUND)
-    find_package(Aluminum 0.4.0 NO_MODULE)
+    find_package(Aluminum 0.5.0 NO_MODULE)
   endif ()
 
   if (Aluminum_FOUND)
@@ -450,6 +450,13 @@ if (Hydrogen_ENABLE_ALUMINUM)
     else ()
       set(HYDROGEN_HAVE_NCCL2 FALSE)
     endif (HYDROGEN_HAVE_GPU AND AL_HAS_NCCL)
+
+    if (HYDROGEN_HAVE_GPU AND AL_HAS_HOST_TRANSFER)
+      set(HYDROGEN_HAVE_AL_HOST_XFER TRUE)
+      message(STATUS "Aluminum detected with HostTransfer backend support.")
+    else ()
+      set(HYDROGEN_HAVE_AL_HOST_XFER FALSE)
+    endif (HYDROGEN_HAVE_GPU AND AL_HAS_HOST_TRANSFER)
 
     if (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
       set(HYDROGEN_HAVE_AL_MPI_CUDA TRUE)
