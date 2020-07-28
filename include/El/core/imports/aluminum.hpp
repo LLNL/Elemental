@@ -105,7 +105,7 @@ struct IsAlTypeT<T, Al::HostTransferBackend> : IsAlTypeT<T, Al::MPIBackend> {};
 template <Collective C, typename BackendT>
 struct IsBackendSupported : std::false_type {};
 
-// MPI backend only supports AllReduce
+// MPI backend now supports all collectives
 ADD_ALUMINUM_COLLECTIVE(    Collective::ALLGATHER, Al::MPIBackend);
 ADD_ALUMINUM_COLLECTIVE(    Collective::ALLREDUCE, Al::MPIBackend);
 ADD_ALUMINUM_COLLECTIVE(     Collective::ALLTOALL, Al::MPIBackend);
@@ -126,7 +126,7 @@ ADD_ALUMINUM_COLLECTIVE(Collective::REDUCESCATTER, Al::NCCLBackend);
 #endif // HYDROGEN_HAVE_NCCL2
 
 #ifdef HYDROGEN_HAVE_AL_HOST_XFER
-// MPICUDA backend only supports AllReduce
+// MPICUDA backend now supports all collectives
 ADD_ALUMINUM_COLLECTIVE(    Collective::ALLGATHER, Al::HostTransferBackend);
 ADD_ALUMINUM_COLLECTIVE(    Collective::ALLREDUCE, Al::HostTransferBackend);
 ADD_ALUMINUM_COLLECTIVE(     Collective::ALLTOALL, Al::HostTransferBackend);
