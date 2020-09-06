@@ -4,16 +4,7 @@
 
 TEST_CASE("Testing core GPU functionality", "[seq][gpu][init]")
 {
-    REQUIRE_FALSE(hydrogen::gpu::IsInitialized());
-    REQUIRE(hydrogen::gpu::IsFinalized());
-
-    REQUIRE_NOTHROW(hydrogen::gpu::Initialize());
-
+    // The "main()" function should handle initialization.
     REQUIRE(hydrogen::gpu::IsInitialized());
     REQUIRE_FALSE(hydrogen::gpu::IsFinalized());
-
-    REQUIRE_NOTHROW(hydrogen::gpu::Finalize());
-
-    REQUIRE_FALSE(hydrogen::gpu::IsInitialized());
-    REQUIRE(hydrogen::gpu::IsFinalized());
 }

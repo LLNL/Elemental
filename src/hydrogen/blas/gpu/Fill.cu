@@ -45,10 +45,11 @@ __global__ void Fill2D_kernel(size_t height, size_t width, T value,
 
 template <typename T, typename>
 void Fill_GPU_impl(
-    size_t height, size_t width, T const& value,
+    size_t height, size_t width, T const& value_in,
     T* buffer, size_t ldim,
     SyncInfo<Device::GPU> const& sync_info)
 {
+    using GPUValueType = NativeGPUType<T>;
     if (height <= 0 || width <= 0)
         return;
 
@@ -56,19 +57,20 @@ void Fill_GPU_impl(
     constexpr size_t blockDim = 256;
     const size_t gridDim = (size + blockDim - 1) / blockDim;
 
+    GPUValueType value = *AsNativeGPUType(&value_in);
     if (width == 1 || ldim == height)
     {
         gpu::LaunchKernel(
-            Fill1D_kernel<T>,
+            Fill1D_kernel<GPUValueType>,
             gridDim, blockDim, 0, sync_info,
-            size, value, buffer);
+            size, value, AsNativeGPUType(buffer));
     }
     else
     {
         gpu::LaunchKernel(
-            Fill2D_kernel<T>,
+            Fill2D_kernel<GPUValueType>,
             gridDim, blockDim, 0, sync_info,
-            height, width, value, buffer, ldim);
+            height, width, value, AsNativeGPUType(buffer), ldim);
     }
 
 }
@@ -83,5 +85,7 @@ ETI(gpu_half_type);
 #endif
 ETI(float);
 ETI(double);
+ETI(El::Complex<float>);
+ETI(El::Complex<double>);
 
 }// namespace hydrogen

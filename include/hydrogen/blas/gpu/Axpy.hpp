@@ -49,7 +49,7 @@ namespace hydrogen
 template <typename T, typename SizeT,
           typename=EnableWhen<IsComputeType<T,Device::GPU>>>
 void Axpy_GPU_impl(
-    SizeT num_rows, SizeT num_cols, T alpha,
+    SizeT num_rows, SizeT num_cols, T const& alpha,
     T const* src, SizeT src_row_stride, SizeT src_col_stride,
     T* dest, SizeT dest_row_stride, SizeT dest_col_stride,
     SyncInfo<Device::GPU> const& sync_info);
@@ -92,7 +92,7 @@ template <typename T, typename SizeT,
 void Axpy_GPU_impl(
     TransposeMode transpA,
     SizeT num_rows, SizeT num_cols,
-    T alpha, T const* A, SizeT lda, T* B, SizeT ldb,
+    T const& alpha, T const* A, SizeT lda, T* B, SizeT ldb,
     SyncInfo<Device::GPU> const& sync_info);
 
 }// namespace hydrogen

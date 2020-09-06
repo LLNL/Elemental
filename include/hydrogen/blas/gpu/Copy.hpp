@@ -21,8 +21,9 @@ namespace hydrogen
  *  substitutes cublas<T>copy for types that cublas does not support
  *  in that operation (e.g., "__half").
  *
- *  @tparam T (Inferred) The type of data. Must be the same for source
- *      and destination matrices.
+ *  @tparam SrcT (Inferred) The type of source data.
+ *  @tparam DestT (Inferred) The type of destination data. Must be
+ *          copy-assignable from SrcT.
  *
  *  @param[in] num_entries The number of entries in the array
  *  @param[in] src The source array. Must not overlap with the
@@ -40,8 +41,8 @@ namespace hydrogen
  *      the arrays overlap.
  */
 template <typename SrcT, typename DestT, typename SizeT,
-          typename=EnableWhen<IsStorageType<SrcT,Device::GPU>>,
-          typename=EnableWhen<IsStorageType<DestT,Device::GPU>>>
+          typename=EnableWhen<And<IsStorageType<SrcT,Device::GPU>,
+                                  IsStorageType<DestT,Device::GPU>>>>
 void Copy_GPU_impl(
     SizeT num_entries,
     SrcT const* src, SizeT src_stride,
@@ -49,8 +50,8 @@ void Copy_GPU_impl(
     SyncInfo<Device::GPU> const& sync_info);
 
 template <typename SrcT, typename DestT, typename SizeT,
-          typename=EnableUnless<IsStorageType<SrcT,Device::GPU>>,
-          typename=EnableUnless<IsStorageType<DestT,Device::GPU>>,
+          typename=EnableUnless<And<IsStorageType<SrcT,Device::GPU>,
+                                    IsStorageType<DestT,Device::GPU>>>,
           typename=void>
 void Copy_GPU_impl(
     SizeT const&,
@@ -94,8 +95,8 @@ void Copy_GPU_impl(
  *        SrcT and DestT will succeed on the device.
  */
 template <typename SrcT, typename DestT, typename SizeT,
-          typename=EnableWhen<IsStorageType<SrcT,Device::GPU>>,
-          typename=EnableWhen<IsStorageType<DestT,Device::GPU>>>
+          typename=EnableWhen<And<IsStorageType<SrcT,Device::GPU>,
+                                  IsStorageType<DestT,Device::GPU>>>>
 void Copy_GPU_impl(
     SizeT num_rows, SizeT num_cols,
     SrcT const* src, SizeT src_row_stride, SizeT src_col_stride,
@@ -103,8 +104,8 @@ void Copy_GPU_impl(
     SyncInfo<Device::GPU> const& sync_info);
 
 template <typename SrcT, typename DestT, typename SizeT,
-          typename=EnableUnless<IsStorageType<SrcT,Device::GPU>>,
-          typename=EnableUnless<IsStorageType<DestT,Device::GPU>>,
+          typename=EnableUnless<And<IsStorageType<SrcT,Device::GPU>,
+                                    IsStorageType<DestT,Device::GPU>>>,
           typename=void>
 void Copy_GPU_impl(SizeT const&, SizeT const&,
                    SrcT const* const&, SizeT const&, SizeT const&,

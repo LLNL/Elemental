@@ -9,6 +9,13 @@
 #include <string>
 #include <type_traits>
 
+// Forward declaration
+namespace El
+{
+template <typename T>
+class Complex;
+}
+
 namespace hydrogen
 {
 
@@ -47,7 +54,6 @@ template <> inline std::string DeviceName<Device::GPU>()
 { return "GPU"; }
 #endif
 
-
 /** @class IsComputeType
  *  @brief Test if one can compute with this type on the device.
  *
@@ -83,6 +89,10 @@ template <>
 struct IsComputeType<std::complex<float>, Device::GPU> : std::true_type {};
 template <>
 struct IsComputeType<std::complex<double>, Device::GPU> : std::true_type {};
+template <>
+struct IsComputeType<El::Complex<float>, Device::GPU> : std::true_type {};
+template <>
+struct IsComputeType<El::Complex<double>, Device::GPU> : std::true_type {};
 #endif
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
@@ -121,6 +131,10 @@ template <>
 struct IsStorageType<std::complex<float>, Device::GPU> : std::true_type {};
 template <>
 struct IsStorageType<std::complex<double>, Device::GPU> : std::true_type {};
+template <>
+struct IsStorageType<El::Complex<float>, Device::GPU> : std::true_type {};
+template <>
+struct IsStorageType<El::Complex<double>, Device::GPU> : std::true_type {};
 #endif
 
 /** @brief Convenience function wrapping IsStorageType.
