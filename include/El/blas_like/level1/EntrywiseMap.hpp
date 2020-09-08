@@ -11,6 +11,7 @@
 
 #include "El/core/DistMatrix/AbstractDistMatrix.hpp"
 #if defined HYDROGEN_HAVE_GPU
+#include "hydrogen/blas/gpu/CombineImpl.hpp"
 #include "hydrogen/blas/gpu/EntrywiseMapImpl.hpp"
 #endif // defined HYDROGEN_HAVE_GPU
 
@@ -146,7 +147,7 @@ void EntrywiseMap
  *  @param A The source matrix.
  *  @param B The target matrix.
  *  @param func The functor to apply entrywise to elements of A. The
- *              signature should be `S(T const&)` or equivalent. It
+ *              signature should be `T(S const&)` or equivalent. It
  *              must be device-executable code.
  */
 template <typename S, typename T, typename FunctorT>
@@ -165,8 +166,46 @@ void EntrywiseMap(Matrix<S, Device::GPU> const& A,
         func,
         multisync);
 }
+
+/** @brief Combine function for GPU matrices.
+ *
+ *  The operation here is `Bij <- func(Aij, Bij)`. This _could_ be
+ *  very hackily implemented with EntrywiseMap or with the right
+ *  closure being passed into an IndexDependentMap function, but it's
+ *  probably better to have the dedicated API.
+ *
+ *  This function handles only the high-level Resize and
+ *  Synchronization tasks. The kernel launch is done elsewhere.
+ *
+ *  @param A The source matrix.
+ *  @param B The target matrix.
+ *  @param func The functor to apply entrywise to elements of A. The
+ *              signature should be `T(S const&, T const&)` or equivalent. It
+ *              must be device-executable code.
+ */
+template <typename S, typename T, typename FunctorT>
+void Combine(Matrix<S, Device::GPU> const& A,
+             Matrix<T, Device::GPU>& B,
+             FunctorT func)
+{
+    if (A.Height() != B.Height() || A.Width() != B.Width())
+        RuntimeError("A and B must be the same size for Combine.");
+
+    auto multisync = hydrogen::MakeMultiSync(
+        SyncInfoFromMatrix(B), SyncInfoFromMatrix(A));
+    hydrogen::device::CombineImpl(
+        A.Height(), A.Width(),
+        A.LockedBuffer(), A.LDim(),
+        B.Buffer(), B.LDim(),
+        func,
+        multisync);
+}
 #else
-// Just declare the template prototype if not in device compilation.
+// Just declare the template prototypes if not in device compilation.
+template <typename S, typename T, typename FunctorT>
+void Combine(Matrix<S, Device::GPU> const& A,
+             Matrix<T, Device::GPU>& B,
+             FunctorT func);
 template <typename S, typename T, typename FunctorT>
 void EntrywiseMap(Matrix<S, Device::GPU> const& A,
                   Matrix<T, Device::GPU>& B,

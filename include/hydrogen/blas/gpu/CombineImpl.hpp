@@ -1,11 +1,12 @@
-#ifndef HYDROGEN_SRC_HYDROGEN_BLAS_GPU_ENTRYWISEMAPIMPL_HPP_
-#define HYDROGEN_SRC_HYDROGEN_BLAS_GPU_ENTRYWISEMAPIMPL_HPP_
+#ifndef HYDROGEN_SRC_HYDROGEN_BLAS_GPU_COMBINEIMPL_HPP_
+#define HYDROGEN_SRC_HYDROGEN_BLAS_GPU_COMBINEIMPL_HPP_
 
 /**
  * @file
  *
- * This file provides general-purpose 1D or 2D entrywise map
- * capability for GPU-based matrices. This file contains device
+ * This file provides general-purpose 1D or 2D "combine" capability
+ * for GPU-based matrices. "Combine" is basically entrywise binary
+ * operations: B(i,j) <- F(A(i,j), B(i,j)). This file contains device
  * code. It will appear empty if `#include`-d somewhere device code is
  * not valid.
  */
@@ -24,13 +25,13 @@ namespace device
 namespace kernel
 {
 
-/** @brief Apply a functor to a 1-D buffer.
+/** @brief Apply a functor to 1-D buffers.
  *
  *  @tparam S (Inferred) Type of source buffer.
  *  @tparam T (Inferred) Type of target buffer.
  *  @tparam SizeT (Inferred) Type of integer used to express sizes.
  *  @tparam FunctorT (Inferred) Type of functor. Must be equivalent to
- *                              `T(S const&)`.
+ *                              `T(S const&, T const&)`.
  *
  *  @param num_entries The number of entries to which the functor is
  *                     applied.
@@ -43,7 +44,7 @@ namespace kernel
  *  @param func The functor to apply. Must be device-invocable.
  */
 template <typename S, typename T, typename SizeT, typename FunctorT>
-__global__ void entrywise_map_1d_kernel_naive(
+__global__ void combine_1d_kernel_naive(
     SizeT num_entries,
     S const* A, SizeT stride_A,
     T * B, SizeT stride_B,
@@ -51,7 +52,7 @@ __global__ void entrywise_map_1d_kernel_naive(
 {
     SizeT const idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < num_entries)
-        B[idx*stride_B] = func(A[idx*stride_A]);
+        B[idx*stride_B] = func(A[idx*stride_A], B[idx*stride_B]);
 }
 
 /** @brief Apply a functor to a 2-D column-major matrix buffer.
@@ -83,7 +84,7 @@ __global__ void entrywise_map_1d_kernel_naive(
  */
 template <int TILE_DIM, int BLK_COLS,
           typename S, typename T, typename SizeT, typename FunctorT>
-__global__ void entrywise_map_2d_kernel_naive(
+__global__ void combine_2d_kernel_naive(
     SizeT m, SizeT n,
     S const* A, SizeT lda,
     T * B, SizeT ldb,
@@ -96,7 +97,8 @@ __global__ void entrywise_map_2d_kernel_naive(
     {
         for (int ii = 0; ii < TILE_DIM && col_idx + ii < n; ii += BLK_COLS)
             B[row_idx + (col_idx+ii)*ldb] =
-                func(A[row_idx + (col_idx+ii)*lda]);
+                func(A[row_idx + (col_idx+ii)*lda],
+                     B[row_idx + (col_idx+ii)*ldb]);
     }
 }
 }// namespace kernel
@@ -109,7 +111,7 @@ __global__ void entrywise_map_2d_kernel_naive(
  *  @tparam T (Inferred) Type of target buffer.
  *  @tparam SizeT (Inferred) Type of integer used to express sizes.
  *  @tparam FunctorT (Inferred) Type of functor. Must be equivalent to
- *                              `T(S const&)`.
+ *                              `T(S const&, T const&)`.
  *
  *  @param num_entries The number of entries to which the functor is
  *                     applied.
@@ -122,7 +124,7 @@ __global__ void entrywise_map_2d_kernel_naive(
  *  @param func The functor to apply. Must be device-invocable.
  */
 template <typename S, typename T, typename SizeT, typename FunctorT>
-void EntrywiseMapImpl(
+void CombineImpl(
     SizeT size,
     S const* A, SizeT stride_A,
     T * B, SizeT stride_B,
@@ -135,7 +137,7 @@ void EntrywiseMapImpl(
     constexpr size_t threads_per_block = 256ULL;
     auto blocks = (size + threads_per_block - 1) / threads_per_block;
     gpu::LaunchKernel(
-        kernel::entrywise_map_1d_kernel_naive<
+        kernel::combine_1d_kernel_naive<
             NativeGPUType<S>, NativeGPUType<T>, SizeT, FunctorT>,
         blocks, threads_per_block, 0, sync_info,
         size,
@@ -144,7 +146,7 @@ void EntrywiseMapImpl(
         func);
 }
 
-/** @brief Apply a functor to a 2-D column-major matrix buffer.
+/** @brief Apply a functor to 2-D column-major matrix buffers.
  *
  *  This can be applied to a row-major matrix by logically transposing
  *  the matrix.
@@ -155,7 +157,7 @@ void EntrywiseMapImpl(
  *  @tparam T (Inferred) Type of target buffer.
  *  @tparam SizeT (Inferred) Type of integer used to express sizes.
  *  @tparam FunctorT (Inferred) Type of functor. Must be equivalent to
- *                              `T(S const&)`.
+ *                              `T(S const&, T const&)`.
  *
  *  @param m The number of rows in A/B.
  *  @param n The number of columns in A/B. Columns must be contiguous
@@ -169,7 +171,7 @@ void EntrywiseMapImpl(
  *  @param func The functor to apply. Must be device-invocable.
  */
 template <typename S, typename T, typename SizeT, typename FunctorT>
-void EntrywiseMapImpl(
+void CombineImpl(
     SizeT m, SizeT n,
     S const* A, SizeT lda,
     T * B, SizeT ldb,
@@ -195,7 +197,7 @@ void EntrywiseMapImpl(
     dim3 thds(TILE_DIM, BLK_COLS, 1);
 
     gpu::LaunchKernel(
-        kernel::entrywise_map_2d_kernel_naive<
+        kernel::combine_2d_kernel_naive<
             TILE_DIM, BLK_COLS,
             NativeGPUType<S>, NativeGPUType<T>, SizeT, FunctorT>,
         blks, thds, 0, sync_info,
@@ -208,4 +210,4 @@ void EntrywiseMapImpl(
 }// namespace device
 }// namespace hydrogen
 #endif // defined __CUDACC__
-#endif // HYDROGEN_SRC_HYDROGEN_BLAS_GPU_ENTRYWISEMAPIMPL_HPP_
+#endif // HYDROGEN_SRC_HYDROGEN_BLAS_GPU_COMBINEIMPL_HPP_

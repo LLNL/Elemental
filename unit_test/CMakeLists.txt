@@ -4,6 +4,7 @@ list(APPEND HYDROGEN_CATCH2_TEST_FILES
 if (HYDROGEN_HAVE_GPU)
   list(APPEND HYDROGEN_CATCH2_TEST_FILES
     gpu_test.cpp
+    gpu_combine_test.cu
     gpu_entrywise_map_test.cu
     copy_cpu_gpu_test.cpp
     )
