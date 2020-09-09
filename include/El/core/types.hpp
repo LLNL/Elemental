@@ -422,6 +422,17 @@ enum LeftOrRight
 };
 char LeftOrRightToChar( LeftOrRight side );
 LeftOrRight CharToLeftOrRight( char c );
+inline SideMode LeftOrRightToSideMode(LeftOrRight side)
+{
+    switch (side)
+    {
+    case LEFT:
+        return SideMode::LEFT;
+    case RIGHT:
+        return SideMode::RIGHT;
+    }
+    return SideMode::LEFT;
+}
 }
 using namespace LeftOrRightNS;
 
@@ -482,6 +493,17 @@ enum UnitOrNonUnit
 };
 char UnitOrNonUnitToChar( UnitOrNonUnit diag );
 UnitOrNonUnit CharToUnitOrNonUnit( char c );
+inline DiagType UnitOrNonUnitToDiagType(UnitOrNonUnit diag)
+{
+    switch (diag)
+    {
+    case NON_UNIT:
+        return DiagType::NON_UNIT;
+    case UNIT:
+        return DiagType::UNIT;
+    }
+    return DiagType::UNIT;
+}
 }
 using namespace UnitOrNonUnitNS;
 
@@ -493,6 +515,17 @@ enum UpperOrLower
 };
 char UpperOrLowerToChar( UpperOrLower uplo );
 UpperOrLower CharToUpperOrLower( char c );
+inline FillMode UpperOrLowerToFillMode(UpperOrLower uplo)
+{
+    switch (uplo)
+    {
+    case LOWER:
+        return FillMode::LOWER_TRIANGLE;
+    case UPPER:
+        return FillMode::UPPER_TRIANGLE;
+    }
+    return FillMode::FULL;
+}
 }
 using namespace UpperOrLowerNS;
 

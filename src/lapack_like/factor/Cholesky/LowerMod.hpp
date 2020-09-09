@@ -52,9 +52,9 @@ void LowerUpdate( Matrix<F>& L, Matrix<F>& V )
         lambda11 = -lambda11;
         z21 = l21;
         Gemv( NORMAL, F(1), V2, v1, F(1), z21 );
-        l21 *= -1;
+        Scale(-1, l21);
         Axpy( tau, z21, l21 );
-        V2 *= -1;
+        Scale(-1, V2);
         Ger( tau, z21, v1, V2 );
     }
 }
@@ -112,9 +112,9 @@ void LowerUpdate
         LocalGemv( NORMAL, F(1), V2, v1_STAR_MR, F(0), b21_MC_STAR );
         El::AllReduce( b21_MC_STAR, V2.RowComm() );
         z21_MC_STAR += b21_MC_STAR;
-        l21 *= -1;
+        Scale(-1, l21);
         Axpy( tau, z21_MC_STAR, l21 );
-        V2 *= -1;
+        Scale(-1, V2);
         LocalGer( tau, z21_MC_STAR, v1_STAR_MR, V2 );
     }
 }
@@ -159,8 +159,8 @@ void LowerDowndate( Matrix<F>& L, Matrix<F>& V )
         lambda11 = -lambda11;
         z21 = l21;
         Gemv( NORMAL, F(-1), V2, v1, F(1), z21 );
-        l21 *= -1;
-        V2 *= -1;
+        Scale(-1, l21);
+        Scale(-1, V2);
         Axpy( F(1)/tau, z21, l21 );
         Ger( F(1)/tau, z21, v1, V2 );
     }
@@ -220,8 +220,8 @@ void LowerDowndate( AbstractDistMatrix<F>& LPre, AbstractDistMatrix<F>& VPre )
         LocalGemv( NORMAL, F(-1), V2, v1_STAR_MR, F(0), b21_MC_STAR );
         El::AllReduce( b21_MC_STAR, V2.RowComm() );
         z21_MC_STAR += b21_MC_STAR;
-        l21 *= -1;
-        V2 *= -1;
+        Scale(-1, l21);
+        Scale(-1, V2);
         Axpy( F(1)/tau, z21_MC_STAR, l21 );
         LocalGer( F(1)/tau, z21_MC_STAR, v1_STAR_MR, V2 );
     }
@@ -238,12 +238,12 @@ void LowerMod( Matrix<F>& L, Base<F> alpha, Matrix<F>& V )
         return;
     else if( alpha > Real(0) )
     {
-        V *= Sqrt(alpha);
+        Scale(Sqrt(alpha), V);
         mod::LowerUpdate( L, V );
     }
     else
     {
-        V *= Sqrt(-alpha);
+        Scale(Sqrt(-alpha), V);
         mod::LowerDowndate( L, V );
     }
 }

@@ -14,101 +14,154 @@ namespace rocblas
 // BLAS 1
 //
 
-#define ADD_AXPY_IMPL(ScalarType, TypeChar)                     \
-    void Axpy(rocblas_handle handle,                            \
-              int n, ScalarType const& alpha,                   \
-              ScalarType const* X, int incx,                    \
-              ScalarType* Y, int incy)                          \
-    {                                                           \
-        H_CHECK_ROCBLAS(                                        \
-            rocblas_ ## TypeChar ## axpy(                         \
-                handle,                                         \
-                n, &alpha, X, incx, Y, incy));                  \
-    }
-
-#define ADD_COPY_IMPL(ScalarType, TypeChar)             \
-    void Copy(rocblas_handle handle,                    \
-              int n, ScalarType const* X, int incx,     \
-              ScalarType* Y, int incy)                  \
+#define ADD_AXPY_IMPL(ScalarType, TypeChar)             \
+    void Axpy(rocblas_handle handle,                    \
+              rocblas_int n, ScalarType const& alpha,   \
+              ScalarType const* X, rocblas_int incx,    \
+              ScalarType* Y, rocblas_int incy)          \
     {                                                   \
         H_CHECK_ROCBLAS(                                \
-            rocblas_ ## TypeChar ## copy(                 \
+            rocblas_ ## TypeChar ## axpy(               \
                 handle,                                 \
-                n, X, incx, Y, incy));                  \
+                n, &alpha, X, incx, Y, incy));          \
     }
 
-#define ADD_DOT_IMPL(ScalarType, TypeChar)      \
-    void Dot(rocblas_handle handle,             \
-             int n,                             \
-             ScalarType const* X, int incx,     \
-             ScalarType const* Y, int incy,     \
-             ScalarType* result)                \
-    {                                           \
-        H_CHECK_ROCBLAS(                        \
-            rocblas_ ## TypeChar ## dot(        \
-                handle,                         \
-                n, X, incx, Y, incy, result));  \
+#define ADD_COPY_IMPL(ScalarType, TypeChar)                             \
+    void Copy(rocblas_handle handle,                                    \
+              rocblas_int n, ScalarType const* X, rocblas_int incx,     \
+              ScalarType* Y, rocblas_int incy)                          \
+    {                                                                   \
+        H_CHECK_ROCBLAS(                                                \
+            rocblas_ ## TypeChar ## copy(                               \
+                handle,                                                 \
+                n, X, incx, Y, incy));                                  \
     }
 
-#define ADD_NRM2_IMPL(ScalarType, TypeChar)             \
-    void Nrm2(rocblas_handle handle,                    \
-              int n, ScalarType const* X, int incx,     \
-              ScalarType* result)                       \
+#define ADD_DOT_IMPL(ScalarType, TypeChar)              \
+    void Dot(rocblas_handle handle,                     \
+             rocblas_int n,                             \
+             ScalarType const* X, rocblas_int incx,     \
+             ScalarType const* Y, rocblas_int incy,     \
+             ScalarType* result)                        \
     {                                                   \
         H_CHECK_ROCBLAS(                                \
-            rocblas_ ## TypeChar ## nrm2(               \
+            rocblas_ ## TypeChar ## dot(                \
                 handle,                                 \
-                n, X, incx, result));                   \
+                n, X, incx, Y, incy, result));          \
     }
 
-#define ADD_SCALE_IMPL(ScalarType, TypeChar)               \
-    void Scale(rocblas_handle handle,                      \
-               int n, ScalarType const& alpha,             \
-               ScalarType* X, int incx)                    \
-    {                                                      \
-        H_CHECK_ROCBLAS(                                   \
-            rocblas_ ## TypeChar ## scal(                    \
-                handle, n, &alpha, X, incx));              \
+#define ADD_NRM2_IMPL(ScalarType, TypeChar)                             \
+    void Nrm2(rocblas_handle handle,                                    \
+              rocblas_int n, ScalarType const* X, rocblas_int incx,     \
+              ScalarType* result)                                       \
+    {                                                                   \
+        H_CHECK_ROCBLAS(                                                \
+            rocblas_ ## TypeChar ## nrm2(                               \
+                handle,                                                 \
+                n, X, incx, result));                                   \
+    }
+
+#define ADD_SCALE_IMPL(ScalarType, TypeChar)            \
+    void Scale(rocblas_handle handle,                   \
+               rocblas_int n, ScalarType const& alpha,  \
+               ScalarType* X, rocblas_int incx)         \
+    {                                                   \
+        H_CHECK_ROCBLAS(                                \
+            rocblas_ ## TypeChar ## scal(               \
+                handle, n, &alpha, X, incx));           \
     }
 
 //
 // BLAS 2
 //
-#define ADD_GEMV_IMPL(ScalarType, TypeChar)              \
-    void Gemv(                                           \
-        rocblas_handle handle,                           \
-        rocblas_operation transpA, int m, int n,         \
-        ScalarType const& alpha,                         \
-        ScalarType const* A, int lda,                    \
-        ScalarType const* B, int ldb,                    \
-        ScalarType const& beta,                          \
-        ScalarType* C, int ldc)                          \
-    {                                                    \
-        H_CHECK_ROCBLAS(rocblas_ ## TypeChar ## gemv(      \
-                            handle,                      \
-                            transpA,                     \
-                            m, n,                        \
-                            &alpha, A, lda, B, ldb,      \
-                            &beta, C, ldc));             \
+#define ADD_GEMV_IMPL(ScalarType, TypeChar)                             \
+    void Gemv(                                                          \
+        rocblas_handle handle,                                          \
+        rocblas_operation transpA, rocblas_int m, rocblas_int n,        \
+        ScalarType const& alpha,                                        \
+        ScalarType const* A, rocblas_int lda,                           \
+        ScalarType const* B, rocblas_int ldb,                           \
+        ScalarType const& beta,                                         \
+        ScalarType* C, rocblas_int ldc)                                 \
+    {                                                                   \
+        H_CHECK_ROCBLAS(rocblas_ ## TypeChar ## gemv(                   \
+                            handle,                                     \
+                            transpA,                                    \
+                            m, n,                                       \
+                            &alpha, A, lda, B, ldb,                     \
+                            &beta, C, ldc));                            \
     }
 
 //
 // BLAS 3
 //
+
+#define ADD_HERK_IMPL(ScalarType, BaseScalarType, TypeChar)     \
+    void Herk(                                                  \
+        rocblas_handle handle,                                  \
+        rocblas_fill uplo, rocblas_operation trans,             \
+        rocblas_int n, rocblas_int k,                           \
+        BaseScalarType const& alpha,                            \
+        ScalarType const* A, rocblas_int lda,                   \
+        BaseScalarType const& beta,                             \
+        ScalarType * C, rocblas_int ldc)                        \
+    {                                                           \
+        H_CHECK_ROCBLAS(                                        \
+            rocblas_ ## TypeChar ## herk(                       \
+                handle,                                         \
+                uplo, trans,                                    \
+                n, k,                                           \
+                &alpha, A, lda, &beta, C, ldc));                \
+    }
+
+#define ADD_SYRK_IMPL(ScalarType, TypeChar)             \
+    void Syrk(                                          \
+        rocblas_handle handle,                          \
+        rocblas_fill uplo, rocblas_operation trans,     \
+        rocblas_int n, rocblas_int k,                   \
+        ScalarType const& alpha,                        \
+        ScalarType const* A, rocblas_int lda,           \
+        ScalarType const& beta,                         \
+        ScalarType* C, rocblas_int ldc)                 \
+    {                                                   \
+        H_CHECK_ROCBLAS(                                \
+            rocblas_ ## TypeChar ## syrk(               \
+                handle,                                 \
+                uplo, trans,                            \
+                n, k,                                   \
+                &alpha, A, lda, &beta, C, ldc));        \
+    }
+
+#define ADD_TRSM_IMPL(ScalarType, TypeChar)             \
+    void Trsm(                                          \
+        rocblas_handle handle,                          \
+        rocblas_side side, rocblas_fill uplo,           \
+        rocblas_operation trans, rocblas_diagonal diag, \
+        rocblas_int m, rocblas_int n,                   \
+        ScalarType const& alpha,                        \
+        ScalarType const* A, int lda,                   \
+        ScalarType* B, int ldb)                         \
+    {                                                   \
+        H_CHECK_ROCBLAS(                                \
+            rocblas_ ## TypeChar ## trsm(               \
+                handle, side, uplo, trans, diag,        \
+                m, n, &alpha, A, lda, B, ldb));         \
+    }
+
 #define ADD_GEMM_IMPL(ScalarType, TypeChar)             \
     void Gemm(                                          \
         rocblas_handle handle,                          \
         rocblas_operation transpA,                      \
         rocblas_operation transpB,                      \
-        rocblas_int m, rocblas_int n, rocblas_int k,                            \
+        rocblas_int m, rocblas_int n, rocblas_int k,    \
         ScalarType const& alpha,                        \
-        ScalarType const* A, rocblas_int lda,                   \
-        ScalarType const* B, rocblas_int ldb,                   \
+        ScalarType const* A, rocblas_int lda,           \
+        ScalarType const* B, rocblas_int ldb,           \
         ScalarType const& beta,                         \
-        ScalarType* C, rocblas_int ldc)                         \
+        ScalarType* C, rocblas_int ldc)                 \
     {                                                   \
         H_CHECK_ROCBLAS(                                \
-            rocblas_ ## TypeChar ## gemm(                 \
+            rocblas_ ## TypeChar ## gemm(               \
                 handle,                                 \
                 transpA, transpB,                       \
                 m, n, k, &alpha, A, lda, B, ldb,        \
@@ -146,12 +199,12 @@ namespace rocblas
         rocblas_handle handle,                  \
         rocblas_operation transpA,              \
         rocblas_operation transpB,              \
-        int m, int n,                           \
+        rocblas_int m, rocblas_int n,           \
         ScalarType const& alpha,                \
-        ScalarType const* A, int lda,           \
+        ScalarType const* A, rocblas_int lda,   \
         ScalarType const& beta,                 \
-        ScalarType const* B, int ldb,           \
-        ScalarType* C, int ldc)                 \
+        ScalarType const* B, rocblas_int ldb,   \
+        ScalarType* C, rocblas_int ldc)         \
     {                                           \
         H_CHECK_ROCBLAS(                        \
             rocblas_ ## TypeChar ## geam(       \
@@ -163,16 +216,23 @@ namespace rocblas
                 C, ldc));                       \
     }
 
-#define ADD_DGMM_IMPL(ScalarType, TypeChar)                     \
-    void Dgmm(                                                  \
-        rocblas_handle handle,                                  \
-        rocblas_side side,                                      \
-        int m, int n,                                           \
-        ScalarType const* A, int lda,                           \
-        ScalarType const* X, int incx,                          \
-        ScalarType* C, int ldc)                                 \
-    {                                                           \
-        H_CHECK_ROCBLAS(rocblas_status_not_implemented);        \
+#define ADD_DGMM_IMPL(ScalarType, TypeChar)     \
+    void Dgmm(                                  \
+        rocblas_handle handle,                  \
+        rocblas_side side,                      \
+        rocblas_int m, rocblas_int n,           \
+        ScalarType const* A, rocblas_int lda,   \
+        ScalarType const* X, rocblas_int incx,  \
+        ScalarType* C, rocblas_int ldc)         \
+    {                                           \
+        H_CHECK_ROCBLAS(                        \
+            rocblas_ ## TypeChar ## dgmm(       \
+                handle,                         \
+                side,                           \
+                m, n,                           \
+                A, lda,                         \
+                X, incx,                        \
+                C, ldc));                       \
     }
 
 // BLAS 1
@@ -199,6 +259,19 @@ ADD_GEMV_IMPL(float, s)
 ADD_GEMV_IMPL(double, d)
 
 // BLAS 3
+ADD_HERK_IMPL(rocblas_float_complex, float, c)
+ADD_HERK_IMPL(rocblas_double_complex, double, z)
+
+ADD_SYRK_IMPL(float, s)
+ADD_SYRK_IMPL(double, d)
+ADD_SYRK_IMPL(rocblas_float_complex, c)
+ADD_SYRK_IMPL(rocblas_double_complex, z)
+
+ADD_TRSM_IMPL(float, s)
+ADD_TRSM_IMPL(double, d)
+ADD_TRSM_IMPL(rocblas_float_complex, c)
+ADD_TRSM_IMPL(rocblas_double_complex, z)
+
 ADD_GEMM_IMPL(rocblas_half, h)
 ADD_GEMM_IMPL(float, s)
 ADD_GEMM_IMPL(double, d)
@@ -230,7 +303,7 @@ ASSERT_SUPPORT(float, BLAS_Op::GEAM);
 ASSERT_SUPPORT(float, BLAS_Op::GEMM);
 ASSERT_SUPPORT(float, BLAS_Op::GEMV);
 ASSERT_SUPPORT(float, BLAS_Op::SCAL);
-ASSERT_NO_SUPPORT(float, BLAS_Op::DGMM);
+ASSERT_SUPPORT(float, BLAS_Op::DGMM);
 ASSERT_SUPPORT(float, BLAS_Op::DOT);
 ASSERT_SUPPORT(float, BLAS_Op::NRM2);
 ASSERT_SUPPORT(float, BLAS_Op::GEMMSTRIDEDBATCHED);
@@ -241,7 +314,7 @@ ASSERT_SUPPORT(double, BLAS_Op::GEAM);
 ASSERT_SUPPORT(double, BLAS_Op::GEMM);
 ASSERT_SUPPORT(double, BLAS_Op::GEMV);
 ASSERT_SUPPORT(double, BLAS_Op::SCAL);
-ASSERT_NO_SUPPORT(double, BLAS_Op::DGMM);
+ASSERT_SUPPORT(double, BLAS_Op::DGMM);
 ASSERT_SUPPORT(double, BLAS_Op::DOT);
 ASSERT_SUPPORT(double, BLAS_Op::NRM2);
 ASSERT_SUPPORT(double, BLAS_Op::GEMMSTRIDEDBATCHED);

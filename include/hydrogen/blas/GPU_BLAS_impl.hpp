@@ -29,8 +29,10 @@
 
 #define GPU_BLAS_USE_CUBLAS
 #include <hydrogen/device/gpu/cuda/cuBLAS.hpp>
+#include <hydrogen/device/gpu/cuda/cuSOLVER.hpp>
 
 namespace gpu_blas_impl = hydrogen::cublas;
+namespace gpu_lapack_impl = hydrogen::cusolver;
 
 #elif defined(HYDROGEN_HAVE_ROCM)
 
@@ -41,8 +43,10 @@ namespace gpu_blas_impl = hydrogen::cublas;
 
 #define GPU_BLAS_USE_ROCBLAS
 #include <hydrogen/device/gpu/rocm/rocBLAS.hpp>
+#include <hydrogen/device/gpu/rocm/rocSOLVER.hpp>
 
 namespace gpu_blas_impl = hydrogen::rocblas;
+namespace gpu_lapack_impl = hydrogen::rocsolver;
 
 #else
 #pragma GCC error "LOGIC ERROR: No GPU programming model enabled."
@@ -60,6 +64,8 @@ using gpu_blas_impl::GetLibraryHandle;
 using gpu_blas_impl::IsSupportedType;
 using gpu_blas_impl::NativeType;
 using gpu_blas_impl::SyncManager;
+using gpu_blas_impl::ToNativeDiagType;
+using gpu_blas_impl::ToNativeFillMode;
 using gpu_blas_impl::ToNativeSideMode;
 using gpu_blas_impl::ToNativeTransposeMode;
 
@@ -272,6 +278,82 @@ void GemvImpl(
         reinterpret_cast<CNTP>(x), ToSizeT(incx),
         beta,
         reinterpret_cast<NTP>(y), ToSizeT(incy));
+}
+
+
+template <typename T, typename SizeT,
+          typename=EnableWhen<IsSupportedType<T, BLAS_Op::HERK>>>
+void HerkImpl(
+    FillMode uplo, TransposeMode trans,
+    SizeT n, SizeT k,
+    TmpBase<T> const& alpha,
+    T const* A, SizeT lda,
+    TmpBase<T> const& beta,
+    T* C, SizeT ldc,
+    SyncInfo<Device::GPU> const& syncinfo)
+{
+    using NTP = MakePointer<NativeType<T>>;
+    using CNTP = MakePointerToConst<NativeType<T>>;
+
+    SyncManager mgr(GetLibraryHandle(), syncinfo);
+    gpu_blas_impl::Herk(
+        GetLibraryHandle(),
+        ToNativeFillMode(uplo), ToNativeTransposeMode(trans),
+        ToSizeT(n), ToSizeT(k),
+        alpha,
+        reinterpret_cast<CNTP>(A), ToSizeT(lda),
+        beta,
+        reinterpret_cast<NTP>(C), ToSizeT(ldc));
+}
+
+template <typename T, typename SizeT,
+          typename=EnableWhen<IsSupportedType<T, BLAS_Op::SYRK>>>
+void SyrkImpl(
+    FillMode uplo, TransposeMode trans,
+    SizeT n, SizeT k,
+    T const& alpha,
+    T const* A, SizeT lda,
+    T const& beta,
+    T* C, SizeT ldc,
+    SyncInfo<Device::GPU> const& syncinfo)
+{
+    using NTP = MakePointer<NativeType<T>>;
+    using CNTP = MakePointerToConst<NativeType<T>>;
+
+    SyncManager mgr(GetLibraryHandle(), syncinfo);
+    gpu_blas_impl::Syrk(
+        GetLibraryHandle(),
+        ToNativeFillMode(uplo), ToNativeTransposeMode(trans),
+        ToSizeT(n), ToSizeT(k),
+        alpha,
+        reinterpret_cast<CNTP>(A), ToSizeT(lda),
+        beta,
+        reinterpret_cast<NTP>(C), ToSizeT(ldc));
+}
+
+template <typename T, typename SizeT,
+          typename=EnableWhen<IsSupportedType<T, BLAS_Op::TRSM>>>
+void TrsmImpl(
+    SideMode side, FillMode uplo,
+    TransposeMode trans, DiagType diag,
+    SizeT n, SizeT m,
+    T const& alpha,
+    T const* A, SizeT lda,
+    T* B, SizeT ldb,
+    SyncInfo<Device::GPU> const& syncinfo)
+{
+    using NTP = MakePointer<NativeType<T>>;
+    using CNTP = MakePointerToConst<NativeType<T>>;
+
+    SyncManager mgr(GetLibraryHandle(), syncinfo);
+    gpu_blas_impl::Trsm(
+        GetLibraryHandle(),
+        ToNativeSideMode(side), ToNativeFillMode(uplo),
+        ToNativeTransposeMode(trans), ToNativeDiagType(diag),
+        ToSizeT(n), ToSizeT(m),
+        alpha,
+        reinterpret_cast<CNTP>(A), ToSizeT(lda),
+        reinterpret_cast<NTP>(B), ToSizeT(ldb));
 }
 
 template <typename T, typename SizeT,
@@ -537,6 +619,60 @@ void GemvImpl(
 }
 
 template <typename T, typename SizeT,
+          typename=EnableUnless<IsSupportedType<T, BLAS_Op::HERK>>,
+          typename=void>
+void HerkImpl(
+    FillMode const, TransposeMode const,
+    SizeT const, SizeT const,
+    TmpBase<T> const& ,
+    T const* const, SizeT const,
+    TmpBase<T> const& ,
+    T* const, SizeT const,
+    SyncInfo<Device::GPU> const&)
+{
+    std::ostringstream oss;
+    oss << "No valid implementation of HERK for T="
+        << TypeTraits<T>::Name();
+    throw std::logic_error(oss.str());
+}
+
+template <typename T, typename SizeT,
+          typename=EnableUnless<IsSupportedType<T, BLAS_Op::SYRK>>,
+          typename=void>
+void SyrkImpl(
+    FillMode const, TransposeMode const,
+    SizeT const, SizeT const,
+    T const&,
+    T const* const, SizeT const,
+    T const&,
+    T* const, SizeT const,
+    SyncInfo<Device::GPU> const&)
+{
+    std::ostringstream oss;
+    oss << "No valid implementation of SYRK for T="
+        << TypeTraits<T>::Name();
+    throw std::logic_error(oss.str());
+}
+
+template <typename T, typename SizeT,
+          typename=EnableUnless<IsSupportedType<T, BLAS_Op::TRSM>>,
+          typename=void>
+void TrsmImpl(
+    SideMode const, FillMode const,
+    TransposeMode const, DiagType const,
+    SizeT const, SizeT const,
+    T const&,
+    T const* const, SizeT const,
+    T* const, SizeT const,
+    SyncInfo<Device::GPU> const&)
+{
+    std::ostringstream oss;
+    oss << "No valid implementation of TRSM for T="
+        << TypeTraits<T>::Name();
+    throw std::logic_error(oss.str());
+}
+
+template <typename T, typename SizeT,
           typename=EnableUnless<IsSupportedType<T,BLAS_Op::GEMM>>,
           typename=void>
 void GemmImpl(
@@ -695,6 +831,54 @@ void Gemv(
 //
 
 template <typename T, typename SizeT>
+void Herk(
+    FillMode uplo, TransposeMode trans,
+    SizeT n, SizeT k,
+    TmpBase<T> const& alpha,
+    T const* A, SizeT lda,
+    TmpBase<T> const& beta,
+    T* C, SizeT ldc,
+    SyncInfo<Device::GPU> const& syncinfo)
+{
+    details::HerkImpl(uplo, trans,
+                      n, k,
+                      alpha, A, lda,
+                      beta, C, ldc,
+                      syncinfo);
+}
+
+template <typename T, typename SizeT>
+void Syrk(
+    FillMode uplo, TransposeMode trans,
+    SizeT n, SizeT k,
+    T const& alpha,
+    T const* A, SizeT lda,
+    T const& beta,
+    T* C, SizeT ldc,
+    SyncInfo<Device::GPU> const& syncinfo)
+{
+    details::SyrkImpl(uplo, trans,
+                      n, k,
+                      alpha, A, lda,
+                      beta, C, ldc,
+                      syncinfo);
+}
+
+template <typename T, typename SizeT>
+void Trsm(
+    SideMode side, FillMode uplo,
+    TransposeMode trans, DiagType diag,
+    SizeT m, SizeT n,
+    T const& alpha,
+    T const* A, SizeT lda,
+    T* B, SizeT ldb,
+    SyncInfo<Device::GPU> const& syncinfo)
+{
+    details::TrsmImpl(side, uplo, trans, diag, m, n,
+                      alpha, A, lda, B, ldb, syncinfo);
+}
+
+template <typename T, typename SizeT>
 void Gemm(
     TransposeMode transA, TransposeMode transB,
     SizeT m, SizeT n, SizeT k,
@@ -727,5 +911,167 @@ void Dgmm(SideMode side,
 }
 
 }// namespace gpu_blas
+
+namespace gpu_lapack
+{
+namespace details
+{
+// These might be unique.
+using gpu_lapack_impl::ToSizeT;
+using gpu_lapack_impl::GetDenseLibraryHandle;
+using gpu_lapack_impl::SyncManager;
+using gpu_lapack_impl::IsSupportedType;
+
+// These are probably the same.
+using gpu_blas_impl::NativeType;
+using gpu_blas_impl::ToNativeDiagType;
+using gpu_blas_impl::ToNativeFillMode;
+using gpu_blas_impl::ToNativeSideMode;
+using gpu_blas_impl::ToNativeTransposeMode;
+
+template <typename T, typename SizeT, typename InfoT,
+          typename=EnableWhen<IsSupportedType<T,LAPACK_Op::POTRF>>>
+void CholeskyFactorizeImpl(FillMode uplo,
+                           SizeT n,
+                           T* A, SizeT lda,
+                           T* workspace, SizeT workspace_size,
+                           InfoT* info,
+                           SyncInfo<Device::GPU> const& si)
+{
+    static_assert(IsSame<InfoT, gpu_lapack_impl::InfoT>::value,
+                  "Deduced InfoT must match gpu_lapack_impl::InfoT.");
+
+    using NTP = MakePointer<NativeType<T>>;
+
+    SyncManager mgr(GetDenseLibraryHandle(), si);
+    gpu_lapack_impl::Potrf(
+        GetDenseLibraryHandle(),
+        ToNativeFillMode(uplo), ToSizeT(n),
+        reinterpret_cast<NTP>(A), ToSizeT(lda),
+        reinterpret_cast<NTP>(workspace), ToSizeT(workspace_size),
+        info);
+}
+
+template <typename T, typename SizeT,
+          typename=EnableWhen<IsSupportedType<T,LAPACK_Op::POTRF>>>
+void CholeskyFactorizeImpl(FillMode uplo,
+                           SizeT n,
+                           T* A, SizeT lda,
+                           T* workspace, SizeT workspace_size,
+                           SyncInfo<Device::GPU> const& si)
+{
+    simple_buffer<gpu_lapack_impl::InfoT, Device::GPU> info(1, si);
+    CholeskyFactorizeImpl(uplo, n, A, lda,
+                          workspace, workspace_size, info.data(), si);
+#ifndef EL_RELEASE
+    gpu_blas_impl::InfoT host_info;
+    Copy1DToHost(info.data(), &host_info, 1, si);
+    Synchronize(si);
+    if (host_info > gpu_blas_impl::InfoT(0))
+        throw std::runtime_error("Cholesky: Matrix not HPD.");
+    else if (host_info < gpu::blas_impl::InfoT(0))
+        throw std::runtime_error("Cholesky: A parameter is bad.");
+#endif // EL_RELEASE
+}
+
+template <typename T, typename SizeT,
+          typename=EnableWhen<IsSupportedType<T,LAPACK_Op::POTRF>>>
+void CholeskyFactorizeImpl(FillMode uplo,
+                           SizeT n,
+                           T* A, SizeT lda,
+                           SyncInfo<Device::GPU> const& si)
+{
+    SyncManager mgr(
+        GetDenseLibraryHandle(), si);
+    auto const workspace_size =
+        gpu_lapack_impl::GetPotrfWorkspaceSize(
+            GetDenseLibraryHandle(),
+            ToNativeFillMode(uplo),
+            ToSizeT(n), A, ToSizeT(lda));
+    simple_buffer<T, Device::GPU> workspace(workspace_size, si);
+    CholeskyFactorizeImpl(uplo, ToSizeT(n), A, ToSizeT(lda),
+                          workspace.data(), ToSizeT(workspace_size),
+                          si);
+}
+
+template <typename T, typename SizeT,
+          typename=EnableUnless<IsSupportedType<T,LAPACK_Op::POTRF>>,
+          typename=void>
+void CholeskyFactorizeImpl(FillMode const,
+                           SizeT const,
+                           T const* const, SizeT const,
+                           SyncInfo<Device::GPU> const& si)
+{
+    std::ostringstream oss;
+    oss << "No valid implementation of CholeskyFactorize for T="
+        << TypeTraits<T>::Name();
+    throw std::logic_error(oss.str());
+}
+
+template <typename T, typename SizeT,
+          typename=EnableUnless<IsSupportedType<T,LAPACK_Op::POTRF>>,
+          typename=void>
+void CholeskyFactorizeImpl(FillMode const,
+                           SizeT const,
+                           T const* const, SizeT const,
+                           T const* const, SizeT const,
+                           SyncInfo<Device::GPU> const&)
+{
+    std::ostringstream oss;
+    oss << "No valid implementation of CholeskyFactorize for T="
+        << TypeTraits<T>::Name();
+    throw std::logic_error(oss.str());
+}
+
+template <typename T, typename SizeT, typename InfoT,
+          typename=EnableUnless<IsSupportedType<T,LAPACK_Op::POTRF>>,
+          typename=void>
+void CholeskyFactorizeImpl(FillMode const,
+                           SizeT const,
+                           T const* const, SizeT const,
+                           T const* const, SizeT const,
+                           InfoT const* const,
+                           SyncInfo<Device::GPU> const&)
+{
+    std::ostringstream oss;
+    oss << "No valid implementation of CholeskyFactorize for T="
+        << TypeTraits<T>::Name();
+    throw std::logic_error(oss.str());
+}
+}// namespace details
+
+template <typename T, typename SizeT>
+void CholeskyFactorize(FillMode uplo,
+                       SizeT n,
+                       T* A, SizeT lda,
+                       SyncInfo<Device::GPU> const& si)
+{
+    details::CholeskyFactorizeImpl(uplo, n, A, lda, si);
+}
+
+template <typename T, typename SizeT>
+void CholeskyFactorize(FillMode uplo,
+                       SizeT n,
+                       T* A, SizeT lda,
+                       T* workspace, SizeT workspace_size,
+                       SyncInfo<Device::GPU> const& si)
+{
+    details::CholeskyFactorizeImpl(
+        uplo, n, A, lda, workspace, workspace_size, si);
+}
+
+template <typename T, typename SizeT, typename InfoT>
+void CholeskyFactorize(FillMode uplo,
+                       SizeT n,
+                       T* A, SizeT lda,
+                       T* workspace, SizeT workspace_size,
+                       InfoT* info,
+                       SyncInfo<Device::GPU> const& si)
+{
+    details::CholeskyFactorizeImpl(
+        uplo, n, A, lda, workspace, workspace_size, info, si);
+}
+
+}// namespace gpu_lapack
 }// namespace hydrogen
 #endif // HYDROGEN_GPU_BLAS_IMPL_HPP_

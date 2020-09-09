@@ -66,6 +66,34 @@ ToNativeSideMode(SideMode const& side) noexcept
     return rocblas_side_right;
 }
 
+inline rocblas_fill
+ToNativeFillMode(FillMode const& uplo) noexcept
+{
+    switch (uplo)
+    {
+    case FillMode::UPPER_TRIANGLE:
+        return rocblas_fill_upper;
+    case FillMode::LOWER_TRIANGLE:
+        return rocblas_fill_lower;
+    case FillMode::FULL:
+        return rocblas_fill_full;
+    }
+    return rocblas_fill_full;
+}
+
+inline rocblas_diagonal
+ToNativeDiagType(DiagType const& diag) noexcept
+{
+    switch (diag)
+    {
+    case DiagType::UNIT:
+        return rocblas_diagonal_unit;
+    case DiagType::NON_UNIT:
+        return rocblas_diagonal_non_unit;
+    }
+    return rocblas_diagonal_unit;
+}
+
 }// namespace rocblas
 }// namespace hydrogen
 #endif // HYDROGEN_DEVICE_GPU_ROCM_ROCBLASUTIL_HPP_

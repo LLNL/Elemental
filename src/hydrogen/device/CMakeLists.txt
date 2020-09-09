@@ -4,6 +4,8 @@ if (HYDROGEN_HAVE_GPU)
       CUDA.cpp
       cuBLAS.cpp
       cuBLAS_API.cpp
+      cuSOLVER.cpp
+      cuSOLVER_API.cpp
       GPU.cpp)
   endif ()
   if (HYDROGEN_HAVE_ROCM)
@@ -12,6 +14,8 @@ if (HYDROGEN_HAVE_GPU)
       ROCm.cpp
       rocBLAS.cpp
       rocBLAS_API.cpp
+      rocSOLVER.cpp
+      rocSOLVER_API.cpp
       )
   endif ()
 
