@@ -15,7 +15,7 @@
 #include <hydrogen/meta/TypeTraits.hpp>
 #include <hydrogen/device/gpu/GPURuntime.hpp>
 
-#if defined __CUDACC__
+#if defined __CUDACC__ || defined __HIPCC__
 
 namespace hydrogen
 {
@@ -207,5 +207,5 @@ void EntrywiseMapImpl(
 
 }// namespace device
 }// namespace hydrogen
-#endif // defined __CUDACC__
+#endif // defined __CUDACC__ || defined __HIPCC__
 #endif // HYDROGEN_SRC_HYDROGEN_BLAS_GPU_ENTRYWISEMAPIMPL_HPP_

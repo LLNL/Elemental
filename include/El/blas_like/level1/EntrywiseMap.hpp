@@ -138,7 +138,7 @@ void EntrywiseMap
 
 #if defined HYDROGEN_HAVE_GPU
 // This section only valid when device-compiling.
-#if defined __CUDACC__
+#if defined __CUDACC__ || defined __HIPCC__
 /** @brief Entrywise map function for GPU matrices.
  *
  *  This function handles only the high-level Resize and
@@ -210,7 +210,7 @@ template <typename S, typename T, typename FunctorT>
 void EntrywiseMap(Matrix<S, Device::GPU> const& A,
                   Matrix<T, Device::GPU>& B,
                   FunctorT func);
-#endif // defined __CUDACC__
+#endif // defined __CUDACC__ || defined __HIPCC__
 #endif // defined HYDROGEN_HAVE_GPU
 
 #ifdef EL_INSTANTIATE_BLAS_LEVEL1

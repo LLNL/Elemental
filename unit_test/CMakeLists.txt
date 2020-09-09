@@ -16,8 +16,13 @@ if (HYDROGEN_HAVE_GPU)
 endif (HYDROGEN_HAVE_GPU)
 
 # Add the sequential test main() function
-add_executable(seq-catch-tests
-  SequentialCatchMain.cpp "${HYDROGEN_CATCH2_TEST_FILES}")
+if (HYDROGEN_HAVE_ROCM)
+  hip_add_executable(seq-catch-tests
+    SequentialCatchMain.cpp "${HYDROGEN_CATCH2_TEST_FILES}")
+else ()
+  add_executable(seq-catch-tests
+    SequentialCatchMain.cpp "${HYDROGEN_CATCH2_TEST_FILES}")
+endif (HYDROGEN_HAVE_ROCM)
 target_link_libraries(seq-catch-tests
   PRIVATE
   ${HYDROGEN_LIBRARIES} Catch2::Catch2)
