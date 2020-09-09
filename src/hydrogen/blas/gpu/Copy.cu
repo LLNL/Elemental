@@ -3,13 +3,7 @@
 #include <El/hydrogen_config.h>
 #include <hydrogen/meta/TypeTraits.hpp>
 
-#ifdef HYDROGEN_HAVE_CUDA
-#include <hydrogen/device/gpu/CUDA.hpp>
-#include <cuda_runtime.h>
-#elif defined(HYDROGEN_HAVE_ROCM)
-#include <hydrogen/device/gpu/ROCm.hpp>
-#include <hip/hip_runtime.h>
-#endif
+#include <hydrogen/device/gpu/GPURuntime.hpp>
 
 namespace hydrogen
 {

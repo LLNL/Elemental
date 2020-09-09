@@ -130,11 +130,7 @@ void Axpy_GPU_impl(
         return;
     }
 
-#ifdef HYDROGEN_HAVE_CUDA
     constexpr int TILE_SIZE = 32;
-#else
-    constexpr int TILE_SIZE = 64;
-#endif // HYDROGEN_HAVE_CUDA
     constexpr int BLK_COLS = 8;
 
     // Short-circuit

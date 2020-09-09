@@ -11,7 +11,6 @@
 
 namespace hydrogen
 {
-
 namespace rocblas
 {
 

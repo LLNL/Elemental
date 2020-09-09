@@ -70,11 +70,8 @@ void Scale_GPU_impl(
     {
         return;
     }
-#ifdef HYDROGEN_HAVE_CUDA
+
     constexpr int TILE_DIM = 32;
-#else
-    constexpr int TILE_DIM = 64;
-#endif // HYDROGEN_HAVE_CUDA
     constexpr int BLK_COLS = 8;
 
     dim3 blks((num_rows + TILE_DIM - 1) / TILE_DIM,

@@ -421,6 +421,7 @@ if (Hydrogen_ENABLE_ROCM)
     set(CMAKE_CXX_EXTENSIONS FALSE)
     find_package(rocblas CONFIG REQUIRED)
     find_package(rocsolver CONFIG REQUIRED)
+    find_package(rocthrust REQUIRED)
     set(HYDROGEN_HAVE_ROCM TRUE)
     message(STATUS "Found ROCm/HIP toolchain. Using HIP/ROCm.")
   else ()
@@ -576,6 +577,7 @@ target_link_libraries(
   $<TARGET_NAME_IF_EXISTS:hip::hipcub>
   $<TARGET_NAME_IF_EXISTS:roc::rocblas>
   $<TARGET_NAME_IF_EXISTS:roc::rocsolver>
+  $<TARGET_NAME_IF_EXISTS:roc::rocthrust>
   )
 
 # Add the CXX library to "Hydrogen"

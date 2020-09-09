@@ -2,14 +2,11 @@
 
 #include <El/hydrogen_config.h>
 #include <hydrogen/meta/TypeTraits.hpp>
+
+#include <hydrogen/device/gpu/GPURuntime.hpp>
 #ifdef HYDROGEN_HAVE_CUDA
-#include <hydrogen/device/gpu/CUDA.hpp>
-#include <cuda_runtime.h>
 #include <cooperative_groups.h>
 namespace cg = cooperative_groups;
-#elif defined(HYDROGEN_HAVE_ROCM)
-#include <hydrogen/device/gpu/ROCm.hpp>
-#include <hip/hip_runtime.h>
 #endif
 
 namespace
@@ -98,7 +95,6 @@ __global__ void transpose_kernel(
 
 }// namespace <anon>
 
-
 namespace hydrogen
 {
 
@@ -110,11 +106,7 @@ void Transpose_GPU_impl(
     if (m == TypeTraits<SizeT>::Zero() || n == TypeTraits<SizeT>::Zero())
         return;
 
-#ifdef HYDROGEN_HAVE_CUDA
     constexpr int TILE_SIZE = 32;
-#else
-    constexpr int TILE_SIZE = 64;
-#endif
     constexpr int BLK_COLS = 8;
     dim3 blks((m + TILE_SIZE - 1) / TILE_SIZE,
               (n + TILE_SIZE - 1) / TILE_SIZE,

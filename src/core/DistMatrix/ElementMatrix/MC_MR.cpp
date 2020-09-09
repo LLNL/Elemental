@@ -280,6 +280,39 @@ int DM::PartialUnionRowRank() const EL_NO_EXCEPT
 
 #ifdef HYDROGEN_HAVE_GPU
 #include "gpu_instantiate.h"
+
+#define FULL_GPU_PROTO(T)                       \
+  INST_DISTMATRIX_CLASS(T);                     \
+  INST_COPY_AND_ASSIGN(T, CIRC, CIRC);          \
+  INST_COPY_AND_ASSIGN(T, MC,   STAR);          \
+  INST_COPY_AND_ASSIGN(T, MD,   STAR);          \
+  INST_COPY_AND_ASSIGN(T, MR,   MC  );          \
+  INST_COPY_AND_ASSIGN(T, MR,   STAR);          \
+  INST_COPY_AND_ASSIGN(T, STAR, MC  );          \
+  INST_COPY_AND_ASSIGN(T, STAR, MD  );          \
+  INST_COPY_AND_ASSIGN(T, STAR, MR  );          \
+  INST_COPY_AND_ASSIGN(T, STAR, STAR);          \
+  INST_COPY_AND_ASSIGN(T, STAR, VC  );          \
+  INST_COPY_AND_ASSIGN(T, STAR, VR  );          \
+  INST_COPY_AND_ASSIGN(T, VC,   STAR);          \
+  INST_COPY_AND_ASSIGN(T, VR,   STAR)
+
+#ifdef HYDROGEN_GPU_USE_FP16
+PROTO(gpu_half_type)
+FULL_GPU_PROTO(gpu_half_type);
+#endif // HYDROGEN_GPU_USE_FP16
+
+FULL_GPU_PROTO(float);
+FULL_GPU_PROTO(double);
+FULL_GPU_PROTO(El::Complex<float>);
+FULL_GPU_PROTO(El::Complex<double>);
+
+#undef FULL_GPU_PROTO
+#undef INST_DISTMATRIX_CLASS
+#undef INST_COPY_AND_ASSIGN
+#undef INST_ASSIGN_OP
+#undef INST_COPY_CTOR
+
 #endif // HYDROGEN_HAVE_GPU
 
 #define EL_ENABLE_DOUBLEDOUBLE
