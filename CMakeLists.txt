@@ -386,7 +386,9 @@ if (Hydrogen_ENABLE_CUDA)
         INTERFACE_LINK_LIBRARIES "${_CUDA_TOOLKIT_LIBS}")
 
       set_property(TARGET cuda::toolkit PROPERTY
-        INTERFACE_COMPILE_OPTIONS $<$<COMPILE_LANGUAGE:CUDA>:-arch=sm_60>)
+        INTERFACE_COMPILE_OPTIONS
+        $<$<COMPILE_LANGUAGE:CUDA>:-arch=sm_60>
+        $<$<COMPILE_LANGUAGE:CUDA>:--expt-extended-lambda>)
 
       set_property(TARGET cuda::toolkit PROPERTY
         INTERFACE_INCLUDE_DIRECTORIES "${CUDA_INCLUDE_DIRS}")
