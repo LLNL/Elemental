@@ -113,6 +113,12 @@ if (_HYDROGEN_HAVE_CUDA)
 
   set_property(TARGET cuda::toolkit PROPERTY
     INTERFACE_INCLUDE_DIRECTORIES "${CUDA_INCLUDE_DIRS}")
+
+  set_property(TARGET cuda::toolkit PROPERTY
+    INTERFACE_COMPILE_OPTIONS
+    $<$<COMPILE_LANGUAGE:CUDA>:-arch=sm_60>
+    $<$<COMPILE_LANGUAGE:CUDA>:--expt-extended-lambda>)
+
 endif ()
 
 set(HYDROGEN_HAVE_HALF @HYDROGEN_HAVE_HALF@)
