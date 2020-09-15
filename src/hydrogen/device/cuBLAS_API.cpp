@@ -39,7 +39,7 @@ void Dot(cublasHandle_t handle,
          int n,
          __half const* X, int incx,
          __half const* Y, int incy,
-         __half& output)
+         __half* output)
 {
     H_CHECK_CUBLAS(
         cublasDotEx(
@@ -47,7 +47,7 @@ void Dot(cublasHandle_t handle,
             n,
             X, /*xtype=*/CUDA_R_16F, incx,
             Y, /*ytype=*/CUDA_R_16F, incy,
-            &output,
+            output,
             /*resulttype=*/CUDA_R_16F,
             /*executiontype=*/CUDA_R_32F));
 }
@@ -55,14 +55,14 @@ void Dot(cublasHandle_t handle,
 void Nrm2(cublasHandle_t handle,
           int n,
           __half const* X, int incx,
-          __half& output)
+          __half* output)
 {
     H_CHECK_CUBLAS(
         cublasNrm2Ex(
             handle,
             n,
             X, /*xtype=*/CUDA_R_16F, incx,
-            &output,
+            output,
             /*resulttype=*/CUDA_R_16F,
             /*executiontype=*/CUDA_R_32F));
 }
@@ -133,6 +133,8 @@ struct RealTypeT<cuDoubleComplex>
 template <typename T>
 using RealType = typename RealTypeT<T>::type;
 
+// For complex DOT, assume most use-cases will want the inner
+// producted in a complex vector space.
 #define ADD_COMPLEX_DOT_IMPL(ScalarType, TypeChar)              \
     void Dotu(cublasHandle_t handle,                            \
               int n, ScalarType const* X, int incx,             \
@@ -145,14 +147,21 @@ using RealType = typename RealTypeT<T>::type;
                 n, X, incx, Y, incy, output));                  \
     }                                                           \
     void Dotc(cublasHandle_t handle,                            \
-             int n, ScalarType const* X, int incx,              \
-             ScalarType const* Y, int incy,                     \
-             ScalarType* output)                                \
+              int n, ScalarType const* X, int incx,             \
+              ScalarType const* Y, int incy,                    \
+              ScalarType* output)                               \
     {                                                           \
         H_CHECK_CUBLAS(                                         \
             cublas ## TypeChar ## dotc(                         \
                 handle,                                         \
                 n, X, incx, Y, incy, output));                  \
+    }                                                           \
+    void Dot(cublasHandle_t handle,                             \
+             int n, ScalarType const* X, int incx,              \
+             ScalarType const* Y, int incy,                     \
+             ScalarType* output)                                \
+    {                                                           \
+        Dotc(handle, n, X, incx, Y, incy, output);              \
     }
 
 #define ADD_NRM2_IMPL(ScalarType, TypeChar)                     \

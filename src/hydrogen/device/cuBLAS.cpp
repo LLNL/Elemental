@@ -155,5 +155,12 @@ void SetPointerMode(PointerMode mode)
                               ? CUBLAS_POINTER_MODE_HOST
                               : CUBLAS_POINTER_MODE_DEVICE)));
 }
+void RequestTensorOperations()
+{
+    H_CHECK_CUBLAS(
+        cublasSetMathMode(cublas::GetLibraryHandle(),
+                          CUBLAS_TENSOR_OP_MATH));
+}
+
 }// namespace gpu_blas
 }// namespace hydrogen

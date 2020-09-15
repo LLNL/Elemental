@@ -178,6 +178,44 @@ void Copy2DImpl(SizeT nrows, SizeT ncols,
 }
 
 template <typename T, typename SizeT,
+          typename=EnableWhen<IsSupportedType<T,BLAS_Op::DOT>>>
+void DotImpl(SizeT num_entries,
+             T const* X, SizeT stride_X,
+             T const* Y, SizeT stride_Y,
+             T* result,
+             SyncInfo<Device::GPU> const& si)
+{
+    using NTP = MakePointer<NativeType<T>>;
+    using CNTP = MakePointerToConst<NativeType<T>>;
+
+    SyncManager mgr(GetLibraryHandle(), si);
+    gpu_blas_impl::Dot(
+        GetLibraryHandle(),
+        num_entries,
+        reinterpret_cast<CNTP>(X), stride_X,
+        reinterpret_cast<CNTP>(Y), stride_Y,
+        reinterpret_cast<NTP>(result));
+}
+
+template <typename T, typename SizeT,
+          typename=EnableWhen<IsSupportedType<T,BLAS_Op::DOT>>>
+void Nrm2Impl(SizeT num_entries,
+              T const* X, SizeT stride_X,
+              T* result,
+              SyncInfo<Device::GPU> const& si)
+{
+    using NTP = MakePointer<NativeType<T>>;
+    using CNTP = MakePointerToConst<NativeType<T>>;
+
+    SyncManager mgr(GetLibraryHandle(), si);
+    gpu_blas_impl::Nrm2(
+        GetLibraryHandle(),
+        num_entries,
+        reinterpret_cast<CNTP>(X), stride_X,
+        reinterpret_cast<NTP>(result));
+}
+
+template <typename T, typename SizeT,
           typename=EnableWhen<IsSupportedType<T,BLAS_Op::SCAL>>>
 void ScaleImpl(SizeT num_entries,
                T const& alpha,
@@ -384,6 +422,36 @@ void GemmImpl(
         reinterpret_cast<NTP>(C), ToSizeT(ldc));
 }
 
+template <typename T, typename SizeT, typename StrideT,
+          typename=EnableWhen<IsSupportedType<T, BLAS_Op::GEMMSTRIDEDBATCHED>>>
+void GemmStridedBatchedImpl(
+    TransposeMode transpA, TransposeMode transpB,
+    SizeT m, SizeT n, SizeT k,
+    T const& alpha,
+    T const* A, SizeT lda, StrideT strideA,
+    T const* B, SizeT ldb, StrideT strideB,
+    T const& beta,
+    T* C, SizeT ldc, StrideT strideC,
+    SizeT batchCount,
+    SyncInfo<Device::GPU> const& si)
+{
+    using NTP = MakePointer<NativeType<T>>;
+    using CNTP = MakePointerToConst<NativeType<T>>;
+
+    SyncManager mgr(GetLibraryHandle(), si);
+    gpu_blas_impl::GemmStridedBatched(
+        GetLibraryHandle(),
+        ToNativeTransposeMode(transpA),
+        ToNativeTransposeMode(transpB),
+        ToSizeT(m), ToSizeT(n), ToSizeT(k),
+        &alpha,
+        reinterpret_cast<CNTP>(A), ToSizeT(lda), ToSizeT(strideA),
+        reinterpret_cast<CNTP>(B), ToSizeT(ldb), ToSizeT(strideB),
+        &beta,
+        reinterpret_cast<NTP>(C), ToSizeT(ldc), ToSizeT(strideC),
+        ToSizeT(batchCount));
+}
+
 template <typename T, typename SizeT,
           typename=EnableWhen<IsSupportedType<T, BLAS_Op::DGMM>>>
 void DgmmImpl(SideMode side,
@@ -512,6 +580,29 @@ void Copy2DStridedImpl(
                   A, rowstride_A, lda,
                   B, rowstride_B, ldb,
                   si);
+}
+
+template <typename T, typename SizeT,
+          typename=EnableUnless<IsSupportedType<T,BLAS_Op::DOT>>,
+          typename=void>
+void DotImpl(SizeT, T const*, SizeT, T const*, SizeT, T*,
+             SyncInfo<Device::GPU> const&)
+{
+    std::ostringstream oss;
+    oss << "No valid implementation of DOT for T="
+        << TypeTraits<T>::Name();
+    throw std::logic_error(oss.str());
+}
+
+template <typename T, typename SizeT,
+          typename=EnableUnless<IsSupportedType<T,BLAS_Op::DOT>>,
+          typename=void>
+void Nrm2Impl(SizeT, T const*, SizeT, T*, SyncInfo<Device::GPU> const&)
+{
+    std::ostringstream oss;
+    oss << "No valid implementation of NRM2 for T="
+        << TypeTraits<T>::Name();
+    throw std::logic_error(oss.str());
 }
 
 template <typename T, typename SizeT,
@@ -691,6 +782,27 @@ void GemmImpl(
     throw std::logic_error(oss.str());
 }
 
+template <
+    typename T, typename SizeT, typename StrideT,
+    typename=EnableUnless<IsSupportedType<T, BLAS_Op::GEMMSTRIDEDBATCHED>>,
+    typename=void>
+void GemmStridedBatchedImpl(
+    TransposeMode, TransposeMode,
+    SizeT, SizeT, SizeT,
+    T const&,
+    T const*, SizeT, StrideT,
+    T const*, SizeT, StrideT,
+    T const&,
+    T*, SizeT, StrideT,
+    SizeT,
+    SyncInfo<Device::GPU> const&)
+{
+    std::ostringstream oss;
+    oss << "No valid implementation of GEMMSTRIDEDBATCHED for T="
+        << TypeTraits<T>::Name();
+    throw std::logic_error(oss.str());
+}
+
 template <typename T, typename SizeT,
           typename=EnableUnless<IsSupportedType<T,BLAS_Op::DGMM>>,
           typename=void>
@@ -786,6 +898,25 @@ void Copy(SizeT num_rows, SizeT num_cols,
             num_rows, num_cols,
             A, row_stride_A, lda,
             B, row_stride_B, ldb, si);
+}
+
+template <typename T, typename SizeT>
+void Dot(SizeT num_entries,
+         T const* X, SizeT stride_X,
+         T const* Y, SizeT stride_Y,
+         T* result,
+         SyncInfo<Device::GPU> const& syncinfo)
+{
+    details::DotImpl(num_entries, X, stride_X, Y, stride_Y, result, syncinfo);
+}
+
+template <typename T, typename SizeT>
+void Nrm2(SizeT num_entries,
+          T const* X, SizeT stride_X,
+          T* result,
+          SyncInfo<Device::GPU> const& syncinfo)
+{
+    details::Nrm2Impl(num_entries, X, stride_X, result, syncinfo);
 }
 
 template <typename T, typename SizeT>
@@ -893,6 +1024,29 @@ void Gemm(
                       m, n, k,
                       alpha, A, lda, B, ldb,
                       beta, C, ldc, si);
+}
+
+template <typename T, typename SizeT, typename StrideT>
+void GemmStridedBatched(
+    TransposeMode transpA, TransposeMode transpB,
+    SizeT m, SizeT n, SizeT k,
+    T const& alpha,
+    T const* A, SizeT lda, StrideT strideA,
+    T const* B, SizeT ldb, StrideT strideB,
+    T const& beta,
+    T* C, SizeT ldc, StrideT strideC,
+    SizeT batchCount,
+    SyncInfo<Device::GPU> const& si)
+{
+    details::GemmStridedBatchedImpl(transpA, transpB,
+                                    m, n, k,
+                                    alpha,
+                                    A, lda, strideA,
+                                    B, ldb, strideB,
+                                    beta,
+                                    C, ldc, strideC,
+                                    batchCount,
+                                    si);
 }
 
 //

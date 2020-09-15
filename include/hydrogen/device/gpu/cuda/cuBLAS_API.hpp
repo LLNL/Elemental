@@ -29,13 +29,13 @@ namespace cublas
              int n,                             \
              ScalarType const* X, int incx,     \
              ScalarType const* Y, int incy,     \
-             ScalarType& output)
+             ScalarType* output)
 
 #define ADD_NRM2_DECL(ScalarType)               \
     void Nrm2(cublasHandle_t handle,            \
               int n,                            \
               ScalarType const* X, int incx,    \
-              ScalarType& output)
+              ScalarType* output)
 
 #define ADD_SCALE_DECL(ScalarType)                       \
     void Scale(cublasHandle_t handle,                    \

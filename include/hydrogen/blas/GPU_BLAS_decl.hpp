@@ -306,7 +306,7 @@ void Dot(SizeT num_entries,
  *  @param num_entries The number of entries in X.
  *  @param X The vector (device memory).
  *  @param stride_X The stride of X.
- *  @param result The result of the dot product (host or device memory).
+ *  @param result The result of the norm (host or device memory).
  *  @param[in] syncinfo The synchronization information for this
  *                      operation.
  *
@@ -537,7 +537,6 @@ void GemmStridedBatched(
     T* C, SizeT ldc, StrideT strideC,
     SizeT batchCount,
     SyncInfo<Device::GPU> const& syncinfo);
-
 
 ///@}
 /** @name BLAS-like Extension Routines */

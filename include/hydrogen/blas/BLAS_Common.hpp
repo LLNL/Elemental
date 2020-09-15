@@ -138,6 +138,16 @@ namespace gpu_blas
 {
 /** @brief Set the pointer mode of the underlying library. */
 void SetPointerMode(PointerMode mode);
+
+/** @brief Request that the underlying library use specialized tensor
+ *         instructions.
+ *
+ *  This is not a guarantee that such operations are available or will
+ *  be used. However, if the library/hardware does expose such
+ *  features, this will suggest to the library that they be used
+ *  whenever possible.
+ */
+void RequestTensorOperations();
 }
 }// namespace hydrogen
 #endif // HYDROGEN_BLAS_COMMON_HPP_

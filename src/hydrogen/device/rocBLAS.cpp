@@ -143,6 +143,11 @@ void SetPointerMode(PointerMode mode)
                                   ? rocblas_pointer_mode_host
                                   : rocblas_pointer_mode_device)));
 }
+void RequestTensorOperations()
+{
+// Nothing to do here.
+}
+
 }// namespace gpu_blas
 
 }// namespace hydrogen
