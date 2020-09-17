@@ -103,14 +103,14 @@ inline hydrogen::cpu_half_type operator^(hydrogen::cpu_half_type const&,
 // Grab the right header
 #if defined(HYDROGEN_HAVE_CUDA)
 #include <cuda_fp16.h>
-#elif defined(HYDROGEN_HAVE_AMDGPU)
-#include <rocblas-types.h>
+#elif defined(HYDROGEN_HAVE_ROCM)
+#include <hip/hip_fp16.h>
 #endif // HYDROGEN_HAVE_CUDA
 
 namespace hydrogen
 {
 
-#if defined(HYDROGEN_HAVE_CUDA)
+#if defined HYDROGEN_HAVE_GPU
 /** @brief Unified name for the FP16 type on GPU */
 using gpu_half_type = __half;
 
@@ -121,15 +121,11 @@ struct TypeTraits<gpu_half_type>
     static gpu_half_type Zero() noexcept { return 0.f; }
     static std::string Name() { return typeid(gpu_half_type).name(); }
 };// struct TypeTraits<gpu_half_type>
-
-#elif defined(HYDROGEN_HAVE_AMDGPU)
-/** @brief Unified name for the FP16 type on GPU */
-using gpu_half_type = rocblas_half;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // defined HYDROGEN_HAVE_GPU
 
 }// namespace hydrogen
 
-#if defined(HYDROGEN_HAVE_CUDA) && !defined(__CUDACC__)
+#if defined HYDROGEN_HAVE_GPU && !defined(__CUDACC__) && !defined(__HIPCC__)
 
 /** @brief Enable "update" functionality for __half. */
 template <typename T>
