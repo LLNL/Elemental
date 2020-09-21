@@ -98,7 +98,7 @@ inline hydrogen::cpu_half_type operator^(hydrogen::cpu_half_type const&,
 #endif // HYDROGEN_HAVE_HALF
 
 // Finally, do the GPU stuff
-#ifdef HYDROGEN_GPU_USE_FP16
+#if defined HYDROGEN_HAVE_GPU && defined HYDROGEN_GPU_USE_FP16
 
 // Grab the right header
 #if defined(HYDROGEN_HAVE_CUDA)
@@ -110,7 +110,6 @@ inline hydrogen::cpu_half_type operator^(hydrogen::cpu_half_type const&,
 namespace hydrogen
 {
 
-#if defined HYDROGEN_HAVE_GPU
 /** @brief Unified name for the FP16 type on GPU */
 using gpu_half_type = __half;
 
@@ -121,11 +120,10 @@ struct TypeTraits<gpu_half_type>
     static gpu_half_type Zero() noexcept { return 0.f; }
     static std::string Name() { return typeid(gpu_half_type).name(); }
 };// struct TypeTraits<gpu_half_type>
-#endif // defined HYDROGEN_HAVE_GPU
 
 }// namespace hydrogen
 
-#if defined HYDROGEN_HAVE_GPU && !defined(__CUDACC__) && !defined(__HIPCC__)
+#if !(defined(__CUDACC__) || defined(__HIPCC__))
 
 /** @brief Enable "update" functionality for __half. */
 template <typename T>
@@ -198,12 +196,12 @@ inline hydrogen::gpu_half_type operator-(
     return -float(val);
 }
 
-#endif // defined(HYDROGEN_HAVE_CUDA) && !defined(__CUDACC__)
+#endif // !(defined(__CUDACC__) || defined(__HIPCC__))
 
 inline std::ostream& operator<<(std::ostream& os, hydrogen::gpu_half_type const& x)
 {
     return os << float(x) << "_h";
 }
 
-#endif // HYDROGEN_GPU_USE_FP16
+#endif // defined HYDROGEN_HAVE_GPU && defined HYDROGEN_GPU_USE_FP16
 #endif // HYDROGEN_UTILS_HALFPRECISION_HPP_

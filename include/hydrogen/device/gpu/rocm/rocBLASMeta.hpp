@@ -41,14 +41,9 @@ struct NativeTypeT<std::complex<double>> { using type = rocblas_double_complex; 
 
 // Half precision requires conversion as well
 #ifdef HYDROGEN_GPU_USE_FP16
-template <> struct NativeTypeT<rocblas_half> { using type = rocblas_half; };
+template <> struct NativeTypeT<gpu_half_type> { using type = rocblas_half; };
 #ifdef HYDROGEN_HAVE_HALF
 template <> struct NativeTypeT<cpu_half_type> { using type = rocblas_half; };
-template <>
-struct NativeTypeT<std::complex<cpu_half_type>>
-{
-    using type = rocblas_half_complex;
-};
 #endif // HYDROGEN_HAVE_HALF
 #endif // HYDROGEN_GPU_USE_FP16
 
