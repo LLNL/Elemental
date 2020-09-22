@@ -9,6 +9,7 @@
 #ifndef EL_ELEMENT_DECL_HPP
 #define EL_ELEMENT_DECL_HPP
 
+#include <hydrogen/utils/HalfPrecision.hpp>
 #include <El/core/Element/Complex/decl.hpp>
 #include <El/core/types.hpp>
 
@@ -262,7 +263,7 @@ template<typename S,typename T,
 struct Caster
 {
     static T Cast( const S& alpha )
-    { return T(alpha); }
+    { return static_cast<T>(alpha); }
 };
 
 template<typename S,typename T>
@@ -271,6 +272,37 @@ struct Caster<S,Complex<T>,void>
     static Complex<T> Cast( const S& alpha )
     { return Complex<T>( T(RealPart(alpha)), T(ImagPart(alpha)) ); }
 };
+
+#if defined HYDROGEN_HAVE_ROCM && defined HYDROGEN_GPU_USE_FP16
+#if defined HYDROGEN_HAVE_HALF
+template <>
+struct Caster<gpu_half_type, cpu_half_type>
+{
+    static cpu_half_type Cast(gpu_half_type const& in)
+    {
+        return cpu_half_type(static_cast<float>(in));
+    }
+};// Caster<gpu_half_type, double>
+#endif // defined HYDROGEN_HAVE_HALF
+
+template <>
+struct Caster<gpu_half_type, double>
+{
+    static double Cast(gpu_half_type const& in)
+    {
+        return static_cast<float>(in);
+    }
+};// Caster<gpu_half_type, double>
+
+template <>
+struct Caster<gpu_half_type,Complex<double>>
+{
+    static Complex<double> Cast(gpu_half_type const& alpha)
+    {
+        return Complex<double>(static_cast<float>(alpha), gpu_half_type(0));
+    }
+};
+#endif // defined HYDROGEN_HAVE_ROCM && defined HYDROGEN_GPU_USE_FP16
 
 // Set the real/imaginary part of an element
 // -----------------------------------------

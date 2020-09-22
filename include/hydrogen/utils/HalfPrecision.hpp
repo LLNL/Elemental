@@ -110,6 +110,10 @@ inline hydrogen::cpu_half_type operator^(hydrogen::cpu_half_type const&,
 namespace hydrogen
 {
 
+#if defined(__HIP_NO_HALF_CONVERSIONS__)
+static_assert(false, "__HIP_NO_HALF_CONVERSIONS__ is defined.");
+#endif
+
 /** @brief Unified name for the FP16 type on GPU */
 using gpu_half_type = __half;
 
