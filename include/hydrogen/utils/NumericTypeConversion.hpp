@@ -59,6 +59,19 @@ struct Caster<F, __half>
         return static_cast<__half>(x);
     }
 };
+
+#ifdef HYDROGEN_HAVE_ROCM
+template <>
+struct Caster<__half, double>
+{
+
+    static double Cast(__half const& x)
+    {
+        return float(x);
+    }
+};
+
+#endif // HYDROGEN_HAVE_ROCM
 #endif // HYDROGEN_GPU_USE_FP16
 
 template <typename T, typename F>

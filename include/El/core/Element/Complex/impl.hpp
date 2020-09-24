@@ -2,8 +2,8 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #ifndef EL_ELEMENT_COMPLEX_IMPL_HPP
@@ -40,7 +40,7 @@ void SmithDiv
     }
     else
     {
-        const Real r = bReal/bImag; 
+        const Real r = bReal/bImag;
         const Real den = bReal*r + bImag;
         cReal = (aReal*r + aImag) / den;
         cImag = (aImag*r - aReal) / den;
@@ -185,17 +185,19 @@ Complex<float>::Complex( const std::complex<float>& a )
 // ===============
 template<typename S>
 Complex<double>::Complex( const S& a )
-: std::complex<double>(double(a))
+    : std::complex<double>(hydrogen::To<double>(a))
 { }
 
 template<typename S>
 Complex<double>::Complex( const Complex<S>& a )
-: std::complex<double>(double(a.real()),double(a.imag()))
+    : std::complex<double>(hydrogen::To<double>(a.real()),
+                           hydrogen::To<double>(a.imag()))
 { }
 
 template<typename S,typename T>
 Complex<double>::Complex( const S& a, const T& b )
-: std::complex<double>(double(a),double(b))
+    : std::complex<double>(hydrogen::To<double>(a),
+                           hydrogen::To<double>(b))
 { }
 
 Complex<double>::Complex()
@@ -387,7 +389,7 @@ Complex<DoubleDouble>::operator/=( const Complex<S>& b )
     // Note that GCC uses the (faster and less stable) textbook algorithm
     auto a = *this;
     SmithDiv
-    ( a.realPart, a.imagPart, 
+    ( a.realPart, a.imagPart,
       DoubleDouble(b.real()), DoubleDouble(b.imag()),
       realPart, imagPart );
     return *this;
@@ -399,7 +401,7 @@ Complex<DoubleDouble>::operator/=( const Complex<DoubleDouble>& b )
     // Note that GCC uses the (faster and less stable) textbook algorithm
     auto a = *this;
     SmithDiv
-    ( a.realPart, a.imagPart, 
+    ( a.realPart, a.imagPart,
       b.realPart, b.imagPart,
       realPart, imagPart );
     return *this;
@@ -559,7 +561,7 @@ Complex<QuadDouble>::operator/=( const Complex<S>& b )
     // Note that GCC uses the (faster and less stable) textbook algorithm
     auto a = *this;
     SmithDiv
-    ( a.realPart, a.imagPart, 
+    ( a.realPart, a.imagPart,
       QuadDouble(b.real()), QuadDouble(b.imag()),
       realPart, imagPart );
     return *this;
@@ -571,7 +573,7 @@ Complex<QuadDouble>::operator/=( const Complex<QuadDouble>& b )
     // Note that GCC uses the (faster and less stable) textbook algorithm
     auto a = *this;
     SmithDiv
-    ( a.realPart, a.imagPart, 
+    ( a.realPart, a.imagPart,
       b.realPart, b.imagPart,
       realPart, imagPart );
     return *this;
@@ -597,7 +599,7 @@ mpc_ptr Complex<BigFloat>::Pointer()
 
 mpc_srcptr Complex<BigFloat>::LockedPointer() const
 { return mpcFloat_; }
-    
+
 mpfr_ptr Complex<BigFloat>::RealPointer()
 { return mpc_realref(mpcFloat_); }
 
@@ -675,34 +677,34 @@ Complex<BigFloat>::Complex
 ( const unsigned& a, mpfr_prec_t prec )
 {
     Init( prec );
-    mpc_set_ui( Pointer(), a, mpc::RoundingMode() ); 
+    mpc_set_ui( Pointer(), a, mpc::RoundingMode() );
 }
 
 Complex<BigFloat>::Complex
 ( const unsigned long long& a, mpfr_prec_t prec )
-{ 
+{
     Init( prec );
-    mpc_set_uj( Pointer(), a, mpc::RoundingMode() ); 
+    mpc_set_uj( Pointer(), a, mpc::RoundingMode() );
 }
 
 Complex<BigFloat>::Complex( const int& a, mpfr_prec_t prec )
 {
     Init( prec );
-    mpc_set_si( Pointer(), a, mpc::RoundingMode() ); 
+    mpc_set_si( Pointer(), a, mpc::RoundingMode() );
 }
 
 Complex<BigFloat>::Complex
 ( const long long int& a, mpfr_prec_t prec )
-{ 
+{
     Init( prec );
-    mpc_set_sj( Pointer(), a, mpc::RoundingMode() ); 
+    mpc_set_sj( Pointer(), a, mpc::RoundingMode() );
 }
 
 Complex<BigFloat>::Complex
 ( const BigInt& a, mpfr_prec_t prec )
 {
     Init( prec );
-    mpc_set_z( Pointer(), a.LockedPointer(), mpc::RoundingMode() ); 
+    mpc_set_z( Pointer(), a.LockedPointer(), mpc::RoundingMode() );
 }
 
 Complex<BigFloat>::Complex
@@ -715,7 +717,7 @@ Complex<BigFloat>::Complex
     ( Pointer(),
       a.LockedPointer(),
       b.LockedPointer(),
-      mpc::RoundingMode() ); 
+      mpc::RoundingMode() );
 }
 
 Complex<BigFloat>::Complex( const float& a, mpfr_prec_t prec )
@@ -750,7 +752,7 @@ Complex<BigFloat>::Complex( const std::complex<double>& a, mpfr_prec_t prec )
 Complex<BigFloat>::Complex( const realType& a, mpfr_prec_t prec )
 {
     Init( prec );
-    mpc_set_fr( Pointer(), a.LockedPointer(), mpc::RoundingMode() ); 
+    mpc_set_fr( Pointer(), a.LockedPointer(), mpc::RoundingMode() );
 }
 
 Complex<BigFloat>::Complex
@@ -760,7 +762,7 @@ Complex<BigFloat>::Complex
 {
     Init( prec );
     mpc_set_fr_fr
-    ( Pointer(), a.LockedPointer(), b.LockedPointer(), mpc::RoundingMode() ); 
+    ( Pointer(), a.LockedPointer(), b.LockedPointer(), mpc::RoundingMode() );
 }
 
 Complex<BigFloat>::Complex( const Complex<realType>& a, mpfr_prec_t prec )
@@ -773,7 +775,7 @@ Complex<BigFloat>::Complex( const Complex<realType>& a, mpfr_prec_t prec )
         ( Pointer(),
           a.LockedRealPointer(),
           a.LockedImagPointer(),
-          mpc::RoundingMode() ); 
+          mpc::RoundingMode() );
     }
     EL_DEBUG_ONLY(
     else
@@ -1432,7 +1434,7 @@ byte* Complex<BigFloat>::Serialize( byte* buf ) const
     // NOTE: We don't have to necessarily serialize the precisions, as
     //       they are known a priori (as long as the user does not fiddle
     //       with SetPrecision)
-    // 
+    //
 
     std::memcpy( buf, &mpcFloat_->re->_mpfr_prec, sizeof(mpfr_prec_t) );
     buf += sizeof(mpfr_prec_t);

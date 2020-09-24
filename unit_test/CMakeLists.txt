@@ -15,8 +15,13 @@ endif (HYDROGEN_HAVE_GPU)
 if (HYDROGEN_HAVE_GPU)
   list(APPEND HYDROGEN_CATCH2_TEST_FILES
     gpu_test.cpp)
-endif ()
 
+  if (HYDROGEN_HAVE_ROCM)
+    list(APPEND HYDROGEN_CATCH2_TEST_FILES
+      hip_half_test.cpp
+      )
+  endif ()
+endif ()
 # Add the sequential test main() function
 add_executable(seq-catch-tests
   SequentialCatchMain.cpp "${HYDROGEN_CATCH2_TEST_FILES}")

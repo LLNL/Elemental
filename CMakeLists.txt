@@ -350,10 +350,6 @@ if (Hydrogen_ENABLE_CUDA)
       set(HYDROGEN_GPU_USE_TENSOR_OP_MATH TRUE)
     endif ()
 
-    if (Hydrogen_ENABLE_GPU_FP16)
-      set(HYDROGEN_GPU_USE_FP16 TRUE)
-    endif ()
-
     if (Hydrogen_ENABLE_CUB)
       find_package(CUB REQUIRED)
       set(HYDROGEN_HAVE_CUB TRUE)
@@ -430,6 +426,10 @@ endif (Hydrogen_ENABLE_ROCM)
 
 if (HYDROGEN_HAVE_CUDA OR HYDROGEN_HAVE_ROCM)
   set(HYDROGEN_HAVE_GPU TRUE)
+
+  if (Hydrogen_ENABLE_GPU_FP16)
+    set(HYDROGEN_GPU_USE_FP16 TRUE)
+  endif ()
 endif ()
 
 if (Hydrogen_ENABLE_ALUMINUM)

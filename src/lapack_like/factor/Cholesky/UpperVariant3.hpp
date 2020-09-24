@@ -43,7 +43,8 @@ void UpperVariant3Unblocked(Matrix<F>& A)
         F* a12 = A.Buffer(j  ,j+1);
         F* A22 = A.Buffer(j+1,j+1);
 
-        blas::Scal(a12Width, Real(1)/alpha11, a12, ALDim);
+        Real alpha11inv = Real(1) / alpha11;
+        blas::Scal(a12Width, alpha11inv, a12, ALDim);
 
         for(Int k=0; k<a12Width; ++k)
             A(j,j+1+k) = Conj(A(j,j+1+k));

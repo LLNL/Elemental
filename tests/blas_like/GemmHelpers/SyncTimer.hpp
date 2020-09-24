@@ -121,8 +121,9 @@ public:
 
     ~SyncTimer()
     {
-        hipEventDestroy(start_);
-        hipEventDestroy(stop_);
+        auto statusignore = hipEventDestroy(start_);
+        statusignore = hipEventDestroy(stop_);
+        (void) statusignore;
     }
 
     void Start()

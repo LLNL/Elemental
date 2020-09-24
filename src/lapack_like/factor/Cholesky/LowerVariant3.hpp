@@ -43,7 +43,8 @@ void LowerVariant3Unblocked(Matrix<F,Device::CPU>& A)
         F* a21 = A.Buffer(j+1,j );
         F* A22 = A.Buffer(j+1,j+1);
 
-        blas::Scal(a21Height, Real(1)/alpha11, a21, 1);
+        Real alpha11inv = Real(1)/alpha11;
+        blas::Scal(a21Height, alpha11inv, a21, 1);
         blas::Her('L', a21Height, -Real(1), a21, 1, A22, ALDim);
     }
 }
