@@ -17,6 +17,12 @@ namespace hydrogen
 using gpuEvent_t = cudaEvent_t;
 using gpuStream_t = cudaStream_t;
 
+/** @brief Metafunction to get a type suitable to device computation.
+ *
+ *  This type will support the "usual" arithmetic operators in device
+ *  code. It should be bitwise-equivalent to the input type so that
+ *  `reinterpret_cast` works sensibly.
+ */
 template <typename T>
 struct NativeGPUTypeT
 {
@@ -38,6 +44,19 @@ struct NativeGPUTypeT<El::Complex<double>>
 template <typename T>
 using NativeGPUType = typename NativeGPUTypeT<T>::type;
 
+/** @brief Metafunction to get a type suitable to static device-side
+ *         allocation.
+ *
+ *  The motivation for this type is complex numbers in CUDA kernel
+ *  templates. One cannot create statically-allocated `__shared__`
+ *  memory blocks with `thrust::complex`, but one cannot perform basic
+ *  arithmetic with `cuComplex`. This solves the former problem, and
+ *  NativeGPUTypeT solves the latter.
+ *
+ *  The returned type may or may not be the same as the corresponding
+ *  NativeGPUTypeT. It should be bitwise-equivalent to the input type
+ *  so that `reinterpret_cast` works sensibly.
+ */
 template <typename T>
 struct GPUStaticStorageTypeT
 {
