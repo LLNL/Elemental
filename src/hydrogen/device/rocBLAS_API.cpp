@@ -174,10 +174,10 @@ namespace rocblas
         rocblas_operation transpA,                                      \
         rocblas_operation transpB,                                      \
         rocblas_int m, rocblas_int n, rocblas_int k,                    \
-        ScalarType const& alpha,                                        \
+        ScalarType const* alpha,                                        \
         ScalarType const* A, rocblas_int lda, rocblas_stride strideA,   \
         ScalarType const* B, rocblas_int ldb, rocblas_stride strideB,   \
-        ScalarType const& beta,                                         \
+        ScalarType const* beta,                                         \
         ScalarType* C, rocblas_int ldc, rocblas_stride strideC,         \
         rocblas_int batchCount)                                         \
     {                                                                   \
@@ -185,10 +185,10 @@ namespace rocblas
             rocblas_ ## TypeChar ## gemm_strided_batched(               \
                 handle,                                                 \
                 transpA, transpB,                                       \
-                m, n, k, &alpha,                                        \
+                m, n, k, alpha,                                         \
                 A, lda, strideA,                                        \
                 B, ldb, strideB,                                        \
-                &beta, C, ldc, strideC, batchCount));                   \
+                beta, C, ldc, strideC, batchCount));                    \
     }
 
 //
