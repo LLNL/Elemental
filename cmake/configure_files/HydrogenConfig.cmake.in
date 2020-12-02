@@ -65,16 +65,6 @@ if (_HYDROGEN_HAVE_ALUMINUM)
   endif ()
 endif (_HYDROGEN_HAVE_ALUMINUM)
 
-# ROCm
-set(_HYDROGEN_HAVE_ROCM @HYDROGEN_HAVE_ROCM@)
-if (_HYDROGEN_HAVE_ROCM)
-  find_package(HIP REQUIRED)
-  find_package(ROCBLAS REQUIRED)
-
-  # query this beforehand, to set to what it was?
-  set(CMAKE_CXX_EXTENSIONS FALSE)
-endif (_HYDROGEN_HAVE_ROCM)
-
 # CUDA!
 set(_HYDROGEN_HAVE_CUDA @HYDROGEN_HAVE_CUDA@)
 set(_HYDROGEN_HAVE_CUB @HYDROGEN_HAVE_CUB@)
@@ -121,6 +111,34 @@ if (_HYDROGEN_HAVE_CUDA)
     $<$<COMPILE_LANGUAGE:CUDA>:--expt-extended-lambda>)
 
 endif ()
+
+set(_HYDROGEN_HAVE_ROCM @HYDROGEN_HAVE_ROCM@)
+if (_HYDROGEN_HAVE_ROCM)
+  set(CMAKE_MODULE_PATH "/opt/rocm/hip/cmake" ${CMAKE_MODULE_PATH})
+  find_package(HIP REQUIRED)
+
+  if (_HYDROGEN_HAVE_CUB)
+    set(CMAKE_PREFIX_PATH "/opt/rocm/hip" ${CMAKE_PREFIX_PATH})
+    set(HIP_FOUND FALSE)
+    find_package(HIP CONFIG REQUIRED)
+    find_package(rocPRIM REQUIRED)
+    find_package(hipCUB REQUIRED)
+    set(HYDROGEN_HAVE_CUB TRUE)
+  else ()
+    set(HYDROGEN_HAVE_CUB FALSE)
+  endif ()
+
+  if (HIP_FOUND)
+    set(CMAKE_CXX_EXTENSIONS FALSE)
+    find_package(rocblas CONFIG REQUIRED)
+    find_package(rocsolver CONFIG REQUIRED)
+    find_package(rocthrust REQUIRED)
+    set(HYDROGEN_HAVE_ROCM TRUE)
+    message(STATUS "Found ROCm/HIP toolchain. Using HIP/ROCm.")
+  else ()
+    message(FATAL_ERROR "ROCm requested but not found.")
+  endif ()
+endif (_HYDROGEN_HAVE_ROCM)
 
 set(HYDROGEN_HAVE_HALF @HYDROGEN_HAVE_HALF@)
 if (HYDROGEN_HAVE_HALF)
@@ -219,10 +237,10 @@ if (NOT TARGET H::Hydrogen)
   include(${CMAKE_CURRENT_LIST_DIR}/HydrogenTargets.cmake)
 
   add_library(H::Hydrogen IMPORTED INTERFACE)
-  target_link_libraries(H::Hydrogen INTERFACE H::Hydrogen_CXX)
-  if (TARGET H::Hydrogen_CUDA)
-    target_link_libraries(H::Hydrogen INTERFACE H::Hydrogen_CUDA)
-  endif ()
+  target_link_libraries(H::Hydrogen INTERFACE H::Hydrogen_CXX
+    $<TARGET_NAME_IF_EXISTS:H::Hydrogen_CUDA>
+    $<TARGET_NAME_IF_EXISTS:H::Hydrogen_ROCM>
+    )
 endif (NOT TARGET H::Hydrogen)
 
 check_required_components(Hydrogen)
