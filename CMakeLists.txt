@@ -158,6 +158,14 @@ option(Hydrogen_ENABLE_ROCM
   "Search for ROCm/HIP support and enable related features if found."
   OFF)
 
+if (Hydrogen_ENABLE_ROCM AND Hydrogen_ENABLE_CUDA)
+  message(FATAL_ERROR
+    "ROCm and CUDA code paths are mutually exclusive. "
+    "Please enable the one that corresponds to your hardware. "
+    "If you have mixed hardware, please contact the Hydrogen developers "
+    "as this would be of great interest.")
+endif ()
+
 if (Hydrogen_ENABLE_CUDA OR Hydrogen_ENABLE_ROCM)
   option(Hydrogen_ENABLE_CUB
     "Search for CUB support and enable related features if found."
@@ -170,14 +178,6 @@ if (Hydrogen_ENABLE_CUDA OR Hydrogen_ENABLE_ROCM)
   option(Hydrogen_ENABLE_GPU_FP16
     "Enable FP16 arithmetic in GPU code."
     ON)
-endif ()
-
-if (Hydrogen_ENABLE_ROCM AND Hydrogen_ENABLE_CUDA)
-  message(FATAL_ERROR
-    "ROCm and CUDA code paths are mutually exclusive. "
-    "Please enable the one that corresponds to your hardware. "
-    "If you have mixed hardware, please contact the Hydrogen developers "
-    "as this would be of great interest.")
 endif ()
 
 #
@@ -407,14 +407,34 @@ if (Hydrogen_ENABLE_CUDA)
 endif (Hydrogen_ENABLE_CUDA)
 
 if (Hydrogen_ENABLE_ROCM)
-  set(CMAKE_MODULE_PATH "/opt/rocm/hip/cmake" ${CMAKE_MODULE_PATH})
+  # Prefer explicit cache variables, then env variables.
+  if (ROCM_PATH)
+    set(_INTERNAL_ROCM_PREFIX ${ROCM_PATH})
+  elseif (DEFINED ENV{ROCM_PATH})
+    set(_INTERNAL_ROCM_PREFIX $ENV{ROCM_PATH})
+  else ()
+    # I don't have a better idea here.
+    set(_INTERNAL_ROCM_PREFIX "/opt/rocm")
+  endif ()
+  
+  set(CMAKE_MODULE_PATH
+    "${_INTERNAL_ROCM_PREFIX}/hip/cmake"
+    ${CMAKE_MODULE_PATH})
   find_package(HIP REQUIRED)
 
   if (Hydrogen_ENABLE_CUB)
-    set(CMAKE_PREFIX_PATH "/opt/rocm/hip" ${CMAKE_PREFIX_PATH})
+    set(CMAKE_PREFIX_PATH
+      "${_INTERNAL_ROCM_PREFIX}/hip"
+      ${CMAKE_PREFIX_PATH})
+
+    # This is finnicky; the HIP we found first is just CMakery. Now we
+    # need to pretend we haven't found it, so that we can find the HIP
+    # runtime.
     set(HIP_FOUND FALSE)
     find_package(HIP CONFIG REQUIRED)
-    find_package(rocPRIM REQUIRED)
+
+    # It looks like hipCUB has added "find_dependency(rocPRIM)", so
+    # hopefully this will just work now.
     find_package(hipCUB REQUIRED)
     set(HYDROGEN_HAVE_CUB TRUE)
   else ()
@@ -422,10 +442,9 @@ if (Hydrogen_ENABLE_ROCM)
   endif ()
 
   if (HIP_FOUND)
-    set(CMAKE_CXX_EXTENSIONS FALSE)
     find_package(rocblas CONFIG REQUIRED)
     find_package(rocsolver CONFIG REQUIRED)
-    find_package(rocthrust REQUIRED)
+    find_package(rocthrust CONFIG REQUIRED)
     set(HYDROGEN_HAVE_ROCM TRUE)
     message(STATUS "Found ROCm/HIP toolchain. Using HIP/ROCm.")
   else ()
@@ -740,6 +759,7 @@ if (NOT __dont_print_summary)
     HYDROGEN_HAVE_NCCL2
     HYDROGEN_HAVE_AL_MPI_CUDA
     HYDROGEN_HAVE_CUDA
+    HYDROGEN_HAVE_ROCM
     HYDROGEN_HAVE_CUB
     HYDROGEN_HAVE_OMP_TASKLOOP
     HYDROGEN_HAVE_CUDA_AWARE_MPI
