@@ -1118,12 +1118,12 @@ void CholeskyFactorizeImpl(FillMode uplo,
     CholeskyFactorizeImpl(uplo, n, A, lda,
                           workspace, workspace_size, info.data(), si);
 #ifndef EL_RELEASE
-    gpu_blas_impl::InfoT host_info;
-    Copy1DToHost(info.data(), &host_info, 1, si);
+    gpu_lapack_impl::InfoT host_info;
+    gpu::Copy1DToHost(info.data(), &host_info, 1, si);
     Synchronize(si);
-    if (host_info > gpu_blas_impl::InfoT(0))
+    if (host_info > gpu_lapack_impl::InfoT(0))
         throw std::runtime_error("Cholesky: Matrix not HPD.");
-    else if (host_info < gpu::blas_impl::InfoT(0))
+    else if (host_info < gpu_lapack_impl::InfoT(0))
         throw std::runtime_error("Cholesky: A parameter is bad.");
 #endif // EL_RELEASE
 }
