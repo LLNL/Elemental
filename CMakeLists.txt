@@ -414,9 +414,24 @@ if (Hydrogen_ENABLE_ROCM)
     set(_INTERNAL_ROCM_PREFIX $ENV{ROCM_PATH})
   else ()
     # I don't have a better idea here.
-    set(_INTERNAL_ROCM_PREFIX "/opt/rocm")
+    find_program(SOME_ROCM_PROGRAM
+      NAMES rocm-smi rocminfo rocprof
+      DOC "A program used to attempt to deduce the ROCm path.")
+    mark_as_advanced(SOME_ROCM_PROGRAM)
+    if (SOME_ROCM_PROGRAM)
+      get_filename_component(ROCM_PROGRAM_BIN_DIR
+        "${SOME_ROCM_PROGRAM}"
+        DIRECTORY)
+      get_filename_component(_INTERNAL_ROCM_PREFIX
+        "${ROCM_PROGRAM_BIN_DIR}"
+        DIRECTORY)
+    else ()
+      # Ok, at this point, there's nothing better to be done.
+      set(_INTERNAL_ROCM_PREFIX "/opt/rocm")
+    endif ()
   endif ()
-  
+  message(STATUS
+    "Searching for HIP/ROCm infrastructure: ${_INTERNAL_ROCM_PREFIX}")
   set(CMAKE_MODULE_PATH
     "${_INTERNAL_ROCM_PREFIX}/hip/cmake"
     ${CMAKE_MODULE_PATH})
