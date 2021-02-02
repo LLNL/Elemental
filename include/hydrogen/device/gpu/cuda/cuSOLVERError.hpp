@@ -16,10 +16,9 @@
         auto h_check_cusolver_err_code__ = cmd;                           \
         H_ASSERT(h_check_cusolver_err_code__ == CUSOLVER_STATUS_SUCCESS,  \
                  cuSOLVERError,                                         \
-                 (cudaDeviceReset(),                                    \
-                  cusolver::BuildcuSOLVERErrorMessage(                    \
-                      #cmd,                                             \
-                      h_check_cusolver_err_code__)));                     \
+                 cusolver::BuildcuSOLVERErrorMessage(                   \
+                     #cmd,                                              \
+                     h_check_cusolver_err_code__));                     \
         H_SYNC_CUDA();                                                  \
     } while (false)
 

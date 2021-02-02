@@ -16,10 +16,9 @@
         auto h_check_cublas_err_code__ = cmd;                           \
         H_ASSERT(h_check_cublas_err_code__ == CUBLAS_STATUS_SUCCESS,    \
                  cuBLASError,                                           \
-                 (cudaDeviceReset(),                                    \
-                  cublas::BuildcuBLASErrorMessage(                      \
-                      #cmd,                                             \
-                      h_check_cublas_err_code__)));                     \
+                 cublas::BuildcuBLASErrorMessage(                       \
+                     #cmd,                                              \
+                     h_check_cublas_err_code__));                       \
         H_SYNC_CUDA();                                                  \
     } while (false)
 
