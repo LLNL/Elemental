@@ -82,10 +82,9 @@ void Axpy(S alphaS, const Matrix<T,Device::CPU>& X, Matrix<T,Device::CPU>& Y)
         }
         else
         {
-            EL_PARALLEL_FOR
+            EL_SIMD_COLLAPSE2
             for(Int j=0; j<nX; ++j)
             {
-                EL_SIMD
                 for(Int i=0; i<mX; ++i)
                 {
                     YBuf[i+j*ldY] += alpha*XBuf[i+j*ldX];

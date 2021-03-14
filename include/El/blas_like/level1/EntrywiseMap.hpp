@@ -42,10 +42,9 @@ void EntrywiseMap(AbstractMatrix<T>& A, function<T(const T&)> func)
     }
     else
     {
-        EL_PARALLEL_FOR
+        EL_SIMD_COLLAPSE2
         for(Int j=0; j<n; ++j)
         {
-            EL_SIMD
             for(Int i=0; i<m; ++i)
             {
                 ABuf[i+j*ALDim] = func(ABuf[i+j*ALDim]);
@@ -74,10 +73,9 @@ void EntrywiseMap
     T* BBuf = B.Buffer();
     const Int ALDim = A.LDim();
     const Int BLDim = B.LDim();
-    EL_PARALLEL_FOR
+    EL_SIMD_COLLAPSE2
     for(Int j=0; j<n; ++j)
     {
-        EL_SIMD
         for(Int i=0; i<m; ++i)
         {
             BBuf[i+j*BLDim] = func(ABuf[i+j*ALDim]);

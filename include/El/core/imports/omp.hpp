@@ -26,8 +26,10 @@
 # endif
 # ifdef EL_HAVE_OMP_SIMD
 #  define EL_SIMD _Pragma("omp simd")
+#  define EL_SIMD_COLLAPSE2 _Pragma("omp simd collapse(2)")
 # else
 #  define EL_SIMD
+#  define EL_SIMD_COLLAPSE2
 # endif
 #else
 # define EL_PARALLEL_FOR

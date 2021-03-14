@@ -32,10 +32,9 @@ void IndexDependentFill( Matrix<T>& A, function<T(Int,Int)> func )
     }
     else
     {
-        EL_PARALLEL_FOR
+        EL_SIMD_COLLAPSE2
         for( Int j=0; j<n; ++j )
         {
-            EL_SIMD
             for( Int i=0; i<m; ++i )
             {
                 ABuf[i+j*ALDim] = func(i,j);
@@ -69,10 +68,9 @@ void IndexDependentFill
     }
     else
     {
-        EL_PARALLEL_FOR
+        EL_SIMD_COLLAPSE2
         for( Int jLoc=0; jLoc<nLoc; ++jLoc )
         {
-            EL_SIMD
             for( Int iLoc=0; iLoc<mLoc; ++iLoc )
             {
                 const Int i = A.GlobalRow(iLoc);

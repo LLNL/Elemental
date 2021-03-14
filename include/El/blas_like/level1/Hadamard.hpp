@@ -67,10 +67,9 @@ void Hadamard(AbstractMatrix<T> const& A, AbstractMatrix<T> const& B,
         }
         else
         {
-            EL_PARALLEL_FOR
+            EL_SIMD_COLLAPSE2
             for( Int j=0; j<width; ++j )
             {
-                EL_SIMD
                 for( Int i=0; i<height; ++i )
                 {
                     CBuf[i+j*CLDim] = ABuf[i+j*ALDim] * BBuf[i+j*BLDim];
