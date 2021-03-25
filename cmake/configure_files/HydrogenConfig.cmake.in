@@ -36,15 +36,16 @@ set(_HYDROGEN_HAVE_NCCL2 @HYDROGEN_HAVE_NCCL2@)
 set(_HYDROGEN_HAVE_AL_MPI_CUDA @HYDROGEN_HAVE_AL_MPI_CUDA@)
 set(_HYDROGEN_HAVE_AL_HOST_XFER @HYDROGEN_HAVE_AL_HOST_XFER@)
 if (_HYDROGEN_HAVE_ALUMINUM)
+  set(_HYDROGEN_MIN_AL_VERSION @ALUMINUM_VERSION@)
   if (NOT Aluminum_FOUND)
-    find_package(Aluminum 0.7.0 NO_MODULE QUIET
+    find_package(Aluminum ${_HYDROGEN_MIN_AL_VERSION} NO_MODULE QUIET
       HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
       $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
       PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
       NO_DEFAULT_PATH)
     if (NOT Aluminum_FOUND)
       set(Aluminum_DIR "@Aluminum_DIR@")
-      find_package(Aluminum 0.7.0 NO_MODULE REQUIRED)
+      find_package(Aluminum ${_HYDROGEN_MIN_AL_VERSION} NO_MODULE REQUIRED)
     endif ()
   endif ()
 
