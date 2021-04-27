@@ -425,7 +425,7 @@ void TranslateBetweenGridsAllreduceOptComm
     const Int mLocB = B->LocalHeight();
     const Int nLocB = B->LocalWidth();
 
-    const Int posInSubGrid = B->Grid().VCRank();
+
     const Int posInGrid = A.Grid().VCRank();
     A.Resize(m,n); 
     
@@ -433,7 +433,7 @@ void TranslateBetweenGridsAllreduceOptComm
     
     
 
-    mpi::Comm const& viewingCommA = A.Grid().ViewingComm();
+
     Int rowStrideA = A.RowStride();
     const Int sizeA = A.Grid().VCSize();
     const Int rowGCD = GCD(rowStrideB, rowStrideA);
@@ -673,8 +673,8 @@ void TranslateBetweenGridsScatterComm
     const Int mLocA = A.LocalHeight();
     const Int nLocA = A.LocalWidth();
 
-    mpi::Comm const& viewingCommA = A.Grid().ViewingComm();
-    mpi::Group owningGroupA = A.Grid().OwningGroup();
+
+
 
 
     Int rowStrideA = A.RowStride();
@@ -731,7 +731,7 @@ void TranslateBetweenGridsScatterComm
     const Int sizeB = B->Grid().VCSize();
     const Int rowGCD = GCD(rowStrideB, rowStrideA);
     const Int rowLCM = rowStrideB*rowStrideA / rowGCD;
-    const Int posInGrid = A.Grid().VCRank();
+
 
 
     // Parent Subgrid Size: 4 Child Subgrid Size: 3
@@ -813,8 +813,8 @@ void TranslateBetweenGridsScatterOptComm
     const Int mLocA = A.LocalHeight();
     const Int nLocA = A.LocalWidth();
 
-    mpi::Comm const& viewingCommA = A.Grid().ViewingComm();
-    mpi::Group owningGroupA = A.Grid().OwningGroup();
+
+
 
     Int rowStrideA = A.RowStride();
 
@@ -866,13 +866,13 @@ void TranslateBetweenGridsScatterOptComm
     SyncInfo<D1> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
 
     const Int maxSendSize = mLocA*nLocA;
-    const Int maxRecvSize = int(mLocA*nLocA/scatterCommSize);
+
 
     simple_buffer<T,D2> send_buf(maxSendSize, syncInfoA);
-    simple_buffer<T,D2> recv_buf(maxRecvSize, syncGeneral);
+
 
     T* sendBuf = send_buf.data();
-    T* recvBuf = recv_buf.data();
+
 
 
     copy::util::InterleaveMatrix(
@@ -886,7 +886,7 @@ void TranslateBetweenGridsScatterOptComm
     const Int sizeB = B->Grid().VCSize();
     const Int rowGCD = GCD(rowStrideB, rowStrideA);
     const Int rowLCM = rowStrideB*rowStrideA / rowGCD;
-    const Int posInGrid = A.Grid().VCRank();
+
 
 
     // Parent Subgrid Size: 4 Child Subgrid Size: 3
@@ -931,7 +931,7 @@ void TranslateBetweenGridsScatterOptComm
 
         for(Int childLayerSubGrid = 0; childLayerSubGrid < numMatricesInSubGrid; ++childLayerSubGrid)
         {
-            const Int memoryOffSet = (mLocA/splitDim) * sendWidth * (localSubgridHeight/numMatricesInSubGrid) * childLayerSubGrid;
+            
             Transpose(recvTransposedMatrix( Range<Int>(0,sendWidth*(mLocA/splitDim)),Range<Int>(partialChildHeight*childLayerSubGrid, partialChildHeight*(childLayerSubGrid+1))),conversionMatrixVector[childLayerSubGrid]);
 
             copy::util::InterleaveMatrix(
@@ -975,8 +975,8 @@ void TranslateBetweenGridsSliceGatherOptComm
     const Int mLocA = A.LocalHeight();
     const Int nLocA = A.LocalWidth();
 
-    mpi::Comm const& viewingCommA = A.Grid().ViewingComm();
-    mpi::Group owningGroupA = A.Grid().OwningGroup();
+
+
 
     Int rowStrideA = A.RowStride();
     
@@ -1001,7 +1001,7 @@ void TranslateBetweenGridsSliceGatherOptComm
     }
 
     const Int gatherCommSize = mpi::Size( gatherComm );
-    const int sendCounts = int((mLocA*nLocA)/gatherCommSize);
+
     const int numMatricesInSubGrid  = int(numChildLayers / gatherCommSize);
 
     std::vector<Int> indexBVec;
@@ -1020,18 +1020,18 @@ void TranslateBetweenGridsSliceGatherOptComm
     DistMatrix<T,STAR,VC,ELEMENT,D2>* B = dynamic_cast<DistMatrix<T,STAR,VC,ELEMENT,D2>*>( &(*B_Vector[indexB]));
     Matrix<T,D2>  transposedMatrix(int((mLocA*nLocA)/splitDim),splitDim), recvTransposedMatrix(int((mLocA*nLocA)/splitDim),int(splitDim/gatherCommSize)), sendTransposedMatrix(nLocA,mLocA);
 
-    SyncInfo<D1> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
 
-    const Int maxSendSize = mLocA*nLocA;
+
+
     const Int maxRecvSize = int(mLocA*nLocA*gatherCommSize);
 
-    simple_buffer<T,D2> send_buf(maxSendSize, syncInfoA);
-    simple_buffer<T,D2> recv_buf(maxRecvSize, syncGeneral);
-    simple_buffer<T,D2> temp_buf((mLocA/numChildLayers)*nLocA*gatherCommSize, syncGeneral);
 
-    T* sendBuf = send_buf.data();
+    simple_buffer<T,D2> recv_buf(maxRecvSize, syncGeneral);
+
+
+
     T* recvBuf = recv_buf.data();
-    T* tempBuf = temp_buf.data();
+
 
 
     Transpose(A.LockedMatrix(),sendTransposedMatrix);
@@ -1065,11 +1065,11 @@ void TranslateBetweenGridsSliceGatherOptComm
 
 
 
-    int partialHeight = int(splitDim/ gatherCommSize);
-    int partialChildHeight = int(partialHeight / numMatricesInSubGrid);
-    const Int localSubgridHeight = int(splitDim/ gatherCommSize);
-    const Int recvLocalHeight =  (mLocA/splitDim) * (localSubgridHeight/numMatricesInSubGrid);
-    int sendWidth = int(n / rowLCM);
+
+
+
+
+
     const Int perSubgridSplitHeight = splitDim / gatherCommSize;
     const Int childLayerSplitHeight = perSubgridSplitHeight / numMatricesInSubGrid;
 
@@ -1138,7 +1138,7 @@ void TranslateBetweenGridsScatterCommParentSmall
     Int nLocA = A.LocalWidth();
 
     mpi::Comm const& viewingCommA = A.Grid().ViewingComm();
-    mpi::Group owningGroupA = A.Grid().OwningGroup();
+
 
 
     Int rowStrideA = A.RowStride();
@@ -1241,9 +1241,9 @@ void TranslateBetweenGridsScatterCommParentSmall
     const Int sizeB = B->Grid().VCSize();
     const Int rowGCD = GCD(rowStrideB, rowStrideA);
     const Int rowLCM = rowStrideB*rowStrideA / rowGCD;
-    const Int posInGrid = A.Grid().VCRank();
 
-    const Int numRanksToRecv = sizeA / sizeB;
+
+
 
     if(sizeA%sizeB!= 0)
     {
@@ -1333,9 +1333,9 @@ void TranslateBetweenGridsSliceGatherParentSmall
     Int nLocA = A.LocalWidth();
 
     mpi::Comm const& viewingCommA = A.Grid().ViewingComm();
-    mpi::Group owningGroupA = A.Grid().OwningGroup();
 
-    Int rowStrideA = A.RowStride();
+
+
     
     const Int numChildLayers = int(B_Vector.size());
     const Int sizeA = A.Grid().VCSize();
@@ -1381,7 +1381,7 @@ void TranslateBetweenGridsSliceGatherParentSmall
     const std::vector<Int> sendMetaData (metaData,metaData + 4 );
 
     
-    SyncInfo<D1> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
+
     Synchronize(syncGeneral);
     
 
@@ -1421,7 +1421,7 @@ void TranslateBetweenGridsSliceGatherParentSmall
     Matrix<T,D2>  transposedMatrix(int((mLocA*nLocA)/splitDim),splitDim), recvTransposedMatrix(int((mLocA*nLocA)/splitDim),int(splitDim/gatherCommSize)), sendTransposedMatrix(nLocA,mLocA);
 
 
-    const Int maxSendSize = mLocA*nLocA;
+
     const Int maxRecvSize = int(mLocA*nLocA*gatherCommSize);
 
     simple_buffer<T,D2> recv_buf(maxRecvSize, syncGeneral);
@@ -1439,14 +1439,14 @@ void TranslateBetweenGridsSliceGatherParentSmall
 
     
 
-    const Int rowStrideB = B->RowStride();
+
 
     const Int sizeB = B->Grid().VCSize();
     const Int numRanksToRecv = sizeA / sizeB;
 
 
-    const Int rowGCD = GCD(rowStrideB, rowStrideA);
-    const Int rowLCM = rowStrideB*rowStrideA / rowGCD;
+
+
 
     // const Int posInGrid = A.Grid().VCRank();
     // const Int subgridNumber = int(std::floor(posInGrid/sizeB));
@@ -1466,9 +1466,9 @@ void TranslateBetweenGridsSliceGatherParentSmall
     // Child  0 1 2 0 1 2 0 1 2 0 1 2
 
 
-    int partialHeight = int(splitDim/ gatherCommSize);
-    const Int localSubgridHeight = int(splitDim/ gatherCommSize);
-    const Int recvLocalHeight =  (mLocA/splitDim) * (localSubgridHeight/numMatricesInSubGrid);
+
+
+
 
     const Int perSubgridSplitHeight = splitDim / gatherCommSize;
     const Int childLayerSplitHeight = perSubgridSplitHeight / numMatricesInSubGrid;
@@ -1535,10 +1535,10 @@ void TranslateBetweenGridsScatterCommSameSizeSubGrids
     Int nLocA = A.LocalWidth();
 
     mpi::Comm const& viewingCommA = A.Grid().ViewingComm();
-    mpi::Group owningGroupA = A.Grid().OwningGroup();
 
 
-    Int rowStrideA = A.RowStride();
+
+
 
 
     const Int numChildLayers = int(B_Vector.size());
@@ -1571,7 +1571,7 @@ void TranslateBetweenGridsScatterCommSameSizeSubGrids
     const std::vector<Int> sendMetaData (metaData,metaData + 4 );
 
     
-    SyncInfo<D1> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
+
     Synchronize(syncGeneral);
     
 
@@ -1626,8 +1626,8 @@ void TranslateBetweenGridsScatterCommSameSizeSubGrids
 
         }
     }
-    const Int indexB = indexBVec[0];
-    DistMatrix<T,STAR,VC,ELEMENT,D2>* B = dynamic_cast<DistMatrix<T,STAR,VC,ELEMENT,D2>*>( &(*B_Vector[indexB]));
+
+
     Matrix<T,D2> conversionMatrix(mLocA,nLocA), transposedMatrix(int((mLocA*nLocA)/splitDim),splitDim), tempMatrix((mLocA/splitDim) * nLocA, splitDim/numChildLayers);
 
 
@@ -1715,14 +1715,14 @@ void TranslateBetweenGridsSliceBroadcastCommSameSizeSubGrids
     Int nLocA = A.LocalWidth();
 
     mpi::Comm const& viewingCommA = A.Grid().ViewingComm();
-    mpi::Group owningGroupA = A.Grid().OwningGroup();
 
 
-    Int rowStrideA = A.RowStride();
+
+
 
 
     const Int numChildLayers = int(B_Vector.size());
-    const Int sizeA = A.Grid().VCSize();
+
 
 
     SyncInfo<D1> syncGeneralMetaData = SyncInfo<D1>();
@@ -1751,7 +1751,7 @@ void TranslateBetweenGridsSliceBroadcastCommSameSizeSubGrids
     const std::vector<Int> sendMetaData (metaData,metaData + 4 );
 
     
-    SyncInfo<D1> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
+
     Synchronize(syncGeneral);
     
 
@@ -1807,12 +1807,12 @@ void TranslateBetweenGridsSliceBroadcastCommSameSizeSubGrids
         }
     }
     const Int indexB = indexBVec[0];
-    DistMatrix<T,STAR,VC,ELEMENT,D2>* B = dynamic_cast<DistMatrix<T,STAR,VC,ELEMENT,D2>*>( &(*B_Vector[indexB]));
+
     Matrix<T,D2> conversionMatrix(mLocA,nLocA), transposedMatrix(int((mLocA*nLocA)/splitDim),splitDim), tempMatrix((mLocA/splitDim) * nLocA, splitDim/numChildLayers);
 
 
-    simple_buffer<T,D2> recv_buf(sendCounts, syncGeneral);
-    T* recvBuf = recv_buf.data();
+
+
 
 
     if(inAGrid)
@@ -1828,9 +1828,9 @@ void TranslateBetweenGridsSliceBroadcastCommSameSizeSubGrids
     }
 
     
-    const Int rowStrideB = B->RowStride();
-    const Int sizeB = B->Grid().VCSize();
-    const Int posInGrid = A.Grid().VCRank();
+
+
+
     const Int posInScatter = mpi::Rank(ScatterComm);
 
 
@@ -1904,10 +1904,10 @@ void TranslateBetweenGridsSliceConcatAlongFirstDim
     const Int mLocA = A.LocalHeight();
     const Int nLocA = A.LocalWidth();
 
-    mpi::Comm const& viewingCommA = A.Grid().ViewingComm();
-    mpi::Group owningGroupA = A.Grid().OwningGroup();
 
-    Int rowStrideA = A.RowStride();
+
+
+
     
     const Int numChildLayers = int(B_Vector.size());
     const Int sizeA = A.Grid().VCSize();
@@ -1930,7 +1930,7 @@ void TranslateBetweenGridsSliceConcatAlongFirstDim
     }
 
     const Int gatherCommSize = mpi::Size( gatherComm );
-    const int sendCounts = int((mLocA*nLocA)/gatherCommSize);
+
     const int numMatricesInSubGrid  = int(numChildLayers / gatherCommSize);
 
     std::vector<Int> indexBVec;
@@ -1951,8 +1951,8 @@ void TranslateBetweenGridsSliceConcatAlongFirstDim
 
     SyncInfo<D1> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
 
-    const Int maxSendSize = mLocA*nLocA;
-    const Int maxRecvSize = int(mLocA*nLocA*gatherCommSize);
+
+
 
 
     Transpose(A.LockedMatrix(),sendTransposedMatrix);
@@ -2208,7 +2208,7 @@ void TranslateBetweenGridsSliceColVector
     EL_DEBUG_CSE
 
     const Int numSubGrids = B_Vector.size();
-    const Int numProcesses = A.Grid().VCSize();
+
     const Int mLocA = A.LocalHeight();
     const Int nLocA = A.LocalWidth();
     const Int m = A.Height();
@@ -2544,7 +2544,7 @@ void TranslateBetweenGridsGatherCommSameSizeSubGrids
     const Int n = B->Width();
     const Int mLocB = B->LocalHeight();
     const Int nLocB = B->LocalWidth();
-    const Int posInGrid = A.Grid().VCRank();
+
     const bool inAGrid = A.Participating();
 
 
@@ -2552,7 +2552,7 @@ void TranslateBetweenGridsGatherCommSameSizeSubGrids
     
     const Int sizeA = A.Grid().VCSize();
 
-     const Int index_from = int(std::floor(posInGrid/sizeB));
+
 
     A.Resize(m*numParentLayers,n); 
 
@@ -2679,7 +2679,7 @@ void TranslateBetweenGridsAllGatherCommSameSizeSubGrids
     const Int n = B->Width();
     const Int mLocB = B->LocalHeight();
     const Int nLocB = B->LocalWidth();
-    const Int posInGrid = A.Grid().VCRank();
+
     const bool inAGrid = A.Participating();
 
 
@@ -2687,7 +2687,7 @@ void TranslateBetweenGridsAllGatherCommSameSizeSubGrids
     
     const Int sizeA = A.Grid().VCSize();
 
-     const Int index_from = int(std::floor(posInGrid/sizeB));
+
 
     A.Resize(m*numParentLayers,n); 
 
@@ -2804,13 +2804,13 @@ void TranslateBetweenConatSliceFirstChannel
     const Int n = B->Width();
     const Int mLocB = B->LocalHeight();
     const Int nLocB = B->LocalWidth();
-    const Int posInGrid = A.Grid().VCRank();
+
     const bool inAGrid = A.Participating();
 
 
 
     
-    const Int sizeA = A.Grid().VCSize();
+
 
     // const Int index_from = int(std::floor(posInGrid/sizeB));
     const Int index_from = mpi::Rank(gatherComm);
@@ -3015,7 +3015,7 @@ void TranslateBetweenGridsBroadcastOptComm
     }
     DistMatrix<T,STAR,VC,ELEMENT,D2>* B = dynamic_cast<DistMatrix<T,STAR,VC,ELEMENT,D2>*>( &(*B_Vector[indexB]));
 
-    const Int posInSubGrid = B->Grid().VCRank(); 
+
 
 
     const Int rowStrideB = B->RowStride();
@@ -3274,7 +3274,7 @@ void TranslateBetweenGridsBroadcastBasic
     //
 
     
-    const bool inBGrid = indexB >=0 ? true:false;
+
 
     const Int maxSendSize = mLocA * nLocA;
     simple_buffer<T,D1> send_buf(maxSendSize, syncInfoA);
@@ -3424,11 +3424,11 @@ void TranslateBetweenGridsBroadcast
 #define PROTO_DIFF_GPU(T)
 #endif
 #define PROTO_DIFF(T) \
-  PROTO_DIFF_CPU(T);  \
+  PROTO_DIFF_CPU(T)  \
   PROTO_DIFF_GPU(T)
 
-PROTO_DIFF(float);
-PROTO_DIFF(double);
+PROTO_DIFF(float)
+PROTO_DIFF(double)
 
 #ifdef HYDROGEN_HAVE_HALF
 PROTO(cpu_half_type);
@@ -3437,145 +3437,6 @@ PROTO(gpu_half_type);
 #endif
 #endif
 
-// template void TranslateBetweenGridsAllreduceBasic <double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& );
-// template void TranslateBetweenGridsAllreduceBasic <double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& );
-// template void TranslateBetweenGridsAllreduceOpt <double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& );
-// template void TranslateBetweenGridsAllreduceOpt <double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& );
-
-// template void TranslateBetweenGridsAllreduceOptComm <double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>&, mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsAllreduceOptComm <double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>&, mpi::Comm const& , SyncInfo<Device::GPU> & );
-
-// template void TranslateBetweenGridsBroadcastBasic <double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& );
-// template void TranslateBetweenGridsBroadcastBasic <double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& );
-
-// template void TranslateBetweenGridsBroadcastOptComm<double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsBroadcastOptComm<double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-
-// template void TranslateBetweenGridsAllreduceBasic <float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& );
-// template void TranslateBetweenGridsAllreduceBasic <float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& );
-// template void TranslateBetweenGridsAllreduceOpt <float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& );
-// template void TranslateBetweenGridsAllreduceOpt <float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& );
-
-// template void TranslateBetweenGridsAllreduceOptComm <float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>&, mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsAllreduceOptComm <float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>&, mpi::Comm const& , SyncInfo<Device::GPU> & );
-
-// template void TranslateBetweenGridsBroadcastBasic <float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& );
-// template void TranslateBetweenGridsBroadcastBasic <float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& );
-
-// template void TranslateBetweenGridsBroadcastOptComm<float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsBroadcastOptComm<float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-
-
-//combined function 
-// template void TranslateBetweenGridsAllreduce <double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int );
-// template void TranslateBetweenGridsAllreduce <double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int );
-// template void TranslateBetweenGridsAllreduce <float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int );
-// template void TranslateBetweenGridsAllreduce <float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int );
-
-// template void TranslateBetweenGridsAllreduce <double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , mpi::Comm const& , SyncInfo<Device::CPU> &, int );
-// template void TranslateBetweenGridsAllreduce <double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , mpi::Comm const& , SyncInfo<Device::GPU> &, int );
-// template void TranslateBetweenGridsAllreduce <float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , mpi::Comm const& , SyncInfo<Device::CPU> &, int );
-// template void TranslateBetweenGridsAllreduce <float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , mpi::Comm const& , SyncInfo<Device::GPU> &, int );
-
-// template void TranslateBetweenGridsBroadcast <double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , mpi::Comm const& , SyncInfo<Device::GPU> &, int );
-// template void TranslateBetweenGridsBroadcast <double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , mpi::Comm const& , SyncInfo<Device::CPU> &, int );
-// template void TranslateBetweenGridsBroadcast <float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , mpi::Comm const& , SyncInfo<Device::GPU> &, int );
-// template void TranslateBetweenGridsBroadcast <float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , mpi::Comm const& , SyncInfo<Device::CPU> &, int );
-
-// template void TranslateBetweenGridsBroadcast <double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int );
-// template void TranslateBetweenGridsBroadcast <double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int );
-// template void TranslateBetweenGridsBroadcast <float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int );
-// template void TranslateBetweenGridsBroadcast <float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int );
-
-//scatter Gather 
-// template void TranslateBetweenGridsScatter<double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> &, int );
-// template void TranslateBetweenGridsScatter<double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> &, int );
-// template void TranslateBetweenGridsScatter<float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> &, int );
-// template void TranslateBetweenGridsScatter<float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> &, int );
-
-// template void TranslateBetweenGridsGather<double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> &, int );
-// template void TranslateBetweenGridsGather<double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> &, int );
-// template void TranslateBetweenGridsGather<float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> &, int );
-// template void TranslateBetweenGridsGather<float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> &, int );
-
-
-
-// template void TranslateBetweenGridsScatterOptComm<double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsGatherOptComm<double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsScatterOptComm<double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-// template void TranslateBetweenGridsGatherOptComm<double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-
-
-// template void TranslateBetweenGridsScatterOptComm<float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsGatherOptComm<float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsScatterOptComm<float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-// template void TranslateBetweenGridsGatherOptComm<float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-
-
-// template void TranslateBetweenGridsScatterComm<double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsGatherComm<double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsScatterComm<double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-// template void TranslateBetweenGridsGatherComm<double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-// template void TranslateBetweenGridsSliceGatherOptComm<double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsSliceGatherOptComm<double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-
-
-// template void TranslateBetweenGridsSliceGatherParentSmall<double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsSliceGatherParentSmall<double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-// template void TranslateBetweenGridsScatterCommParentSmall<double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsScatterCommParentSmall<double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-
-
-// template void TranslateBetweenGridsSliceGatherParentSmall<float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsSliceGatherParentSmall<float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-// template void TranslateBetweenGridsScatterCommParentSmall<float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsScatterCommParentSmall<float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-
-
-// template void TranslateBetweenGridsScatterCommSameSizeSubGrids<double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsScatterCommSameSizeSubGrids<double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-// template void TranslateBetweenGridsScatterCommSameSizeSubGrids<float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsScatterCommSameSizeSubGrids<float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-
-// template void TranslateBetweenGridsSliceBroadcastCommSameSizeSubGrids<double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsSliceBroadcastCommSameSizeSubGrids<double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-// template void TranslateBetweenGridsSliceBroadcastCommSameSizeSubGrids<float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsSliceBroadcastCommSameSizeSubGrids<float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-
-// template void TranslateBetweenGridsSliceConcatAlongFirstDim<float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsSliceConcatAlongFirstDim<double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsSliceConcatAlongFirstDim<float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-// template void TranslateBetweenGridsSliceConcatAlongFirstDim<double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-
-// template void TranslateBetweenConatSliceFirstChannel<float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenConatSliceFirstChannel<double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenConatSliceFirstChannel<float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-// template void TranslateBetweenConatSliceFirstChannel<double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-
-
-
-// template void TranslateBetweenGridsScatterComm<float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsGatherComm<float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsScatterComm<float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-// template void TranslateBetweenGridsGatherComm<float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-// template void TranslateBetweenGridsSliceGatherOptComm<float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsSliceGatherOptComm<float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-
-// template void TranslateBetweenGridsGatherCommSameSizeSubGrids<double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsGatherCommSameSizeSubGrids<double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-// template void TranslateBetweenGridsGatherCommSameSizeSubGrids<float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsGatherCommSameSizeSubGrids<float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-
-// template void TranslateBetweenGridsAllGatherCommSameSizeSubGrids<double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsAllGatherCommSameSizeSubGrids<double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-// template void TranslateBetweenGridsAllGatherCommSameSizeSubGrids<float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::CPU> & );
-// template void TranslateBetweenGridsAllGatherCommSameSizeSubGrids<float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> & , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& , int ,  mpi::Comm const& , SyncInfo<Device::GPU> & );
-
-
-// template void TranslateBetweenGridsSliceColVector<double, Device::CPU,Device::CPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& );
-// template void TranslateBetweenGridsSliceColVector<double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<double>>>& );
-// template void TranslateBetweenGridsSliceColVector<float, Device::CPU,Device::CPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::CPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& );
-// template void TranslateBetweenGridsSliceColVector<float, Device::GPU,Device::GPU> (DistMatrix<float,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<std::unique_ptr<AbstractDistMatrix<float>>>& );
 
 template void TranslateBetweenGridsSliceCol<double> (AbstractDistMatrix<double> const& , AbstractDistMatrix<double> &);
 // template void TranslateBetweenGridsSliceCol<double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> const& , DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> &);
@@ -3605,8 +3466,7 @@ void TranslateBetweenGridsAsync
     // Compute the number of process rows and columns that each process
     // needs to send to.
     
-    const Int colRankA = A.ColRank();
-    const Int rowRankA = A.RowRank();
+
     Int colStrideA = A.ColStride();
     Int rowStrideA = A.RowStride();
     Int colAlignA = A.ColAlign();
@@ -3662,8 +3522,6 @@ void TranslateBetweenGridsAsync
     B.Resize(m, n);
     const Int colStrideB = B.ColStride();
     const Int rowStrideB = B.RowStride();
-    const Int colShiftB = B.ColShift();
-    const Int rowShiftB = B.RowShift();
     const Int colRankB = B.ColRank();
     const Int rowRankB = B.RowRank();
     const Int colAlignB = B.ColAlign();
@@ -3700,7 +3558,7 @@ void TranslateBetweenGridsAsync
     const Int firstSendRow = Mod(colShift+sendColOffset,colStrideA);
     const Int firstSendCol = Mod(rowShift+sendRowOffset,rowStrideA);
 
-    const Int numColRecvs = Length(colStrideA,colShift,colStrideB);
+
     Int sendCol = firstSendCol;
 
     Int sendRow = firstSendRow;
@@ -3762,7 +3620,7 @@ void TranslateBetweenGridsAsync
 
     T* recvBuf = recv_buf.data();
 
-    Int recvRow = 0;
+
 
     //Checking if process are in both A and B grids 
     // Just transfer the data directly 
@@ -3784,9 +3642,8 @@ void TranslateBetweenGridsAsync
                 if(rankMap[sendVCRank]==myRankViewing) break;
             }
 
-            
 
-            const Int recvWidth = ((rowRecv*rowStrideB + numInB)>= Mod(n,rowLCM)) ? floor(n/rowLCM) : floor(n/rowLCM)+1;
+
             copy::util::InterleaveMatrix(
                 mLocA, sendWidth,
                 A.LockedBuffer(0,rowSend),
@@ -3804,15 +3661,13 @@ void TranslateBetweenGridsAsync
 
 
 
-    
-
     std::vector<mpi::Request<T>> sendRequests(numRowSends);
     std::vector<bool> sendRequestsUsed(numRowSends,false);
     for(Int rowSend=0; rowSend<numRowSends; ++rowSend)
     {
-        Int recvCol = 0; // avoid compiler warnings...
-        if(inAGrid)
-            recvCol=Mod(Mod(rowRankA-rowAlignA,rowStrideA)+rowAlignB,rowStrideB);
+
+
+
         mpi::Request<T> sendRequest;
 
         const Int recvVCRank = Mod(A.Grid().Rank() + rowSend*rowStrideA, rowStrideB);
@@ -3856,25 +3711,10 @@ void TranslateBetweenGridsAsync
         if(inBGrid && rankMap[sendVCRank]!=myRankViewing)
         {
 
-            const Int sendColShift =
-              Shift(sendRow, colAlignA, colStrideA);
-
-            const Int localColOffset =
-              (sendColShift-colShiftB) / colStrideB;
-            
-
-            
-            const Int sendRowShift =
-              Shift(sendCol, rowAlignA, rowStrideA) +
-              rowRecv*rowStrideA;
 
             const Int sendWidth = ((rowRecv*rowStrideB + numInB)>= Mod(n,rowLCM)) ? floor(n/rowLCM) : floor(n/rowLCM)+1;
             
-            
-            const Int localRowOffset =
-              (sendRowShift-rowShiftB) / rowStrideB;
 
-            
             mpi::Recv(
                 recvBuf, m*sendWidth, rankMap[sendVCRank],
                 viewingCommB, syncInfoB);
