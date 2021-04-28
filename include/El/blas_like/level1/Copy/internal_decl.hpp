@@ -110,6 +110,7 @@ void TranslateBetweenGridsSliceGatherOptComm
   std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, int splitDim,  mpi::Comm const& gatherComm, SyncInfo<D1> & syncGeneral);
 
 template<typename T, Device D1, Device D2>
+
 void TranslateBetweenGridsScatterCommParentSmall
 (DistMatrix<T,STAR,VC,ELEMENT,D1> const& A,
   std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, int splitDim,  mpi::Comm const& ScatterComm, SyncInfo<D1> & syncGeneral);
@@ -135,6 +136,7 @@ void TranslateBetweenGridsSliceBroadcastCommSameSizeSubGrids
 
 
 template<typename T, Device D1, Device D2>
+
 void TranslateBetweenGridsScatter
 (DistMatrix<T,STAR,VC,ELEMENT,D1> const& A,
   std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, int splitDim,  mpi::Comm const& ScatterComm, SyncInfo<D1> & syncGeneral, int version=0);
@@ -149,6 +151,7 @@ template<typename T, Device D1, Device D2>
 void TranslateBetweenGridsGatherComm
 (DistMatrix<T,STAR,VC,ELEMENT,D1> & A,
   std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, int splitDim,  mpi::Comm const& gatherComm, SyncInfo<D1> & syncGeneral);
+
 
 
 template<typename T, Device D1, Device D2>
@@ -200,7 +203,6 @@ void TranslateBetweenConatSliceFirstChannel
   int splitDim,  
   mpi::Comm const& gatherComm, 
   SyncInfo<D1> & syncGeneral);
-
 
 
 
