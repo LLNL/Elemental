@@ -126,7 +126,7 @@ ADD_ALUMINUM_COLLECTIVE(       Collective::GATHER, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(       Collective::REDUCE, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(Collective::REDUCESCATTER, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(      Collective::SCATTER, Al::NCCLBackend);
-ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::NCCLBackend);
+//ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::NCCLBackend);
 #endif // HYDROGEN_HAVE_NCCL2
 
 #ifdef HYDROGEN_HAVE_AL_HOST_XFER
@@ -162,13 +162,13 @@ using AluminumNCCLBackendIfDefined = Al::NCCLBackend;
 using AluminumNCCLBackendIfDefined = details::BackendNotDefined;
 #endif
 
-#ifdef HYDROGEN_AL_HAVE_HOST_XFER
+#ifdef HYDROGEN_HAVE_AL_HOST_XFER
 using AluminumHostTransferBackendIfDefined = Al::HostTransferBackend;
 #else
 using AluminumHostTransferBackendIfDefined = details::BackendNotDefined;
 #endif
 
-#ifdef HYDROGEN_AL_HAVE_MPI_CUDA
+#ifdef HYDROGEN_HAVE_AL_MPI_CUDA
 using AluminumMPICUDABackendIfDefined = Al::MPICUDABackend;
 #else
 using AluminumMPICUDABackendIfDefined = details::BackendNotDefined;

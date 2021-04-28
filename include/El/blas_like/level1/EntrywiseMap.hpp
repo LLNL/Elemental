@@ -10,6 +10,10 @@
 #define EL_BLAS_ENTRYWISEMAP_HPP
 
 #include "El/core/DistMatrix/AbstractDistMatrix.hpp"
+#if defined HYDROGEN_HAVE_GPU
+#include "hydrogen/blas/gpu/CombineImpl.hpp"
+#include "hydrogen/blas/gpu/EntrywiseMapImpl.hpp"
+#endif // defined HYDROGEN_HAVE_GPU
 
 namespace El {
 
@@ -132,27 +136,104 @@ void EntrywiseMap
     }
 }
 
+#if defined HYDROGEN_HAVE_GPU
+// This section only valid when device-compiling.
+#if defined __CUDACC__ || defined __HIPCC__
+/** @brief Entrywise map function for GPU matrices.
+ *
+ *  This function handles only the high-level Resize and
+ *  Synchronization tasks. The kernel launch is done elsewhere.
+ *
+ *  @param A The source matrix.
+ *  @param B The target matrix.
+ *  @param func The functor to apply entrywise to elements of A. The
+ *              signature should be `T(S const&)` or equivalent. It
+ *              must be device-executable code.
+ */
+template <typename S, typename T, typename FunctorT>
+void EntrywiseMap(Matrix<S, Device::GPU> const& A,
+                  Matrix<T, Device::GPU>& B,
+                  FunctorT func)
+{
+    B.Resize(A.Height(), A.Width());
+
+    auto multisync = hydrogen::MakeMultiSync(
+        SyncInfoFromMatrix(B), SyncInfoFromMatrix(A));
+    hydrogen::device::EntrywiseMapImpl(
+        A.Height(), A.Width(),
+        A.LockedBuffer(), A.LDim(),
+        B.Buffer(), B.LDim(),
+        func,
+        multisync);
+}
+
+/** @brief Combine function for GPU matrices.
+ *
+ *  The operation here is `Bij <- func(Aij, Bij)`. This _could_ be
+ *  very hackily implemented with EntrywiseMap or with the right
+ *  closure being passed into an IndexDependentMap function, but it's
+ *  probably better to have the dedicated API.
+ *
+ *  This function handles only the high-level Resize and
+ *  Synchronization tasks. The kernel launch is done elsewhere.
+ *
+ *  @param A The source matrix.
+ *  @param B The target matrix.
+ *  @param func The functor to apply entrywise to elements of A. The
+ *              signature should be `T(S const&, T const&)` or equivalent. It
+ *              must be device-executable code.
+ */
+template <typename S, typename T, typename FunctorT>
+void Combine(Matrix<S, Device::GPU> const& A,
+             Matrix<T, Device::GPU>& B,
+             FunctorT func)
+{
+    if (A.Height() != B.Height() || A.Width() != B.Width())
+        RuntimeError("A and B must be the same size for Combine.");
+
+    auto multisync = hydrogen::MakeMultiSync(
+        SyncInfoFromMatrix(B), SyncInfoFromMatrix(A));
+    hydrogen::device::CombineImpl(
+        A.Height(), A.Width(),
+        A.LockedBuffer(), A.LDim(),
+        B.Buffer(), B.LDim(),
+        func,
+        multisync);
+}
+#else
+// Just declare the template prototypes if not in device compilation.
+template <typename S, typename T, typename FunctorT>
+void Combine(Matrix<S, Device::GPU> const& A,
+             Matrix<T, Device::GPU>& B,
+             FunctorT func);
+template <typename S, typename T, typename FunctorT>
+void EntrywiseMap(Matrix<S, Device::GPU> const& A,
+                  Matrix<T, Device::GPU>& B,
+                  FunctorT func);
+#endif // defined __CUDACC__ || defined __HIPCC__
+#endif // defined HYDROGEN_HAVE_GPU
+
 #ifdef EL_INSTANTIATE_BLAS_LEVEL1
 # define EL_EXTERN
 #else
 # define EL_EXTERN extern
 #endif
 
-#define PROTO(T) \
-  EL_EXTERN template void EntrywiseMap \
-  (AbstractMatrix<T>& A, \
-    function<T(const T&)> func); \
-  EL_EXTERN template void EntrywiseMap \
-  (AbstractDistMatrix<T>& A, \
-    function<T(const T&)> func); \
-  EL_EXTERN template void EntrywiseMap \
-  (const AbstractMatrix<T>& A, \
-          AbstractMatrix<T>& B, \
-          function<T(const T&)> func); \
-  EL_EXTERN template void EntrywiseMap \
-  (const AbstractDistMatrix<T>& A, \
-          AbstractDistMatrix<T>& B, \
-          function<T(const T&)> func);
+#define PROTO(T)                                \
+    EL_EXTERN template void EntrywiseMap        \
+    (AbstractMatrix<T>& A,                      \
+     function<T(const T&)> func);               \
+    EL_EXTERN template void EntrywiseMap        \
+    (AbstractDistMatrix<T>& A,                  \
+     function<T(const T&)> func);               \
+    EL_EXTERN template void EntrywiseMap        \
+    (const AbstractMatrix<T>& A,                \
+     AbstractMatrix<T>& B,                      \
+     function<T(const T&)> func);               \
+    EL_EXTERN template void EntrywiseMap        \
+    (const AbstractDistMatrix<T>& A,            \
+     AbstractDistMatrix<T>& B,                  \
+     function<T(const T&)> func);
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

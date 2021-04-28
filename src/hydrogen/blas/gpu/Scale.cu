@@ -44,7 +44,7 @@ namespace hydrogen
 template <typename T, typename SizeT, typename>
 void Scale_GPU_impl(
     SizeT num_entries,
-    T const& alpha, T* A, SizeT lda,
+    T const& alpha_in, T* A, SizeT lda,
     SyncInfo<Device::GPU> const& sync_info)
 {
     if (!num_entries)
@@ -52,16 +52,17 @@ void Scale_GPU_impl(
 
     constexpr size_t threads_per_block = 128;
     auto blocks = (num_entries + threads_per_block - 1)/ threads_per_block;
+    NativeGPUType<T> alpha = *AsNativeGPUType(&alpha_in);
     gpu::LaunchKernel(
-        scale_1d_kernel_naive<T,SizeT>,
+        scale_1d_kernel_naive<NativeGPUType<T>, SizeT>,
         blocks, threads_per_block, 0, sync_info,
-        num_entries, alpha, A, lda);
+        num_entries, alpha, AsNativeGPUType(A), lda);
 }
 
 template <typename T, typename SizeT, typename>
 void Scale_GPU_impl(
     SizeT num_rows, SizeT num_cols,
-    T const& alpha, T* A, SizeT lda,
+    T const& alpha_in, T* A, SizeT lda,
     SyncInfo<Device::GPU> const& sync_info)
 {
     if (num_rows == TypeTraits<SizeT>::Zero()
@@ -78,10 +79,11 @@ void Scale_GPU_impl(
               1);
     dim3 thds(TILE_DIM, BLK_COLS, 1);
 
+    NativeGPUType<T> alpha = *AsNativeGPUType(&alpha_in);
     gpu::LaunchKernel(
-        scale_2d_kernel_naive<TILE_DIM,BLK_COLS,T,SizeT>,
+        scale_2d_kernel_naive<TILE_DIM,BLK_COLS,NativeGPUType<T>,SizeT>,
         blks, thds, 0, sync_info,
-        num_rows, num_cols, alpha, A, lda);
+        num_rows, num_cols, alpha, AsNativeGPUType(A), lda);
 }
 
 #define ETI(DataType, SizeType)                         \
@@ -94,24 +96,20 @@ void Scale_GPU_impl(
         DataType const&, DataType*, SizeType,           \
         SyncInfo<Device::GPU> const&)
 
-ETI(float, int);
-ETI(float, long);
-ETI(float, long long);
-ETI(float, unsigned);
-ETI(float, size_t);
-
-ETI(double, int);
-ETI(double, long);
-ETI(double, long long);
-ETI(double, unsigned);
-ETI(double, size_t);
+#define ETI_ALL_SIZE_TYPES(ScalarT)               \
+    ETI(ScalarT, int);                            \
+    ETI(ScalarT, long);                           \
+    ETI(ScalarT, long long);                      \
+    ETI(ScalarT, unsigned);                       \
+    ETI(ScalarT, size_t)
 
 #ifdef HYDROGEN_GPU_USE_FP16
-ETI(gpu_half_type, int);
-ETI(gpu_half_type, long);
-ETI(gpu_half_type, long long);
-ETI(gpu_half_type, unsigned);
-ETI(gpu_half_type, size_t);
+ETI_ALL_SIZE_TYPES(gpu_half_type);
 #endif
+
+ETI_ALL_SIZE_TYPES(float);
+ETI_ALL_SIZE_TYPES(double);
+ETI_ALL_SIZE_TYPES(El::Complex<float>);
+ETI_ALL_SIZE_TYPES(El::Complex<double>);
 
 }// namespace hydrogen

@@ -92,6 +92,13 @@ template void Her
   const Int& alpha,
   const Int* x, BlasInt incx,
         Int* A, BlasInt ALDim );
+#ifdef HYDROGEN_HAVE_HALF
+template void Her(
+    char uplo, BlasInt m,
+    cpu_half_type const& alpha,
+    cpu_half_type const* x, BlasInt incx,
+    cpu_half_type* A, BlasInt ALDim);
+#endif // HYDROGEN_HAVE_HALF
 #ifdef HYDROGEN_HAVE_QD
 template void Her
 ( char uplo, BlasInt m,

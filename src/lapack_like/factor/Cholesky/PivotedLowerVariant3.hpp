@@ -2,8 +2,8 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #ifndef EL_CHOLESKY_PIVOTED_LOWER_VARIANT3_HPP
@@ -64,7 +64,7 @@ LDLPivot PanelFull
 
 template<typename F>
 LDLPivot PanelFull
-( const DistMatrix<F>& A, 
+( const DistMatrix<F>& A,
         DistMatrix<F,MD,STAR>& d,
   const DistMatrix<F,MC,STAR>& X,
   const DistMatrix<F,MR,STAR>& Y )
@@ -102,7 +102,7 @@ LDLPivot PanelFull
     LDLPivot pivot;
     pivot.nb = 1;
     pivot.from[0] = diagMax.index;
-    
+
     return pivot;
 }
 
@@ -144,7 +144,7 @@ void PivotedLowerUnblocked( Matrix<F>& A, Permutation& P )
         const Base<F> delta11 = Sqrt(ABR.GetRealPart(0,0));
         const Base<F> delta11Inv = Base<F>(1)/delta11;
         ABR.Set(0,0,delta11);
-        a21 *= delta11Inv;
+        Scale(delta11Inv, a21);
 
         // A22 -= a21 a21'
         Her( LOWER, F(-1), a21, A22 );
@@ -193,7 +193,7 @@ void PivotedLowerUnblocked
         const Base<F> delta11 = Sqrt(ABR.GetRealPart(0,0));
         const Base<F> delta11Inv = Base<F>(1)/delta11;
         ABR.Set(0,0,delta11);
-        a21 *= delta11Inv;
+        Scale(delta11Inv, a21);
 
         // A22 -= a21 a21'
         Her( LOWER, F(-1), a21, A22 );
@@ -205,7 +205,7 @@ void PivotedLowerUnblocked
 template<typename F>
 void PivotedLowerPanel
 ( Matrix<F>& AFull,
-  Permutation& PFull, 
+  Permutation& PFull,
   Matrix<F>& X,
   Matrix<F>& Y,
   Int bsize,
@@ -243,7 +243,7 @@ void PivotedLowerPanel
         auto y21 = Y( ind2, ind1 );
         auto YB0 = Y( indB, ind0 );
 
-        // Determine the pivot 
+        // Determine the pivot
         const auto pivot = pivot::PanelFull( ABR, dB, XB0, YB0 );
         const Int from = k + pivot.from[0];
 
@@ -262,7 +262,7 @@ void PivotedLowerPanel
         const Base<F> delta11 = Sqrt(A.GetRealPart(k,k));
         const Base<F> delta11Inv = Base<F>(1)/delta11;
         A.SetRealPart(k,k,delta11);
-        a21 *= delta11Inv;
+        Scale(delta11Inv, a21);
 
         // Store x21 := a21 and y21 := conj(a21)
         Conjugate( a21, y21 );
@@ -333,7 +333,7 @@ void PivotedLowerPanel
         const Base<F> delta11 = Sqrt(A.GetRealPart(k,k));
         const Base<F> delta11Inv = Base<F>(1)/delta11;
         A.SetRealPart(k,k,delta11);
-        a21 *= delta11Inv;
+        Scale(delta11Inv, a21);
 
         // Store x21 := a21 and y21 := conj(a21)
         Conjugate( a21, y21 );

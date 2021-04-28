@@ -2,8 +2,8 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 
@@ -48,7 +48,7 @@ void Trsv
         {
             for( BlasInt j=0; j<m; ++j )
             {
-                if( !unitDiag ) 
+                if( !unitDiag )
                     x[j*incx] /= A[j+j*ALDim];
                 gamma = x[j*incx];
                 for( BlasInt i=j+1; i<m; ++i )
@@ -116,7 +116,7 @@ void Trsv
             {
                 if( conj )
                 {
-                    if( !unitDiag ) 
+                    if( !unitDiag )
                     {
                         Conj( A[j+j*ALDim], delta );
                         x[j*incx] /= delta;
@@ -131,7 +131,7 @@ void Trsv
                 }
                 else
                 {
-                    if( !unitDiag ) 
+                    if( !unitDiag )
                         x[j*incx] /= A[j+j*ALDim];
                     gamma = x[j*incx];
                     for( BlasInt i=j+1; i<m; ++i )
@@ -145,6 +145,12 @@ void Trsv
         }
     }
 }
+#ifdef HYDROGEN_HAVE_HALF
+template void Trsv(
+    char uplo, char trans, char diag, BlasInt m,
+    cpu_half_type const* A, BlasInt ALDim,
+    cpu_half_type* X, BlasInt incx);
+#endif // HYDROGEN_HAVE_HALF
 #ifdef HYDROGEN_HAVE_QD
 template void Trsv
 ( char uplo, char trans, char diag, BlasInt m,

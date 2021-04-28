@@ -36,6 +36,9 @@ using namespace El;
 // in a tight loop (probably 10 times); a timer will record each call
 // to give min, max, mean, stddev stats for each kernel.
 
+// A flag type to indicate things are broken.
+struct UndefinedType {};
+
 // Helper infrastructure
 enum class FloatType {
 #ifdef HYDROGEN_HAVE_HALF
@@ -245,6 +248,30 @@ ExperimentResult TestGemm(
     return times;
 }
 
+template <>
+ExperimentResult TestGemm<UndefinedType, El::Device::CPU>(
+    Orientation orientA, Orientation orientB,
+    Int m, Int n, Int k, Int block_size,
+    GemmAlgorithm alg,
+    const Grid& g)
+{
+  RuntimeError("Invalid type detected.");
+  return ExperimentResult{};// silence compiler warning
+}
+
+#ifdef HYDROGEN_HAVE_GPU
+template <>
+ExperimentResult TestGemm<UndefinedType, El::Device::GPU>(
+    Orientation orientA, Orientation orientB,
+    Int m, Int n, Int k, Int block_size,
+    GemmAlgorithm alg,
+    const Grid& g)
+{
+  RuntimeError("Invalid type detected.");
+  return ExperimentResult{};// silence compiler warning
+}
+#endif // HYDROGEN_HAVE_GPU
+
 // Experiment file format:
 /*
    DEVICE:TYPE:ORIENT:ORIENT:ALG:M:N:K:BLK_SIZE
@@ -375,6 +402,7 @@ std::string FloatTypeToString(FloatType F)
     case FloatType::DOUBLE:
         return "double";
     }
+    return "unknown type"; // silence compiler warning
 }
 
 Orientation StringToOrientation(std::string const& str)
@@ -396,6 +424,7 @@ std::string OrientationToString(Orientation O)
     case Orientation::ADJOINT:
         return "Adjoint";
     }
+    return "Unknown orientation";
 }
 
 GemmAlgorithm StringToGemmAlgorithm(std::string const& str)
@@ -439,6 +468,7 @@ std::string GemmAlgorithmToString(GemmAlgorithm alg)
     case GEMM_CANNON:       return "CANNON";
     //case GEMM_COSMA:       return "COSMA";
     }
+    return "Unknown GEMM Algorithm";// silence compiler warning
 }
 
 Experiment::Experiment(std::string const& dev,
@@ -518,11 +548,17 @@ struct HalfTypeT<Device::CPU>
     using type = cpu_half_type;
 };
 
-#ifdef HYDROGEN_HAVE_GPU
+#ifdef HYDROGEN_GPU_USE_FP16
 template <>
 struct HalfTypeT<Device::GPU>
 {
     using type = gpu_half_type;
+};
+#else
+template <>
+struct HalfTypeT<Device::GPU>
+{
+    using type = UndefinedType;
 };
 #endif // HYDROGEN_HAVE_GPU
 #endif // HYDROGEN_HAVE_HALF
@@ -553,6 +589,7 @@ ExperimentResult RunExperiment(Experiment const& exp, Grid const& grid)
             exp.m, exp.n, exp.k, exp.nb,
             exp.alg, grid);
     }
+    return ExperimentResult{};// silence compiler warning
 }
 
 ExperimentResults RunExperiments(

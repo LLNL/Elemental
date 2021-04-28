@@ -2,7 +2,7 @@
 #add_subdirectory(condense)
 #add_subdirectory(equilibrate)
 #add_subdirectory(euclidean_min)
-#add_subdirectory(factor)
+add_subdirectory(factor)
 #add_subdirectory(funcs)
 #add_subdirectory(perm)
 add_subdirectory(props)

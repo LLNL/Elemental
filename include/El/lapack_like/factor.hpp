@@ -19,7 +19,7 @@ namespace El {
 // Cholesky
 // ========
 template<typename Field>
-void Cholesky( UpperOrLower uplo, Matrix<Field>& A );
+void Cholesky( UpperOrLower uplo, AbstractMatrix<Field>& A );
 template<typename Field>
 void Cholesky
 ( UpperOrLower uplo, AbstractDistMatrix<Field>& A, bool scalapack=false );

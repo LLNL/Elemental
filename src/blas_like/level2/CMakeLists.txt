@@ -14,7 +14,7 @@ set_full_path(THIS_DIR_SOURCES
 #  Trmv.cpp
 #  Trr.cpp
 #  Trr2.cpp
-#  Trsv.cpp
+  Trsv.cpp
   )
 
 # Add the subdirectories

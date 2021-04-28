@@ -110,7 +110,7 @@ void IndexDependentMap
     const Int m = A.Height();
     const Int n = A.Width();
     B.Resize( m, n );
-    const T* ABuf = A.LockedBuffer();
+    const S* ABuf = A.LockedBuffer();
     T* BBuf = B.Buffer();
     const Int ALDim = A.LDim();
     const Int BLDim = B.LDim();
@@ -151,7 +151,7 @@ void IndexDependentMap
     const Int nLoc = A.LocalWidth();
     B.AlignWith( A.DistData() );
     B.Resize( A.Height(), A.Width() );
-    const T* ALocBuf = A.LockedBuffer();
+    const S* ALocBuf = A.LockedBuffer();
     T* BLocBuf = B.Buffer();
     const Int ALocLDim = A.LDim();
     const Int BLocLDim = B.LDim();

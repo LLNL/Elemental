@@ -28,7 +28,9 @@ __global__ void axpy_2d_transpose_tiled_kernel(
 #ifdef HYDROGEN_HAVE_CUDA
     cg::thread_block cta = cg::this_thread_block();
 #endif
-    __shared__ T tile[TILE_SIZE][TILE_SIZE+1];
+    using StorageType = hydrogen::GPUStaticStorageType<T>;
+    __shared__ StorageType tile_shared[TILE_SIZE][TILE_SIZE+1];
+    auto tile = reinterpret_cast<T(*)[TILE_SIZE+1]>(tile_shared);
 
     auto const row_start_A = blockIdx.y * TILE_SIZE + threadIdx.x;
     auto const col_start_A = blockIdx.x * TILE_SIZE + threadIdx.y;
@@ -117,7 +119,7 @@ namespace hydrogen
 template <typename T, typename SizeT, typename>
 void Axpy_GPU_impl(
     SizeT height, SizeT width,
-    T alpha,
+    T const& alpha_in,
     T const* X, SizeT colStrideX, SizeT rowStrideX,
     T* Y, SizeT colStrideY, SizeT rowStrideY,
     SyncInfo<Device::GPU> const& sync_info)
@@ -139,19 +141,20 @@ void Axpy_GPU_impl(
               (width + TILE_SIZE - 1) / TILE_SIZE, 1);
     dim3 thds(TILE_SIZE, BLK_COLS, 1);
 
+    NativeGPUType<T> alpha = *AsNativeGPUType(&alpha_in);
     gpu::LaunchKernel(
-        axpy_2d_tiled_kernel<TILE_SIZE, BLK_COLS, T, SizeT>,
+        axpy_2d_tiled_kernel<TILE_SIZE, BLK_COLS, NativeGPUType<T>, SizeT>,
         blks, thds, 0, sync_info,
         height, width, alpha,
-        X, colStrideX, rowStrideX,
-        Y, colStrideY, rowStrideY);
+        AsNativeGPUType(X), colStrideX, rowStrideX,
+        AsNativeGPUType(Y), colStrideY, rowStrideY);
 }
 
 template <typename T, typename SizeT, typename>
 void Axpy_GPU_impl(
     TransposeMode transpA,
     SizeT height, SizeT width,
-    T alpha,
+    T const& alpha_in,
     T const* A, SizeT lda,
     T* B, SizeT ldb,
     SyncInfo<Device::GPU> const& sync_info)
@@ -165,7 +168,7 @@ void Axpy_GPU_impl(
 
     if (transpA == TransposeMode::NORMAL)
         return Axpy_GPU_impl(
-            height, width, alpha,
+            height, width, alpha_in,
             A, TypeTraits<SizeT>::One(), lda,
             B, TypeTraits<SizeT>::One(), ldb, sync_info);
 
@@ -176,41 +179,38 @@ void Axpy_GPU_impl(
               (width + TILE_SIZE - 1) / TILE_SIZE, 1);
     dim3 thds(TILE_SIZE, BLK_COLS, 1);
 
+    NativeGPUType<T> alpha = *AsNativeGPUType(&alpha_in);
     gpu::LaunchKernel(
-        axpy_2d_transpose_tiled_kernel<TILE_SIZE, BLK_COLS, T, SizeT>,
+        axpy_2d_transpose_tiled_kernel<TILE_SIZE, BLK_COLS,
+                                       NativeGPUType<T>, SizeT>,
         blks, thds, 0, sync_info,
-        height, width, alpha, A, lda, B, ldb);
+        height, width, alpha,
+        AsNativeGPUType(A), lda, AsNativeGPUType(B), ldb);
 }
 
 #define ETI(ScalarT, SizeT)                                    \
     template void Axpy_GPU_impl(                               \
-        SizeT, SizeT, ScalarT,                                 \
+        SizeT, SizeT, ScalarT const&,                          \
         ScalarT const*, SizeT, SizeT,                          \
         ScalarT*, SizeT, SizeT, SyncInfo<Device::GPU> const&); \
     template void Axpy_GPU_impl(                               \
-        TransposeMode, SizeT, SizeT, ScalarT,                  \
+        TransposeMode, SizeT, SizeT, ScalarT const&,           \
         ScalarT const*, SizeT,                                 \
         ScalarT*, SizeT, SyncInfo<Device::GPU> const&)
 
+#define ETI_ALL_SIZE_TYPES(ScalarT)             \
+  ETI(ScalarT, int);                            \
+  ETI(ScalarT, long);                           \
+  ETI(ScalarT, long long);                      \
+  ETI(ScalarT, unsigned);                       \
+  ETI(ScalarT, size_t)
 
 #ifdef HYDROGEN_GPU_USE_FP16
-ETI(gpu_half_type, int);
-ETI(gpu_half_type, long);
-ETI(gpu_half_type, long long);
-ETI(gpu_half_type, unsigned);
-ETI(gpu_half_type, size_t);
+ETI_ALL_SIZE_TYPES(gpu_half_type);
 #endif
-
-ETI(float, int);
-ETI(float, long);
-ETI(float, long long);
-ETI(float, unsigned);
-ETI(float, size_t);
-
-ETI(double, int);
-ETI(double, long);
-ETI(double, long long);
-ETI(double, unsigned);
-ETI(double, size_t);
+ETI_ALL_SIZE_TYPES(float);
+ETI_ALL_SIZE_TYPES(double);
+ETI_ALL_SIZE_TYPES(El::Complex<float>);
+ETI_ALL_SIZE_TYPES(El::Complex<double>);
 
 }// namespace hydrogen

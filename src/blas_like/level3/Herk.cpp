@@ -11,65 +11,69 @@
 
 namespace El {
 
-template<typename T>
-void Herk
-( UpperOrLower uplo, Orientation orientation,
-  Base<T> alpha, const Matrix<T>& A, Base<T> beta, Matrix<T>& C )
+template <typename T>
+void Herk(
+    UpperOrLower uplo, Orientation orientation,
+    Base<T> alpha, AbstractMatrix<T> const& A,
+    Base<T> beta, AbstractMatrix<T>& C)
 {
-    EL_DEBUG_CSE
-    Syrk( uplo, orientation, T(alpha), A, T(beta), C, true );
+    EL_DEBUG_CSE;
+    Syrk(uplo, orientation, T(alpha), A, T(beta), C, true);
 }
 
 template<typename T>
-void Herk
-( UpperOrLower uplo, Orientation orientation,
-  Base<T> alpha, const Matrix<T>& A, Matrix<T>& C )
+void Herk(
+    UpperOrLower uplo, Orientation orientation,
+    Base<T> alpha, AbstractMatrix<T> const& A,
+    AbstractMatrix<T>& C)
 {
-    EL_DEBUG_CSE
-    const Int n = ( orientation==NORMAL ? A.Height() : A.Width() );
-    C.Resize( n, n );
-    Zero( C );
-    Syrk( uplo, orientation, T(alpha), A, T(0), C, true );
+    EL_DEBUG_CSE;
+    const Int n = (orientation==NORMAL ? A.Height() : A.Width());
+    C.Resize(n, n);
+    Zero(C);
+    Syrk(uplo, orientation, T(alpha), A, T(0), C, true);
 }
 
 template<typename T>
-void Herk
-( UpperOrLower uplo, Orientation orientation,
-  Base<T> alpha, const AbstractDistMatrix<T>& A,
-  Base<T> beta,        AbstractDistMatrix<T>& C )
+void Herk(
+    UpperOrLower uplo, Orientation orientation,
+    Base<T> alpha, AbstractDistMatrix<T> const& A,
+    Base<T> beta, AbstractDistMatrix<T>& C)
 {
-    EL_DEBUG_CSE
-    Syrk( uplo, orientation, T(alpha), A, T(beta), C, true );
+    EL_DEBUG_CSE;
+    Syrk(uplo, orientation, T(alpha), A, T(beta), C, true);
 }
 
 template<typename T>
-void Herk
-( UpperOrLower uplo, Orientation orientation,
-  Base<T> alpha, const AbstractDistMatrix<T>& A, AbstractDistMatrix<T>& C )
+void Herk(
+    UpperOrLower uplo, Orientation orientation,
+    Base<T> alpha, AbstractDistMatrix<T> const& A,
+    AbstractDistMatrix<T>& C)
 {
-    EL_DEBUG_CSE
-    const Int n = ( orientation==NORMAL ? A.Height() : A.Width() );
-    C.Resize( n, n );
-    Zero( C );
-    Syrk( uplo, orientation, T(alpha), A, T(0), C, true );
+    EL_DEBUG_CSE;
+    const Int n = (orientation==NORMAL ? A.Height() : A.Width());
+    C.Resize(n, n);
+    Zero(C);
+    Syrk(uplo, orientation, T(alpha), A, T(0), C, true);
 }
 
-
-#define PROTO(T) \
-  template void Herk \
-  ( UpperOrLower uplo, Orientation orientation, \
-    Base<T> alpha, const Matrix<T>& A, \
-    Base<T> beta,        Matrix<T>& C ); \
-  template void Herk \
-  ( UpperOrLower uplo, Orientation orientation, \
-    Base<T> alpha, const Matrix<T>& A, Matrix<T>& C ); \
-  template void Herk \
-  ( UpperOrLower uplo, Orientation orientation, \
-    Base<T> alpha, const AbstractDistMatrix<T>& A, AbstractDistMatrix<T>& C ); \
-  template void Herk \
-  ( UpperOrLower uplo, Orientation orientation, \
-    Base<T> alpha, const AbstractDistMatrix<T>& A, \
-    Base<T> beta,        AbstractDistMatrix<T>& C );
+#define PROTO(T)                                        \
+    template void Herk(                                 \
+        UpperOrLower uplo, Orientation orientation,     \
+        Base<T> alpha, AbstractMatrix<T> const& A,      \
+        Base<T> beta, AbstractMatrix<T>& C);            \
+    template void Herk(                                 \
+        UpperOrLower uplo, Orientation orientation,     \
+        Base<T> alpha, AbstractMatrix<T> const& A,      \
+        AbstractMatrix<T>& C);                          \
+    template void Herk(                                 \
+        UpperOrLower uplo, Orientation orientation,     \
+        Base<T> alpha, AbstractDistMatrix<T> const& A,  \
+        AbstractDistMatrix<T>& C);                      \
+    template void Herk(                                 \
+        UpperOrLower uplo, Orientation orientation,     \
+        Base<T> alpha, AbstractDistMatrix<T> const& A,  \
+        Base<T> beta, AbstractDistMatrix<T>& C);
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

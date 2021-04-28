@@ -21,6 +21,25 @@
 
 namespace hydrogen
 {
+namespace details
+{
+template <typename T>
+struct BaseT
+{
+    using type = T;
+};
+
+// Ehhhhh this is certainly not fool-proof... But I don't want to
+// include all the El::Complex stuff here.
+template <template <typename> class AugmentedT, typename T>
+struct BaseT<AugmentedT<T>>
+{
+    using type = T;
+};
+}// namespace details
+
+template <typename T>
+using TmpBase = typename details::BaseT<T>::type;
 
 /** @namespace gpu_blas
  *  @brief A collection of BLAS routines that are exposed for GPUs
@@ -287,7 +306,7 @@ void Dot(SizeT num_entries,
  *  @param num_entries The number of entries in X.
  *  @param X The vector (device memory).
  *  @param stride_X The stride of X.
- *  @param result The result of the dot product (host or device memory).
+ *  @param result The result of the norm (host or device memory).
  *  @param[in] syncinfo The synchronization information for this
  *                      operation.
  *
@@ -392,6 +411,45 @@ void Gemv(
 /** @name BLAS-3 Routines */
 ///@{
 
+/** @brief Hermitian rank-K update of matrices in GPU memory.
+ *  @todo Finish documentation.
+ */
+template <typename T, typename SizeT>
+void Herk(
+    FillMode uplo, TransposeMode trans,
+    SizeT n, SizeT k,
+    TmpBase<T> const& alpha,
+    T const* A, SizeT lda,
+    TmpBase<T> const& beta,
+    T* C, SizeT ldc,
+    SyncInfo<Device::GPU> const& syncinfo);
+
+/** @brief Symmetric rank-K update of matrices in GPU memory.
+ *  @todo Finish documentation.
+ */
+template <typename T, typename SizeT>
+void Syrk(
+    FillMode uplo, TransposeMode trans,
+    SizeT n, SizeT k,
+    T const& alpha,
+    T const* A, SizeT lda,
+    T const& beta,
+    T* C, SizeT ldc,
+    SyncInfo<Device::GPU> const& syncinfo);
+
+/** @brief Triangular matrix solve.
+ *  @todo Finish documentation.
+ */
+template <typename T, typename SizeT>
+void Trsm(
+    SideMode side, FillMode uplo,
+    TransposeMode trans, DiagType diag,
+    SizeT m, SizeT n,
+    T const& alpha,
+    T const* A, SizeT lda,
+    T* B, SizeT ldb,
+    SyncInfo<Device::GPU> const& syncinfo);
+
 /** @brief Matrix-matrix product in GPU memory.
  *
  *  Perform a scaled matrix-matrix product:
@@ -480,7 +538,6 @@ void GemmStridedBatched(
     SizeT batchCount,
     SyncInfo<Device::GPU> const& syncinfo);
 
-
 ///@}
 /** @name BLAS-like Extension Routines */
 ///@{
@@ -526,5 +583,53 @@ void Dgmm(SideMode side,
 ///@}
 
 }// namespace gpu_blas
+
+namespace gpu_lapack
+{
+
+/** @brief Compute the Cholesky factorization of A.
+ *
+ *  This routine will allocate the properly-sized workspace and info
+ *  parameter, using the caching allocators if available.
+ *
+ *  @note The `info` parameter to the underlying library will only be
+ *        checked in Debug builds.
+ */
+template <typename T, typename SizeT>
+void CholeskyFactorize(FillMode uplo,
+                       SizeT n,
+                       T* A, SizeT lda,
+                       SyncInfo<Device::GPU> const& si);
+
+/** @brief Compute the Cholesky factorization of A with a user-provided
+ *         workspace.
+ *
+ *  This routine will allocate the info argument.
+ *
+ *  @note The `info` parameter to the underlying library will only be
+ *        checked in Debug builds.
+ *  @todo Improve the error reporting.
+ */
+template <typename T, typename SizeT>
+void CholeskyFactorize(FillMode uplo,
+                       SizeT n,
+                       T* A, SizeT lda,
+                       T* workspace, SizeT workspace_size,
+                       SyncInfo<Device::GPU> const& si);
+
+/** @brief Compute the Cholesky factorization of A with a user-provided
+ *         workspace and info parameter.
+ *
+ *  @note The `info` parameter will not be checked by this routine.
+ */
+template <typename T, typename SizeT, typename InfoT>
+void CholeskyFactorize(FillMode uplo,
+                       SizeT n,
+                       T* A, SizeT lda,
+                       T* workspace, SizeT workspace_size,
+                       InfoT* info,
+                       SyncInfo<Device::GPU> const& si);
+
+}// namespace gpu_lapack
 }// namespace hydrogen
 #endif // HYDROGEN_GPU_BLAS_DECL_HPP_

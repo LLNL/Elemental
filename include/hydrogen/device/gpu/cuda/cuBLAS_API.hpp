@@ -29,13 +29,13 @@ namespace cublas
              int n,                             \
              ScalarType const* X, int incx,     \
              ScalarType const* Y, int incy,     \
-             ScalarType& output)
+             ScalarType* output)
 
 #define ADD_NRM2_DECL(ScalarType)               \
     void Nrm2(cublasHandle_t handle,            \
               int n,                            \
               ScalarType const* X, int incx,    \
-              ScalarType& output)
+              ScalarType* output)
 
 #define ADD_SCALE_DECL(ScalarType)                       \
     void Scale(cublasHandle_t handle,                    \
@@ -102,6 +102,36 @@ ADD_GEMV_DECL(cuDoubleComplex);
 /** @name BLAS-3 Routines */
 ///@{
 
+#define ADD_HERK_DECL(ScalarType, BaseScalarType)               \
+    void Herk(                                                  \
+        cublasHandle_t handle,                                  \
+        cublasFillMode_t uplo, cublasOperation_t trans,         \
+        int n, int k,                                           \
+        BaseScalarType const& alpha,                            \
+        ScalarType const* A, int lda,                           \
+        BaseScalarType const& beta,                             \
+        ScalarType * C, int ldc)
+
+#define ADD_SYRK_DECL(ScalarType)                       \
+    void Syrk(                                          \
+        cublasHandle_t handle,                          \
+        cublasFillMode_t uplo, cublasOperation_t trans, \
+        int n, int k,                                   \
+        ScalarType const& alpha,                        \
+        ScalarType const* A, int lda,                   \
+        ScalarType const& beta,                         \
+        ScalarType* C, int ldc)
+
+#define ADD_TRSM_DECL(ScalarType)                             \
+    void Trsm(                                                \
+        cublasHandle_t handle,                                \
+        cublasSideMode_t side, cublasFillMode_t uplo,         \
+        cublasOperation_t trans, cublasDiagType_t diag,       \
+        int m, int n,                                         \
+        ScalarType const& alpha,                              \
+        ScalarType const* A, int lda,                         \
+        ScalarType* B, int ldb)
+
 #define ADD_GEMM_DECL(ScalarType)               \
     void Gemm(                                  \
         cublasHandle_t handle,                  \
@@ -129,6 +159,21 @@ ADD_GEMV_DECL(cuDoubleComplex);
         ScalarType* C, int ldc,                         \
         long long int strideC,                          \
         int batchCount)
+
+ADD_HERK_DECL(float, float);
+ADD_HERK_DECL(double, double);
+ADD_HERK_DECL(cuComplex, float);
+ADD_HERK_DECL(cuDoubleComplex, double);
+
+ADD_SYRK_DECL(float);
+ADD_SYRK_DECL(double);
+ADD_SYRK_DECL(cuComplex);
+ADD_SYRK_DECL(cuDoubleComplex);
+
+ADD_TRSM_DECL(float);
+ADD_TRSM_DECL(double);
+ADD_TRSM_DECL(cuComplex);
+ADD_TRSM_DECL(cuDoubleComplex);
 
 #ifdef HYDROGEN_GPU_USE_FP16
 ADD_GEMM_DECL(__half);

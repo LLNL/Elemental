@@ -3,17 +3,12 @@
 #include <El/hydrogen_config.h>
 #include <hydrogen/meta/TypeTraits.hpp>
 
-#ifdef HYDROGEN_HAVE_CUDA
-#include <hydrogen/device/gpu/CUDA.hpp>
-#include <cuda_runtime.h>
-#elif defined(HYDROGEN_HAVE_ROCM)
-#include <hydrogen/device/gpu/ROCm.hpp>
-#include <hip/hip_runtime.h>
-#endif
+#include <hydrogen/device/gpu/GPURuntime.hpp>
 
+namespace hydrogen
+{
 namespace
 {
-
 template <typename SrcT, typename DestT, typename SizeT>
 __global__ void copy_1d_kernel(
     SizeT num_entries,
@@ -35,7 +30,9 @@ __global__ void copy_2d_kernel(
     SrcT const* __restrict__ src, SizeT src_row_stride, SizeT src_col_stride,
     DestT* __restrict__ dest, SizeT dest_row_stride, SizeT dest_col_stride)
 {
-    __shared__ SrcT tile[TILE_SIZE][TILE_SIZE+1];
+    using StorageType = GPUStaticStorageType<SrcT>;
+    __shared__ StorageType tile_shared[TILE_SIZE][TILE_SIZE+1];
+    auto tile = reinterpret_cast<SrcT(*)[TILE_SIZE+1]>(tile_shared);
 
     SizeT const start_row = blockIdx.x * TILE_SIZE + threadIdx.x;
     SizeT const start_col = blockIdx.y * TILE_SIZE + threadIdx.y;
@@ -75,13 +72,27 @@ __global__ void copy_2d_kernel(
     }
 }
 
-}// namespace <anon>
+template <typename SrcT, typename DestT>
+struct CanCopy : std::true_type {};
 
-namespace hydrogen
-{
+template <typename SrcRealT, typename DestT>
+struct CanCopy<El::Complex<SrcRealT>, DestT>
+  : std::false_type
+{};
 
-template <typename SrcT, typename DestT, typename SizeT, typename, typename>
-void Copy_GPU_impl(
+template <typename SrcT, typename DestRealT>
+struct CanCopy<SrcT, El::Complex<DestRealT>>
+  : std::true_type
+{};
+
+template <typename SrcRealT, typename DestRealT>
+struct CanCopy<El::Complex<SrcRealT>, El::Complex<DestRealT>>
+  : std::true_type
+{};
+
+template <typename SrcT, typename DestT, typename SizeT,
+          EnableWhen<CanCopy<SrcT, DestT>, int> = 0>
+void do_gpu_copy(
     SizeT num_entries,
     SrcT const* src, SizeT src_stride,
     DestT * dest, SizeT dest_stride,
@@ -104,21 +115,33 @@ void Copy_GPU_impl(
     auto blocks = (num_entries + threads_per_block - 1)/ threads_per_block;
 
     gpu::LaunchKernel(
-        copy_1d_kernel<SrcT,DestT,SizeT>,
+        copy_1d_kernel<NativeGPUType<SrcT>, NativeGPUType<DestT>, SizeT>,
         blocks, threads_per_block,
         0, sync_info,
-        num_entries, src, src_stride, dest, dest_stride);
+        num_entries,
+        AsNativeGPUType(src), src_stride,
+        AsNativeGPUType(dest), dest_stride);
 }
 
-template <typename SrcT, typename DestT, typename SizeT, typename, typename>
-void Copy_GPU_impl(
+template <typename SrcT, typename DestT, typename SizeT,
+          EnableUnless<CanCopy<SrcT, DestT>, int> = 1>
+void do_gpu_copy(SizeT const&, SrcT const* const, SizeT const&,
+                 DestT * const, SizeT const&,
+                 SyncInfo<Device::GPU> const&)
+{
+    throw std::logic_error("Cannot copy SrcT to DestT.");
+}
+
+template <typename SrcT, typename DestT, typename SizeT,
+          EnableWhen<CanCopy<SrcT, DestT>, int> = 0>
+void do_gpu_copy(
     SizeT num_rows, SizeT num_cols,
     SrcT const* src, SizeT src_row_stride, SizeT src_col_stride,
     DestT* dest, SizeT dest_row_stride, SizeT dest_col_stride,
     SyncInfo<Device::GPU> const& sync_info)
 {
-  if (num_rows == 0 || num_cols == 0)
-    return;
+    if (num_rows == 0 || num_cols == 0)
+        return;
 
 #ifdef HYDROGEN_DO_BOUNDS_CHECKING
     // The kernel parameters are __restrict__-ed. This helps ensure
@@ -138,11 +161,47 @@ void Copy_GPU_impl(
     dim3 thds(TILE_SIZE, BLK_COLS, 1);
 
     gpu::LaunchKernel(
-        copy_2d_kernel<TILE_SIZE,BLK_COLS,SrcT,DestT,SizeT>,
+        copy_2d_kernel<TILE_SIZE, BLK_COLS,
+                       NativeGPUType<SrcT>, NativeGPUType<DestT>, SizeT>,
         blks, thds, 0, sync_info,
         num_rows, num_cols,
-        src, src_row_stride, src_col_stride,
-        dest, dest_row_stride, dest_col_stride);
+        AsNativeGPUType(src), src_row_stride, src_col_stride,
+        AsNativeGPUType(dest), dest_row_stride, dest_col_stride);
+}
+
+template <typename SrcT, typename DestT, typename SizeT,
+          EnableUnless<CanCopy<SrcT, DestT>, int> = 1>
+void do_gpu_copy(SizeT const&, SizeT const&,
+                 SrcT const* const, SizeT const&, SizeT const&,
+                 DestT * const, SizeT const&, SizeT const&,
+                 SyncInfo<Device::GPU> const&)
+{
+    throw std::logic_error("Cannot copy SrcT to DestT.");
+}
+
+}// namespace <anon>
+
+template <typename SrcT, typename DestT, typename SizeT, typename>
+void Copy_GPU_impl(
+    SizeT num_entries,
+    SrcT const* src, SizeT src_stride,
+    DestT * dest, SizeT dest_stride,
+    SyncInfo<Device::GPU> const& sync_info)
+{
+  do_gpu_copy(num_entries, src, src_stride, dest, dest_stride, sync_info);
+}
+
+template <typename SrcT, typename DestT, typename SizeT, typename>
+void Copy_GPU_impl(
+    SizeT num_rows, SizeT num_cols,
+    SrcT const* src, SizeT src_row_stride, SizeT src_col_stride,
+    DestT* dest, SizeT dest_row_stride, SizeT dest_col_stride,
+    SyncInfo<Device::GPU> const& sync_info)
+{
+    do_gpu_copy(num_rows, num_cols,
+                src, src_row_stride, src_col_stride,
+                dest, dest_row_stride, dest_col_stride,
+                sync_info);
 }
 
 #define ETI(SourceType, DestType, SizeType)                          \
@@ -154,60 +213,35 @@ void Copy_GPU_impl(
         SourceType const*, SizeType, SizeType,                       \
         DestType*, SizeType, SizeType, SyncInfo<Device::GPU> const&)
 
-ETI(float, float, int);
-ETI(float, float, long);
-ETI(float, float, long long);
-ETI(float, float, unsigned);
-ETI(float, float, size_t);
-
-ETI(float, double, int);
-ETI(float, double, long);
-ETI(float, double, long long);
-ETI(float, double, unsigned);
-ETI(float, double, size_t);
-
-ETI(double, float, int);
-ETI(double, float, long);
-ETI(double, float, long long);
-ETI(double, float, unsigned);
-ETI(double, float, size_t);
-
-ETI(double, double, int);
-ETI(double, double, long);
-ETI(double, double, long long);
-ETI(double, double, unsigned);
-ETI(double, double, size_t);
+#define ETI_ALL_SIZE_TYPES(SourceType, DestType)        \
+    ETI(SourceType, DestType, int);                     \
+    ETI(SourceType, DestType, long);                    \
+    ETI(SourceType, DestType, long long);               \
+    ETI(SourceType, DestType, unsigned);                \
+    ETI(SourceType, DestType, size_t)
 
 #ifdef HYDROGEN_GPU_USE_FP16
-ETI(gpu_half_type, gpu_half_type, int);
-ETI(gpu_half_type, gpu_half_type, long);
-ETI(gpu_half_type, gpu_half_type, long long);
-ETI(gpu_half_type, gpu_half_type, unsigned);
-ETI(gpu_half_type, gpu_half_type, size_t);
-
-ETI(gpu_half_type, float, int);
-ETI(gpu_half_type, float, long);
-ETI(gpu_half_type, float, long long);
-ETI(gpu_half_type, float, unsigned);
-ETI(gpu_half_type, float, size_t);
-
-ETI(float, gpu_half_type, int);
-ETI(float, gpu_half_type, long);
-ETI(float, gpu_half_type, long long);
-ETI(float, gpu_half_type, unsigned);
-ETI(float, gpu_half_type, size_t);
-
-ETI(gpu_half_type, double, int);
-ETI(gpu_half_type, double, long);
-ETI(gpu_half_type, double, long long);
-ETI(gpu_half_type, double, unsigned);
-ETI(gpu_half_type, double, size_t);
-
-ETI(double, gpu_half_type, int);
-ETI(double, gpu_half_type, long);
-ETI(double, gpu_half_type, long long);
-ETI(double, gpu_half_type, unsigned);
-ETI(double, gpu_half_type, size_t);
+#define ETI_ALL_TARGETS(SourceType) \
+  ETI_ALL_SIZE_TYPES(SourceType, gpu_half_type);        \
+  ETI_ALL_SIZE_TYPES(SourceType, float);                \
+  ETI_ALL_SIZE_TYPES(SourceType, double);               \
+  ETI_ALL_SIZE_TYPES(SourceType, El::Complex<float>);   \
+  ETI_ALL_SIZE_TYPES(SourceType, El::Complex<double>)
+#else
+#define ETI_ALL_TARGETS(SourceType) \
+  ETI_ALL_SIZE_TYPES(SourceType, float);                \
+  ETI_ALL_SIZE_TYPES(SourceType, double);               \
+  ETI_ALL_SIZE_TYPES(SourceType, El::Complex<float>);   \
+  ETI_ALL_SIZE_TYPES(SourceType, El::Complex<double>)
 #endif
+
+#ifdef HYDROGEN_GPU_USE_FP16
+ETI_ALL_TARGETS(gpu_half_type);
+#endif
+ETI_ALL_TARGETS(float);
+ETI_ALL_TARGETS(double);
+ETI_ALL_TARGETS(El::Complex<float>);
+ETI_ALL_TARGETS(El::Complex<double>);
+
 
 }// namespace hydrogen

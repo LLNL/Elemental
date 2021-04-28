@@ -54,7 +54,7 @@ endif (__GIT_EXECUTABLE)
 # This must be set because version tags
 set(HYDROGEN_VERSION_MAJOR 1)
 set(HYDROGEN_VERSION_MINOR 5)
-set(HYDROGEN_VERSION_PATCH 0)
+set(HYDROGEN_VERSION_PATCH 2)
 set(HYDROGEN_VERSION_MAJOR_MINOR
     "${HYDROGEN_VERSION_MAJOR}.${HYDROGEN_VERSION_MINOR}")
 set(HYDROGEN_VERSION
@@ -338,8 +338,10 @@ if (Hydrogen_ENABLE_CUDA)
   if (CMAKE_CUDA_COMPILER)
     enable_language(CUDA)
 
-    if (NOT CMAKE_CUDA_STANDARD OR CMAKE_CUDA_STANDARD EQUAL 98)
-      set(CMAKE_CUDA_STANDARD 11)
+    if (NOT CMAKE_CUDA_STANDARD
+        OR CMAKE_CUDA_STANDARD EQUAL 98
+        OR CMAKE_CUDA_STANDARD LESS 14)
+      set(CMAKE_CUDA_STANDARD 14)
       set(CMAKE_CUDA_STANDARD_REQUIRED TRUE)
     endif ()
 
@@ -373,7 +375,8 @@ if (Hydrogen_ENABLE_CUDA)
       add_library(cuda::toolkit INTERFACE IMPORTED)
 
       foreach (lib IN LISTS CUDA_CUBLAS_LIBRARIES CUDA_LIBRARIES
-          CUDA_CUDA_LIBRARY CUB_LIBRARIES NVML_LIBRARIES)
+          CUDA_CUDA_LIBRARY CUB_LIBRARIES NVML_LIBRARIES
+          CUDA_cusolver_LIBRARY)
 
         if (lib)
           list(APPEND _CUDA_TOOLKIT_LIBS ${lib})
@@ -385,7 +388,9 @@ if (Hydrogen_ENABLE_CUDA)
         INTERFACE_LINK_LIBRARIES "${_CUDA_TOOLKIT_LIBS}")
 
       set_property(TARGET cuda::toolkit PROPERTY
-        INTERFACE_COMPILE_OPTIONS $<$<COMPILE_LANGUAGE:CUDA>:-arch=sm_60>)
+        INTERFACE_COMPILE_OPTIONS
+        $<$<COMPILE_LANGUAGE:CUDA>:-arch=sm_60>
+        $<$<COMPILE_LANGUAGE:CUDA>:--expt-extended-lambda>)
 
       set_property(TARGET cuda::toolkit PROPERTY
         INTERFACE_INCLUDE_DIRECTORIES "${CUDA_INCLUDE_DIRS}")
@@ -418,7 +423,9 @@ if (Hydrogen_ENABLE_ROCM)
 
   if (HIP_FOUND)
     set(CMAKE_CXX_EXTENSIONS FALSE)
-    find_package(ROCBLAS REQUIRED)
+    find_package(rocblas CONFIG REQUIRED)
+    find_package(rocsolver CONFIG REQUIRED)
+    find_package(rocthrust REQUIRED)
     set(HYDROGEN_HAVE_ROCM TRUE)
     message(STATUS "Found ROCm/HIP toolchain. Using HIP/ROCm.")
   else ()
@@ -431,13 +438,13 @@ if (HYDROGEN_HAVE_CUDA OR HYDROGEN_HAVE_ROCM)
 endif ()
 
 if (Hydrogen_ENABLE_ALUMINUM)
-  find_package(Aluminum 0.5.0 NO_MODULE
+  find_package(Aluminum 0.7.0 NO_MODULE
     HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
     $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
     PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
     NO_DEFAULT_PATH)
   if (NOT Aluminum_FOUND)
-    find_package(Aluminum 0.5.0 NO_MODULE)
+    find_package(Aluminum 0.7.0 NO_MODULE)
   endif ()
 
   if (Aluminum_FOUND)
@@ -565,7 +572,6 @@ target_link_libraries(
   ${HALF_LIBRARIES}
   ${VTUNE_LIBRARIES}
   ${NVTX_LIBRARIES}
-  ${ROCBLAS_LIBRARIES}
   $<TARGET_NAME_IF_EXISTS:OpenMP::OpenMP_CXX>
   $<TARGET_NAME_IF_EXISTS:MPI::MPI_CXX>
   $<TARGET_NAME_IF_EXISTS:LAPACK::lapack>
@@ -573,6 +579,9 @@ target_link_libraries(
   $<TARGET_NAME_IF_EXISTS:cuda::toolkit>
   $<TARGET_NAME_IF_EXISTS:hip::rocprim_hip>
   $<TARGET_NAME_IF_EXISTS:hip::hipcub>
+  $<TARGET_NAME_IF_EXISTS:roc::rocblas>
+  $<TARGET_NAME_IF_EXISTS:roc::rocsolver>
+  $<TARGET_NAME_IF_EXISTS:roc::rocthrust>
   )
 
 # Add the CXX library to "Hydrogen"

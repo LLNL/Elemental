@@ -2,8 +2,8 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 
@@ -170,6 +170,14 @@ template void Herk
   const Int* A, BlasInt ALDim,
   const Int& beta,
         Int* C, BlasInt CLDim );
+#ifdef HYDROGEN_HAVE_HALF
+template void Herk(char uplo, char trans,
+                   BlasInt n, BlasInt k,
+                   cpu_half_type const& alpha,
+                   cpu_half_type const* A, BlasInt ALDim,
+                   cpu_half_type const& beta,
+                   cpu_half_type* C, BlasInt CLDim);
+#endif // HYDROGEN_HAVE_HALF
 #ifdef HYDROGEN_HAVE_QD
 template void Herk
 ( char uplo, char trans,
@@ -293,9 +301,9 @@ void Herk
 template<typename T>
 void Syrk
 ( char uplo, char trans,
-  BlasInt n, BlasInt k, 
+  BlasInt n, BlasInt k,
   const T& alpha,
-  const T* A, BlasInt ALDim, 
+  const T* A, BlasInt ALDim,
   const T& beta,
         T* C, BlasInt CLDim )
 {
@@ -401,77 +409,86 @@ void Syrk
 }
 template void Syrk
 ( char uplo, char trans,
-  BlasInt n, BlasInt k, 
+  BlasInt n, BlasInt k,
   const Int& alpha,
-  const Int* A, BlasInt ALDim, 
+  const Int* A, BlasInt ALDim,
   const Int& beta,
         Int* C, BlasInt CLDim );
+#ifdef HYDROGEN_HAVE_HALF
+template void Syrk(
+    char uplo, char trans,
+    BlasInt n, BlasInt k,
+    cpu_half_type const& alpha,
+    cpu_half_type const* A, BlasInt ALDim,
+    cpu_half_type const& beta,
+    cpu_half_type* C, BlasInt CLDim );
+#endif // HYDROGEN_HAVE_HALF
 #ifdef HYDROGEN_HAVE_QD
 template void Syrk
 ( char uplo, char trans,
-  BlasInt n, BlasInt k, 
+  BlasInt n, BlasInt k,
   const DoubleDouble& alpha,
-  const DoubleDouble* A, BlasInt ALDim, 
+  const DoubleDouble* A, BlasInt ALDim,
   const DoubleDouble& beta,
         DoubleDouble* C, BlasInt CLDim );
 template void Syrk
 ( char uplo, char trans,
-  BlasInt n, BlasInt k, 
+  BlasInt n, BlasInt k,
   const QuadDouble& alpha,
-  const QuadDouble* A, BlasInt ALDim, 
+  const QuadDouble* A, BlasInt ALDim,
   const QuadDouble& beta,
         QuadDouble* C, BlasInt CLDim );
 template void Syrk
 ( char uplo, char trans,
-  BlasInt n, BlasInt k, 
+  BlasInt n, BlasInt k,
   const Complex<DoubleDouble>& alpha,
-  const Complex<DoubleDouble>* A, BlasInt ALDim, 
+  const Complex<DoubleDouble>* A, BlasInt ALDim,
   const Complex<DoubleDouble>& beta,
         Complex<DoubleDouble>* C, BlasInt CLDim );
 template void Syrk
 ( char uplo, char trans,
-  BlasInt n, BlasInt k, 
+  BlasInt n, BlasInt k,
   const Complex<QuadDouble>& alpha,
-  const Complex<QuadDouble>* A, BlasInt ALDim, 
+  const Complex<QuadDouble>* A, BlasInt ALDim,
   const Complex<QuadDouble>& beta,
         Complex<QuadDouble>* C, BlasInt CLDim );
 #endif
 #ifdef HYDROGEN_HAVE_QUADMATH
 template void Syrk
 ( char uplo, char trans,
-  BlasInt n, BlasInt k, 
+  BlasInt n, BlasInt k,
   const Quad& alpha,
-  const Quad* A, BlasInt ALDim, 
+  const Quad* A, BlasInt ALDim,
   const Quad& beta,
         Quad* C, BlasInt CLDim );
 template void Syrk
 ( char uplo, char trans,
   BlasInt n, BlasInt k,
   const Complex<Quad>& alpha,
-  const Complex<Quad>* A, BlasInt ALDim, 
+  const Complex<Quad>* A, BlasInt ALDim,
   const Complex<Quad>& beta,
         Complex<Quad>* C, BlasInt CLDim );
 #endif
 #ifdef HYDROGEN_HAVE_MPC
 template void Syrk
 ( char uplo, char trans,
-  BlasInt n, BlasInt k, 
+  BlasInt n, BlasInt k,
   const BigInt& alpha,
-  const BigInt* A, BlasInt ALDim, 
+  const BigInt* A, BlasInt ALDim,
   const BigInt& beta,
         BigInt* C, BlasInt CLDim );
 template void Syrk
 ( char uplo, char trans,
-  BlasInt n, BlasInt k, 
+  BlasInt n, BlasInt k,
   const BigFloat& alpha,
-  const BigFloat* A, BlasInt ALDim, 
+  const BigFloat* A, BlasInt ALDim,
   const BigFloat& beta,
         BigFloat* C, BlasInt CLDim );
 template void Syrk
 ( char uplo, char trans,
-  BlasInt n, BlasInt k, 
+  BlasInt n, BlasInt k,
   const Complex<BigFloat>& alpha,
-  const Complex<BigFloat>* A, BlasInt ALDim, 
+  const Complex<BigFloat>* A, BlasInt ALDim,
   const Complex<BigFloat>& beta,
         Complex<BigFloat>* C, BlasInt CLDim );
 #endif

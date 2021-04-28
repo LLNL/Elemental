@@ -2,8 +2,8 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 
@@ -64,12 +64,12 @@ void Trsm
         {
             if( lower )
             {
-                for( BlasInt k=0; k<m; ++k )     
+                for( BlasInt k=0; k<m; ++k )
                 {
                     if( !unitDiag )
                     {
                         alpha11 = A[k+k*ALDim];
-                        for( BlasInt j=0; j<n; ++j )      
+                        for( BlasInt j=0; j<n; ++j )
                             B[k+j*BLDim] /= alpha11;
                     }
                     Geru
@@ -81,12 +81,12 @@ void Trsm
             }
             else
             {
-                for( BlasInt k=m-1; k>=0; --k )     
+                for( BlasInt k=m-1; k>=0; --k )
                 {
                     if( !unitDiag )
                     {
                         alpha11 = A[k+k*ALDim];
-                        for( BlasInt j=0; j<n; ++j )      
+                        for( BlasInt j=0; j<n; ++j )
                             B[k+j*BLDim] /= alpha11;
                     }
                     Geru
@@ -293,6 +293,14 @@ void Trsm
         }
     }
 }
+#ifdef HYDROGEN_HAVE_HALF
+template void Trsm(
+    char side, char uplo, char trans, char unit,
+    BlasInt m, BlasInt n,
+    cpu_half_type const& alpha,
+    cpu_half_type const* A, BlasInt ALDim,
+    cpu_half_type* B, BlasInt BLDim);
+#endif // HYDROGEN_HAVE_HALF
 #ifdef HYDROGEN_HAVE_QD
 template void Trsm
 ( char side, char uplo, char trans, char unit,
@@ -358,7 +366,7 @@ void Trsm
     const char fixedTrans = ( std::toupper(trans) == 'C' ? 'T' : trans );
     EL_BLAS(strsm)
     ( &side, &uplo, &fixedTrans, &unit, &m, &n, &alpha, A, &ALDim, B, &BLDim );
-} 
+}
 
 void Trsm
 ( char side, char uplo, char trans, char unit,
@@ -370,7 +378,7 @@ void Trsm
     const char fixedTrans = ( std::toupper(trans) == 'C' ? 'T' : trans );
     EL_BLAS(dtrsm)
     ( &side, &uplo, &fixedTrans, &unit, &m, &n, &alpha, A, &ALDim, B, &BLDim );
-} 
+}
 
 void Trsm
 ( char side, char uplo, char trans, char unit,
@@ -381,7 +389,7 @@ void Trsm
 {
     EL_BLAS(ctrsm)
     ( &side, &uplo, &trans, &unit, &m, &n, &alpha, A, &ALDim, B, &BLDim );
-} 
+}
 
 void Trsm
 ( char side, char uplo, char trans, char unit,
@@ -392,7 +400,7 @@ void Trsm
 {
     EL_BLAS(ztrsm)
     ( &side, &uplo, &trans, &unit, &m, &n, &alpha, A, &ALDim, B, &BLDim );
-} 
+}
 
 } // namespace blas
 } // namespace El

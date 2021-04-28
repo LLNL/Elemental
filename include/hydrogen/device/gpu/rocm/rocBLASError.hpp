@@ -16,10 +16,9 @@
         auto h_check_rocblas_err_code__ = cmd;                          \
         H_ASSERT(h_check_rocblas_err_code__ == rocblas_status_success,  \
                  rocBLASError,                                          \
-                 (hipDeviceReset(),                                     \
-                  rocblas::BuildrocBLASErrorMessage(                    \
-                      #cmd,                                             \
-                      h_check_rocblas_err_code__)));                    \
+                 rocblas::BuildrocBLASErrorMessage(                     \
+                     #cmd,                                              \
+                     h_check_rocblas_err_code__));                      \
         H_SYNC_HIP();                                                   \
     } while (false)
 

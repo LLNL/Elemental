@@ -9,6 +9,8 @@ namespace hydrogen
 namespace gpu
 {
 
+inline constexpr int Default2DTileSize() { return 64; }
+
 template <typename F, typename... Args>
 void LaunchKernel(
     F kernel, dim3 const& gridDim, dim3 const& blkDim,

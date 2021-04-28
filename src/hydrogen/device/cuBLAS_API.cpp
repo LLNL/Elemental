@@ -39,7 +39,7 @@ void Dot(cublasHandle_t handle,
          int n,
          __half const* X, int incx,
          __half const* Y, int incy,
-         __half& output)
+         __half* output)
 {
     H_CHECK_CUBLAS(
         cublasDotEx(
@@ -47,7 +47,7 @@ void Dot(cublasHandle_t handle,
             n,
             X, /*xtype=*/CUDA_R_16F, incx,
             Y, /*ytype=*/CUDA_R_16F, incy,
-            &output,
+            output,
             /*resulttype=*/CUDA_R_16F,
             /*executiontype=*/CUDA_R_32F));
 }
@@ -55,14 +55,14 @@ void Dot(cublasHandle_t handle,
 void Nrm2(cublasHandle_t handle,
           int n,
           __half const* X, int incx,
-          __half& output)
+          __half* output)
 {
     H_CHECK_CUBLAS(
         cublasNrm2Ex(
             handle,
             n,
             X, /*xtype=*/CUDA_R_16F, incx,
-            &output,
+            output,
             /*resulttype=*/CUDA_R_16F,
             /*executiontype=*/CUDA_R_32F));
 }
@@ -133,6 +133,8 @@ struct RealTypeT<cuDoubleComplex>
 template <typename T>
 using RealType = typename RealTypeT<T>::type;
 
+// For complex DOT, assume most use-cases will want the inner
+// producted in a complex vector space.
 #define ADD_COMPLEX_DOT_IMPL(ScalarType, TypeChar)              \
     void Dotu(cublasHandle_t handle,                            \
               int n, ScalarType const* X, int incx,             \
@@ -145,14 +147,21 @@ using RealType = typename RealTypeT<T>::type;
                 n, X, incx, Y, incy, output));                  \
     }                                                           \
     void Dotc(cublasHandle_t handle,                            \
-             int n, ScalarType const* X, int incx,              \
-             ScalarType const* Y, int incy,                     \
-             ScalarType* output)                                \
+              int n, ScalarType const* X, int incx,             \
+              ScalarType const* Y, int incy,                    \
+              ScalarType* output)                               \
     {                                                           \
         H_CHECK_CUBLAS(                                         \
             cublas ## TypeChar ## dotc(                         \
                 handle,                                         \
                 n, X, incx, Y, incy, output));                  \
+    }                                                           \
+    void Dot(cublasHandle_t handle,                             \
+             int n, ScalarType const* X, int incx,              \
+             ScalarType const* Y, int incy,                     \
+             ScalarType* output)                                \
+    {                                                           \
+        Dotc(handle, n, X, incx, Y, incy, output);              \
     }
 
 #define ADD_NRM2_IMPL(ScalarType, TypeChar)                     \
@@ -200,6 +209,77 @@ using RealType = typename RealTypeT<T>::type;
 //
 // BLAS 3
 //
+
+#define ADD_REAL_HERK_IMPL(ScalarType, TypeChar)        \
+    void Herk(                                          \
+        cublasHandle_t handle,                          \
+        cublasFillMode_t uplo, cublasOperation_t trans, \
+        int n, int k,                                   \
+        ScalarType const& alpha,                        \
+        ScalarType const* A, int lda,                   \
+        ScalarType const& beta,                         \
+        ScalarType * C, int ldc)                        \
+    {                                                   \
+        H_CHECK_CUBLAS(                                 \
+            cublas ## TypeChar ## syrk(                 \
+                handle,                                 \
+                uplo, trans,                            \
+                n, k,                                   \
+                &alpha, A, lda, &beta, C, ldc));        \
+    }
+
+#define ADD_HERK_IMPL(ScalarType, BaseScalarType, TypeChar)     \
+    void Herk(                                                  \
+        cublasHandle_t handle,                                  \
+        cublasFillMode_t uplo, cublasOperation_t trans,         \
+        int n, int k,                                           \
+        BaseScalarType const& alpha,                            \
+        ScalarType const* A, int lda,                           \
+        BaseScalarType const& beta,                             \
+        ScalarType * C, int ldc)                                \
+    {                                                           \
+        H_CHECK_CUBLAS(                                         \
+            cublas ## TypeChar ## herk(                         \
+                handle,                                         \
+                uplo, trans,                                    \
+                n, k,                                           \
+                &alpha, A, lda, &beta, C, ldc));                  \
+    }
+
+#define ADD_SYRK_IMPL(ScalarType, TypeChar)             \
+    void Syrk(                                          \
+        cublasHandle_t handle,                          \
+        cublasFillMode_t uplo, cublasOperation_t trans, \
+        int n, int k,                                   \
+        ScalarType const& alpha,                        \
+        ScalarType const* A, int lda,                   \
+        ScalarType const& beta,                         \
+        ScalarType* C, int ldc)                         \
+    {                                                   \
+        H_CHECK_CUBLAS(                                 \
+            cublas ## TypeChar ## syrk(                 \
+                handle,                                 \
+                uplo, trans,                            \
+                n, k,                                   \
+                &alpha, A, lda, &beta, C, ldc));        \
+    }
+
+#define ADD_TRSM_IMPL(ScalarType, TypeChar)     \
+    void Trsm(                                  \
+        cublasHandle_t handle,                                \
+        cublasSideMode_t side, cublasFillMode_t uplo,         \
+        cublasOperation_t trans, cublasDiagType_t diag,       \
+        int m, int n,                                         \
+        ScalarType const& alpha,                              \
+        ScalarType const* A, int lda,                         \
+        ScalarType* B, int ldb)                               \
+    {                                                         \
+        H_CHECK_CUBLAS(                                       \
+            cublas ## TypeChar ## trsm(                       \
+                handle, side, uplo, trans, diag,              \
+                m, n, &alpha, A, lda, B, ldb));               \
+    }
+
 #define ADD_GEMM_IMPL(ScalarType, TypeChar)             \
     void Gemm(                                          \
         cublasHandle_t handle,                          \
@@ -320,6 +400,21 @@ ADD_GEMV_IMPL(cuComplex, C)
 ADD_GEMV_IMPL(cuDoubleComplex, Z)
 
 // BLAS 3
+ADD_REAL_HERK_IMPL(float, S)
+ADD_REAL_HERK_IMPL(double, D)
+ADD_HERK_IMPL(cuComplex, float, C)
+ADD_HERK_IMPL(cuDoubleComplex, double, Z)
+
+ADD_SYRK_IMPL(float, S)
+ADD_SYRK_IMPL(double, D)
+ADD_SYRK_IMPL(cuComplex, C)
+ADD_SYRK_IMPL(cuDoubleComplex, Z)
+
+ADD_TRSM_IMPL(float, S)
+ADD_TRSM_IMPL(double, D)
+ADD_TRSM_IMPL(cuComplex, C)
+ADD_TRSM_IMPL(cuDoubleComplex, Z)
+
 ADD_GEMM_IMPL(__half, H)
 ADD_GEMM_IMPL(float, S)
 ADD_GEMM_IMPL(double, D)

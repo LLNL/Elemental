@@ -1,4 +1,5 @@
 #include <hydrogen/device/gpu/cuda/cuBLAS.hpp>
+#include <hydrogen/device/gpu/cuda/cuSOLVER.hpp>
 
 // Helper macro for converting enums to strings.
 #define H_ADD_CUBLAS_ENUM_TO_STRING_CASE(enum_value) \
@@ -74,6 +75,13 @@ void Initialize(cublasHandle_t handle)
 #endif // HYDROGEN_GPU_USE_TENSOR_OP_MATH
 
         cublas_is_initialized_ = true;
+
+        // At this moment in time, cuSOLVER support in Hydrogen should
+        // be viewed as inseparable from cuBLAS support. This ensures
+        // that the library gets initialized. If cuSOLVER support
+        // expands beyond the one function currently supported, we
+        // should move this somewhere people will actually see it...
+        cusolver::InitializeDense();
     }
 }
 
@@ -147,5 +155,12 @@ void SetPointerMode(PointerMode mode)
                               ? CUBLAS_POINTER_MODE_HOST
                               : CUBLAS_POINTER_MODE_DEVICE)));
 }
+void RequestTensorOperations()
+{
+    H_CHECK_CUBLAS(
+        cublasSetMathMode(cublas::GetLibraryHandle(),
+                          CUBLAS_TENSOR_OP_MATH));
+}
+
 }// namespace gpu_blas
 }// namespace hydrogen

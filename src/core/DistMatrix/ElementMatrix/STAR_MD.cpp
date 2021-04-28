@@ -272,90 +272,40 @@ int DM::PartialUnionRowRank() const EL_NO_EXCEPT
   BOTH(T,VR,  STAR);
 
 #ifdef HYDROGEN_HAVE_GPU
-#define INSTGPU(T,U,V)                                                  \
-    template DistMatrix<T,COLDIST,ROWDIST,ELEMENT,Device::GPU>::DistMatrix \
-    (DistMatrix<T,U,V,ELEMENT,Device::CPU> const&);                     \
-    template DistMatrix<T,COLDIST,ROWDIST,ELEMENT,Device::GPU>&         \
-    DistMatrix<T,COLDIST,ROWDIST,ELEMENT,Device::GPU>::operator=        \
-    (DistMatrix<T,U,V,ELEMENT,Device::CPU> const&);                     \
-    template DistMatrix<T,COLDIST,ROWDIST,ELEMENT,Device::GPU>::DistMatrix \
-    (DistMatrix<T,U,V,ELEMENT,Device::GPU> const&);                     \
-                                                                        \
-    template DistMatrix<T,COLDIST,ROWDIST,ELEMENT,Device::CPU>::DistMatrix \
-    (DistMatrix<T,U,V,ELEMENT,Device::GPU> const&);                     \
-    template DistMatrix<T,COLDIST,ROWDIST,ELEMENT,Device::CPU>&         \
-    DistMatrix<T,COLDIST,ROWDIST,ELEMENT,Device::CPU>::operator=        \
-    (DistMatrix<T,U,V,ELEMENT,Device::GPU> const&)
+#include "gpu_instantiate.h"
 
-#define INST_GPU_ONLY(T,U,V) \
-    template DistMatrix<T,COLDIST,ROWDIST,ELEMENT,Device::GPU>::DistMatrix \
-    (DistMatrix<T,U,V,ELEMENT,Device::GPU> const&)
+#define FULL_GPU_PROTO(T)                       \
+  INST_DISTMATRIX_CLASS(T);                     \
+  INST_COPY_AND_ASSIGN(T, CIRC, CIRC);          \
+  INST_COPY_AND_ASSIGN(T, MC,     MR);          \
+  INST_COPY_AND_ASSIGN(T, MC,   STAR);          \
+  INST_COPY_AND_ASSIGN(T, MD,   STAR);          \
+  INST_COPY_AND_ASSIGN(T, MR,   MC  );          \
+  INST_COPY_AND_ASSIGN(T, MR,   STAR);          \
+  INST_COPY_AND_ASSIGN(T, STAR, MC  );          \
+  INST_COPY_AND_ASSIGN(T, STAR, MR  );          \
+  INST_COPY_AND_ASSIGN(T, STAR, STAR);          \
+  INST_COPY_AND_ASSIGN(T, STAR, VC  );          \
+  INST_COPY_AND_ASSIGN(T, STAR, VR  );          \
+  INST_COPY_AND_ASSIGN(T, VC,   STAR);          \
+  INST_COPY_AND_ASSIGN(T, VR,   STAR)
 
 #ifdef HYDROGEN_GPU_USE_FP16
 PROTO(gpu_half_type)
-template class DistMatrix<gpu_half_type,COLDIST,ROWDIST,ELEMENT,Device::GPU>;
-INSTGPU(gpu_half_type,CIRC,CIRC);
-INSTGPU(gpu_half_type,  MC,  MR);
-INSTGPU(gpu_half_type,  MC,STAR);
-INSTGPU(gpu_half_type,  MD,STAR);
-INSTGPU(gpu_half_type,  MR,  MC);
-INSTGPU(gpu_half_type,  MR,STAR);
-INSTGPU(gpu_half_type,STAR,  MC);
-INSTGPU(gpu_half_type,STAR,  MR);
-INSTGPU(gpu_half_type,STAR,STAR);
-INSTGPU(gpu_half_type,STAR,  VC);
-INSTGPU(gpu_half_type,STAR,  VR);
-INSTGPU(gpu_half_type,  VC,STAR);
-INSTGPU(gpu_half_type,  VR,STAR);
-template DistMatrix<gpu_half_type,COLDIST,ROWDIST,ELEMENT,Device::GPU>&
-DistMatrix<gpu_half_type,COLDIST,ROWDIST,ELEMENT,Device::GPU>::operator=(
-    DistMatrix<gpu_half_type,COLDIST,ROWDIST,ELEMENT,Device::CPU> const&);
-template DistMatrix<gpu_half_type,COLDIST,ROWDIST,ELEMENT,Device::CPU>&
-DistMatrix<gpu_half_type,COLDIST,ROWDIST,ELEMENT,Device::CPU>::operator=(
-    DistMatrix<gpu_half_type,COLDIST,ROWDIST,ELEMENT,Device::GPU> const&);
+FULL_GPU_PROTO(gpu_half_type);
 #endif // HYDROGEN_GPU_USE_FP16
 
-template class DistMatrix<float,COLDIST,ROWDIST,ELEMENT,Device::GPU>;
-INSTGPU(float,CIRC,CIRC);
-INSTGPU(float,MC,  MR  );
-INSTGPU(float,MC,  STAR);
-INSTGPU(float,MD,  STAR);
-INSTGPU(float,MR,  MC  );
-INSTGPU(float,MR,  STAR);
-INSTGPU(float,STAR,MC  );
-INSTGPU(float,STAR,MR  );
-INSTGPU(float,STAR,STAR);
-INSTGPU(float,STAR,VC  );
-INSTGPU(float,STAR,VR  );
-INSTGPU(float,VC,  STAR);
-INSTGPU(float,VR,  STAR);
-template DistMatrix<float,COLDIST,ROWDIST,ELEMENT,Device::GPU>&
-DistMatrix<float,COLDIST,ROWDIST,ELEMENT,Device::GPU>::operator=(
-    DistMatrix<float,COLDIST,ROWDIST,ELEMENT,Device::CPU> const&);
-template DistMatrix<float,COLDIST,ROWDIST,ELEMENT,Device::CPU>&
-DistMatrix<float,COLDIST,ROWDIST,ELEMENT,Device::CPU>::operator=(
-    DistMatrix<float,COLDIST,ROWDIST,ELEMENT,Device::GPU> const&);
+FULL_GPU_PROTO(float);
+FULL_GPU_PROTO(double);
+FULL_GPU_PROTO(El::Complex<float>);
+FULL_GPU_PROTO(El::Complex<double>);
 
-template class DistMatrix<double,COLDIST,ROWDIST,ELEMENT,Device::GPU>;
-INSTGPU(double,CIRC,CIRC);
-INSTGPU(double,MC,  MR  );
-INSTGPU(double,MC,  STAR);
-INSTGPU(double,MD,  STAR);
-INSTGPU(double,MR,  MC  );
-INSTGPU(double,MR,  STAR);
-INSTGPU(double,STAR,MC  );
-INSTGPU(double,STAR,MR  );
-INSTGPU(double,STAR,STAR);
-INSTGPU(double,STAR,VC  );
-INSTGPU(double,STAR,VR  );
-INSTGPU(double,VC,  STAR);
-INSTGPU(double,VR,  STAR);
-template DistMatrix<double,COLDIST,ROWDIST,ELEMENT,Device::GPU>&
-DistMatrix<double,COLDIST,ROWDIST,ELEMENT,Device::GPU>::operator=(
-    DistMatrix<double,COLDIST,ROWDIST,ELEMENT,Device::CPU> const&);
-template DistMatrix<double,COLDIST,ROWDIST,ELEMENT,Device::CPU>&
-DistMatrix<double,COLDIST,ROWDIST,ELEMENT,Device::CPU>::operator=(
-    DistMatrix<double,COLDIST,ROWDIST,ELEMENT,Device::GPU> const&);
+#undef FULL_GPU_PROTO
+#undef INST_DISTMATRIX_CLASS
+#undef INST_COPY_AND_ASSIGN
+#undef INST_ASSIGN_OP
+#undef INST_COPY_CTOR
+
 #endif // HYDROGEN_HAVE_GPU
 
 #define EL_ENABLE_DOUBLEDOUBLE

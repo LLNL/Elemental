@@ -2,8 +2,8 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #ifndef EL_CHOLESKY_PIVOTED_UPPER_VARIANT3_HPP
@@ -51,7 +51,7 @@ void PivotedUpperUnblocked( Matrix<F>& A, Permutation& P )
         const Base<F> delta11 = Sqrt(ABR.GetRealPart(0,0));
         const Base<F> delta11Inv = Base<F>(1)/delta11;
         ABR.Set(0,0,delta11);
-        a12 *= delta11Inv;
+        Scale(delta11Inv, a12);
 
         // A22 := A22 - a12' a12
         // NOTE: This is silly, but currently necessary
@@ -91,7 +91,7 @@ void PivotedUpperUnblocked
         auto A22 = A( ind2, ind2 );
         auto ABR = A( indB, indR );
 
-        // Determine the pivot 
+        // Determine the pivot
         const LDLPivot pivot = pivot::Full( ABR );
 
         // Apply the pivot
@@ -103,7 +103,7 @@ void PivotedUpperUnblocked
         const Base<F> delta11 = Sqrt(ABR.GetRealPart(0,0));
         const Base<F> delta11Inv = Base<F>(1)/delta11;
         ABR.Set(0,0,delta11);
-        a12 *= delta11Inv;
+        Scale(delta11Inv, a12);
 
         // A22 := A22 - a12' a12
         // NOTE: This is silly, but currently necessary
@@ -118,7 +118,7 @@ void PivotedUpperUnblocked
 template<typename F>
 void PivotedUpperPanel
 ( Matrix<F>& AFull,
-  Permutation& PFull, 
+  Permutation& PFull,
   Matrix<F>& X,
   Matrix<F>& Y,
   Int bsize,
@@ -156,7 +156,7 @@ void PivotedUpperPanel
         auto y21 = Y( ind2, ind1 );
         auto YB0 = Y( indB, ind0 );
 
-        // Determine the pivot 
+        // Determine the pivot
         const auto pivot = pivot::PanelFull( ABR, dB, XB0, YB0 );
         const Int from = k + pivot.from[0];
 
@@ -175,7 +175,7 @@ void PivotedUpperPanel
         const Base<F> delta11 = Sqrt(A.GetRealPart(k,k));
         const Base<F> delta11Inv = Base<F>(1)/delta11;
         A.Set(k,k,delta11);
-        a12 *= delta11Inv;
+        Scale(delta11Inv, a12);
 
         // Store x21 := a12' and y21 := a12^T
         Adjoint( a12, x21 );
@@ -247,7 +247,7 @@ PivotedUpperPanel
         const Base<F> delta11 = Sqrt(A.GetRealPart(k,k));
         const Base<F> delta11Inv = Base<F>(1)/delta11;
         A.Set(k,k,delta11);
-        a12 *= delta11Inv;
+        Scale(delta11Inv, a12);
 
         // Store x21 := a12' and y21 := a12^T
         Adjoint( a12, x21 );

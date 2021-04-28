@@ -79,34 +79,35 @@ void Hadamard_GPU_impl(
         if (X == Z)
         {
             gpu::LaunchKernel(
-                MultAssign_kernel<T>,
+                MultAssign_kernel<NativeGPUType<T>>,
                 gridDim, blockDim, 0, sync_info,
-                size, Y, Z);
+                size, AsNativeGPUType(Y), AsNativeGPUType(Z));
         }
         else if (Y == Z)
         {
             gpu::LaunchKernel(
-                MultAssign_kernel<T>,
+                MultAssign_kernel<NativeGPUType<T>>,
                 gridDim, blockDim, 0, sync_info,
-                size, X, Z);
+                size, AsNativeGPUType(X), AsNativeGPUType(Z));
         }
         else
         {
             gpu::LaunchKernel(
-                Hadamard1D_kernel<T>,
+                Hadamard1D_kernel<NativeGPUType<T>>,
                 gridDim, blockDim, 0, sync_info,
-                size, X, Y, Z);
+                size, AsNativeGPUType(X), AsNativeGPUType(Y),
+                AsNativeGPUType(Z));
         }
     }
     else
     {
         gpu::LaunchKernel(
-            Hadamard2D_kernel<T>,
+            Hadamard2D_kernel<NativeGPUType<T>>,
             gridDim, blockDim, 0, sync_info,
             height, width,
-            X, colStrideX, rowStrideX,
-            Y, colStrideY, rowStrideY,
-            Z, colStrideZ, rowStrideZ);
+            AsNativeGPUType(X), colStrideX, rowStrideX,
+            AsNativeGPUType(Y), colStrideY, rowStrideY,
+            AsNativeGPUType(Z), colStrideZ, rowStrideZ);
     }
 
 }
@@ -124,5 +125,7 @@ ETI(gpu_half_type);
 
 ETI(float);
 ETI(double);
+ETI(El::Complex<float>);
+ETI(El::Complex<double>);
 
 }// namespace hydrogen

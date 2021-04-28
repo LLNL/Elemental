@@ -105,23 +105,26 @@ void Hemm
 // Herk
 // ====
 template<typename T>
-void Herk
-( UpperOrLower uplo, Orientation orientation,
-  Base<T> alpha, const Matrix<T>& A, Base<T> beta, Matrix<T>& C );
+void Herk(
+    UpperOrLower uplo, Orientation orientation,
+    Base<T> alpha, const AbstractMatrix<T>& A,
+    Base<T> beta, AbstractMatrix<T>& C);
 template<typename T>
-void Herk
-( UpperOrLower uplo, Orientation orientation,
-  Base<T> alpha, const Matrix<T>& A, Matrix<T>& C );
+void Herk(
+    UpperOrLower uplo, Orientation orientation,
+    Base<T> alpha, const AbstractMatrix<T>& A,
+    AbstractMatrix<T>& C);
 
 template<typename T>
-void Herk
-( UpperOrLower uplo, Orientation orientation,
-  Base<T> alpha, const AbstractDistMatrix<T>& A,
-  Base<T> beta,        AbstractDistMatrix<T>& C );
+void Herk(
+    UpperOrLower uplo, Orientation orientation,
+    Base<T> alpha, const AbstractDistMatrix<T>& A,
+    Base<T> beta,        AbstractDistMatrix<T>& C);
 template<typename T>
-void Herk
-( UpperOrLower uplo, Orientation orientation,
-  Base<T> alpha, const AbstractDistMatrix<T>& A, AbstractDistMatrix<T>& C );
+void Herk(
+    UpperOrLower uplo, Orientation orientation,
+    Base<T> alpha, const AbstractDistMatrix<T>& A,
+    AbstractDistMatrix<T>& C);
 
 // Her2k
 // =====
@@ -291,12 +294,14 @@ void LocalAccumulateRU
 template<typename T>
 void Syrk
 ( UpperOrLower uplo, Orientation orientation,
-  T alpha, const Matrix<T>& A, T beta, Matrix<T>& C,
+  T alpha, const AbstractMatrix<T>& A,
+  T beta, AbstractMatrix<T>& C,
   bool conjugate=false );
 template<typename T>
 void Syrk
 ( UpperOrLower uplo, Orientation orientation,
-  T alpha, const Matrix<T>& A, Matrix<T>& C,
+  T alpha, const AbstractMatrix<T>& A,
+  AbstractMatrix<T>& C,
   bool conjugate=false );
 
 template<typename T>
@@ -397,19 +402,20 @@ enum TrsmAlgorithm {
 using namespace TrsmAlgorithmNS;
 
 template<typename F>
-void Trsm
-( LeftOrRight side, UpperOrLower uplo,
-  Orientation orientation, UnitOrNonUnit diag,
-  F alpha, const Matrix<F>& A, Matrix<F>& B,
-  bool checkIfSingular=false );
+void Trsm(
+    LeftOrRight side, UpperOrLower uplo,
+    Orientation orientation, UnitOrNonUnit diag,
+    F alpha, AbstractMatrix<F> const& A, AbstractMatrix<F>& B,
+    bool checkIfSingular=false);
 template<typename F>
-void Trsm
-( LeftOrRight side, UpperOrLower uplo,
-  Orientation orientation, UnitOrNonUnit diag,
-  F alpha,
-  const AbstractDistMatrix<F>& A,
-        AbstractDistMatrix<F>& B,
-  bool checkIfSingular=false, TrsmAlgorithm alg=TRSM_DEFAULT );
+void Trsm(
+    LeftOrRight side, UpperOrLower uplo,
+    Orientation orientation, UnitOrNonUnit diag,
+    F alpha,
+    AbstractDistMatrix<F> const& A,
+    AbstractDistMatrix<F>& B,
+    bool checkIfSingular=false,
+    TrsmAlgorithm alg=TRSM_DEFAULT);
 
 template<typename F>
 void LocalTrsm
