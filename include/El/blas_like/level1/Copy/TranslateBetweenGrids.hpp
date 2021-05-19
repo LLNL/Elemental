@@ -21,8 +21,6 @@ void TranslateBetweenGrids
 {
     EL_DEBUG_CSE
 
-    //if (D1 != Device::CPU)
-        //LogicError("TranslateBetweenGrids: Device not implemented.");
 
     if (D1 != D2)
         LogicError("TranslateBetweenGrids: ",
@@ -40,9 +38,6 @@ void TranslateBetweenGrids
 {
     EL_DEBUG_CSE
 
-    //if (D1 != Device::CPU)
-        //LogicError("TranslateBetweenGrids<MC,MR,ELEMENT>: "
-                   //"Device not implemented.");
 
     const Int m = A.Height();
     const Int n = A.Width();
@@ -87,8 +82,6 @@ void TranslateBetweenGrids
 
     const Int maxSendSize =
       (m/(colStrideA*numColSends)+1) * (n/(rowStrideA*numRowSends)+1);
-
-    //std::printf("colStrideA %d rowStrideA %d\n",colStrideA,rowStrideA);
 
     // Translate the ranks from A's VC communicator to B's viewing so that
     // we can match send/recv communicators. Since A's VC communicator is not
@@ -139,8 +132,6 @@ void TranslateBetweenGrids
     Int recvRow = 0; // avoid compiler warnings...
     if(inAGrid)
         recvRow = Mod(Mod(colRankA-colAlignA,colStrideA)+colAlignB,colStride);
-
-
     for(Int colSend=0; colSend<numColSends; ++colSend)
     {
         Int recvCol = 0; // avoid compiler warnings...
@@ -247,8 +238,6 @@ void TranslateBetweenGrids
 }
 
 
-
-
 template<typename T, Device D1, Device D2>
 void TranslateBetweenGridsAllreduceBasic
 (DistMatrix<T,STAR,VC,ELEMENT,D1> & A,
@@ -256,10 +245,11 @@ void TranslateBetweenGridsAllreduceBasic
 {
     //<T,STAR,VC,ELEMENT,D2>
     /*
-    This function is specific to the LBANN with implementation for specific cases
-    Subgrids in B_vector are assumed to be subset of resources in A grid 
-    Sum the output from different subgrids to parent grid
-    Basic allreduce implementation without overlapping communication
+    Logically, the values in B_vector are summed together and copied to A. 
+    This function is specific to the LBANN with implementation for specific cases.
+    
+    Subgrids in B_vector are assumed to evenly divide the grid in A.
+    This is a basic allreduce implementation with no overlapped communication.
     */
     EL_DEBUG_CSE
 
@@ -4112,10 +4102,6 @@ void TranslateBetweenGrids
   DistMatrix<T,STAR,STAR,ELEMENT,D2>& B)
 {
     EL_DEBUG_CSE;
-    //LogicError("TranslateBetweenGrids is no longer supported. "
-               //"If you have reached this message, please open "
-               //"an issue at https://github.com/llnl/elemental.");
-//#ifdef EL_TRANSLATE_BETWEEN_GRIDS_REENABLE__
     const Int height = A.Height();
     const Int width = A.Width();
     B.Resize(height, width);
@@ -4250,13 +4236,10 @@ void TranslateBetweenGrids
 } // namespace copy
 } // namespace El
 
-
-//template void TranslateBetweenGridsBroadcast <double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> const& , std::vector<DistMatrix<double,STAR,VC,ELEMENT,Device::GPU>>& );
 #endif // ifndef EL_BLAS_COPY_TRANSLATEBETWEENGRIDS_HPP
 
 
 
 
 // template TranslateBetweenGridsBroadcast<double, Device::CPU,Device::CPU>;
-
 
