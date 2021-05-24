@@ -172,7 +172,7 @@ main( int argc, char* argv[] )
 
             if(GPU)
             {
-                cudaDeviceSynchronize();
+                El::gpu::SynchronizeDevice();
             }
             
             auto end = std::chrono::high_resolution_clock::now();
@@ -198,7 +198,7 @@ main( int argc, char* argv[] )
             El::copy::TranslateBetweenGridsAllreduce<double,D,D>(A,B_vector,2);
             if(GPU)
             {
-                cudaDeviceSynchronize();
+                El::gpu::SynchronizeDevice();
             }
 
             auto end = std::chrono::high_resolution_clock::now();
@@ -226,7 +226,7 @@ main( int argc, char* argv[] )
             El::copy::TranslateBetweenGridsAllreduce<double,D,D>(A,B_vector,allreduceComm,syncGeneral);
             if(GPU)
             {
-                cudaDeviceSynchronize();
+                El::gpu::SynchronizeDevice();
             }
 
             auto end = std::chrono::high_resolution_clock::now();

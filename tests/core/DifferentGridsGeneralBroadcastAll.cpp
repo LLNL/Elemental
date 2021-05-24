@@ -158,7 +158,7 @@ main( int argc, char* argv[] )
 
             if(GPU)
             {
-                cudaDeviceSynchronize();
+                El::gpu::SynchronizeDevice();
             }
 
             
@@ -188,7 +188,7 @@ main( int argc, char* argv[] )
 
             if(GPU)
             {
-                cudaDeviceSynchronize();
+                El::gpu::SynchronizeDevice();
             }
 
             auto end = std::chrono::high_resolution_clock::now();
@@ -227,7 +227,7 @@ main( int argc, char* argv[] )
             }
             if(GPU)
             {
-                cudaDeviceSynchronize();
+                El::gpu::SynchronizeDevice();
             }
             
 
