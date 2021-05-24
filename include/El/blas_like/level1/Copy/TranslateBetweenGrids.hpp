@@ -290,6 +290,13 @@ void TranslateBetweenGridsAllreduceBasic
     const Int rowGCD = GCD(rowStrideB, rowStrideA);
     const Int rowLCM = rowStrideB*rowStrideA / rowGCD;
 
+    //Asserting parent grid evenly divides number of columns 
+    if(n%sizeA!=0)
+    {
+        LogicError("TranslateBetweenGridsAllreduceBasic: ",
+                   "Number of columns should be evenly divided by the size of the grid A (parent grid)");
+    }
+
     // Parent Subgrid Size: 4 Child Subgrid Size: 3
     // Parent 0 1 2 3 0 1 2 3 0 1 2 3 
     // Child  0 1 2 0 1 2 0 1 2 0 1 2
@@ -426,6 +433,13 @@ void TranslateBetweenGridsAllreduceOptComm
     const Int rowGCD = GCD(rowStrideB, rowStrideA);
     const Int rowLCM = rowStrideB*rowStrideA / rowGCD;
 
+    //Asserting parent grid evenly divides number of columns 
+    if(n%sizeA!=0)
+    {
+        LogicError("TranslateBetweenGridsAllreduceOptComm: ",
+                   "Number of columns should be evenly divided by the size of the grid A (parent grid)");
+    }
+
 
     // Parent Subgrid Size: 4 Child Subgrid Size: 3
     // Parent 0 1 2 3 0 1 2 3 0 1 2 3 
@@ -532,6 +546,13 @@ void TranslateBetweenGridsAllreduceOpt
     const Int sizeA = A.Grid().VCSize();
     const Int rowGCD = GCD(rowStrideB, rowStrideA);
     const Int rowLCM = rowStrideB*rowStrideA / rowGCD;
+
+    //Asserting parent grid evenly divides number of columns 
+    if(n%sizeA!=0)
+    {
+        LogicError("TranslateBetweenGridsAllreduceOpt: ",
+                   "Number of columns should be evenly divided by the size of the grid A (parent grid)");
+    }
 
     // Parent Subgrid Size: 4 Child Subgrid Size: 3
     // Parent 0 1 2 3 0 1 2 3 0 1 2 3 
@@ -682,13 +703,20 @@ void TranslateBetweenGridsScatterComm
     
     if(m%splitDim != 0)
     {
-        LogicError("TranslateBetweenGridsScatterOptComm: ",
+        LogicError("TranslateBetweenGridsScatterComm: ",
                    "feature dimension should be divisible by split dimension");
     }
     if(splitDim%numChildLayers!=0)
     {
-        LogicError("TranslateBetweenGridsScatterOptComm: ",
+        LogicError("TranslateBetweenGridsScatterComm: ",
                    "Split dimension must be divisible by number of children layers or number of splits");
+    }
+
+    //Asserting parent grid evenly divides number of columns 
+    if(n%sizeA!=0)
+    {
+        LogicError("TranslateBetweenGridsScatterComm: ",
+                   "Number of columns should be evenly divided by the size of the grid A (parent grid)");
     }
 
 
@@ -831,6 +859,12 @@ void TranslateBetweenGridsScatterOptComm
                    "Split dimension must be divisible by number of children layers or number of splits");
     }
 
+    //Asserting parent grid evenly divides number of columns 
+    if(n%sizeA!=0)
+    {
+        LogicError("TranslateBetweenGridsScatterOptComm: ",
+                   "Number of columns should be evenly divided by the size of the grid A (parent grid)");
+    }
 
 
     //const Int myRankViewing = mpi::Rank(viewingCommA);
@@ -983,13 +1017,19 @@ void TranslateBetweenGridsSliceGatherOptComm
     
     if(m%splitDim != 0)
     {
-        LogicError("TranslateBetweenGridsScatterOptComm: ",
+        LogicError("TranslateBetweenGridsSliceGatherOptComm: ",
                    "feature dimension should be divisible by split dimension");
     }
     if(splitDim%numChildLayers!=0)
     {
-        LogicError("TranslateBetweenGridsScatterOptComm: ",
+        LogicError("TranslateBetweenGridsSliceGatherOptComm: ",
                    "Split dimension must be divisible by number of children layers or number of splits");
+    }
+    //Asserting parent grid evenly divides number of columns 
+    if(n%sizeA!=0)
+    {
+        LogicError("TranslateBetweenGridsSliceGatherOptComm: ",
+                   "Number of columns should be evenly divided by the size of the grid A (parent grid)");
     }
 
     const Int gatherCommSize = mpi::Size( gatherComm );
@@ -1186,6 +1226,12 @@ void TranslateBetweenGridsScatterCommParentSmall
         LogicError("TranslateBetweenGridsScatterCommParentSmall: ",
                    "Split dimension must be divisible by number of children layers or number of splits");
     }
+    //Asserting parent grid evenly divides number of columns 
+    if(n%sizeA!=0)
+    {
+        LogicError("TranslateBetweenGridsScatterCommParentSmall: ",
+                   "Number of columns should be evenly divided by the size of the grid A (parent grid)");
+    }
 
 
     const Int scatterCommSize = mpi::Size( ScatterComm );
@@ -1377,6 +1423,14 @@ void TranslateBetweenGridsSliceGatherParentSmall
     nLocA = recvMetaData[3];
 
 
+    //Asserting parent grid evenly divides number of columns 
+    if(n%sizeA!=0)
+    {
+        LogicError("TranslateBetweenGridsSliceGatherParentSmall: ",
+                   "Number of columns should be evenly divided by the size of the grid A (parent grid)");
+    }
+
+
     for(Int i=0; i<numChildLayers;++i)
     {
         B_Vector[i]->Resize(int(m/numChildLayers),n);
@@ -1516,6 +1570,7 @@ void TranslateBetweenGridsScatterCommSameSizeSubGrids
     Int n = A.Width();
     Int mLocA = A.LocalHeight();
     Int nLocA = A.LocalWidth();
+    const Int sizeA = A.Grid().VCSize();
 
     mpi::Comm const& viewingCommA = A.Grid().ViewingComm();
 
@@ -1577,7 +1632,7 @@ void TranslateBetweenGridsScatterCommSameSizeSubGrids
     if( (inAGrid ==true && B_Vector[0]->Participating()==false) || 
         (inAGrid ==false && B_Vector[0]->Participating()==true) )
     {
-        //A gird should have same ranks as of subgrid1 
+        //A grid should have same ranks as of subgrid1 
         LogicError("TranslateBetweenGridsScatteSameSizeSubGrids: ",
                    "Owning ranks in Grid A should be same as of Owning Ranks in Subgrid 1");
 
@@ -1592,6 +1647,13 @@ void TranslateBetweenGridsScatterCommSameSizeSubGrids
     {
         LogicError("TranslateBetweenGridsScatteSameSizeSubGrids: ",
                    "Split dimension must be divisible by number of children layers or number of splits");
+    }
+
+    //Asserting parent grid evenly divides number of columns 
+    if(n%sizeA!=0)
+    {
+        LogicError("TranslateBetweenGridsScatteSameSizeSubGrids: ",
+                   "Number of columns should be evenly divided by the size of the grid A (parent grid)");
     }
 
 
@@ -1696,6 +1758,7 @@ void TranslateBetweenGridsSliceBroadcastCommSameSizeSubGrids
     Int n = A.Width();
     Int mLocA = A.LocalHeight();
     Int nLocA = A.LocalWidth();
+    const Int sizeA = A.Grid().VCSize();
 
     mpi::Comm const& viewingCommA = A.Grid().ViewingComm();
 
@@ -1772,6 +1835,12 @@ void TranslateBetweenGridsSliceBroadcastCommSameSizeSubGrids
     {
         LogicError("TranslateBetweenGridsScatteSameSizeSubGrids: ",
                    "Split dimension must be divisible by number of children layers or number of splits");
+    }
+    //Asserting parent grid evenly divides number of columns 
+    if(n%sizeA!=0)
+    {
+        LogicError("TranslateBetweenGridsScatteSameSizeSubGrids: ",
+                   "Number of columns should be evenly divided by the size of the grid A (parent grid)");
     }
 
 
@@ -1910,6 +1979,12 @@ void TranslateBetweenGridsSliceConcatAlongFirstDim
     {
         LogicError("TranslateBetweenGridsSliceConcatAlongFirstDim: ",
                    "Split dimension must be divisible by number of children layers or number of splits");
+    }
+    //Asserting parent grid evenly divides number of columns 
+    if(n%sizeA!=0)
+    {
+        LogicError("TranslateBetweenGridsSliceConcatAlongFirstDim: ",
+                   "Number of columns should be evenly divided by the size of the grid A (parent grid)");
     }
 
     const Int gatherCommSize = mpi::Size( gatherComm );
@@ -2129,7 +2204,7 @@ void TranslateBetweenGridsSliceCol
 
     Subgrids in B_vector are assumed to be subset of resources in A grid 
 
-    Resources are assumed to be distribted equally among different subgrids 
+    Resources are assumed to be distributed equally among different subgrids 
 
     It is a local operation. No Communication needed.
     */
@@ -2296,20 +2371,26 @@ void TranslateBetweenGridsGatherComm
     //mlocB and m should be equal
     if(mLocB!=m)
     {
-        LogicError("TranslateBetweenGridsGatherOptComm: ",
+        LogicError("TranslateBetweenGridsGatherComm: ",
                    "mLocB and m should be same");
 
     }
     if(n%sizeA!=0)
     {
-        LogicError("TranslateBetweenGridsGatherOptComm: ",
+        LogicError("TranslateBetweenGridsGatherComm: ",
                    "Width must be divisible by number of resources in A matrix");
     }
     if(mLocB%splitDim!=0)
     {
-        LogicError("TranslateBetweenGridsGatherOptComm: ",
+        LogicError("TranslateBetweenGridsGatherComm: ",
                    "Height in B matrix must be divisible by splitDim");
 
+    }
+    //Asserting parent grid evenly divides number of columns 
+    if(n%sizeA!=0)
+    {
+        LogicError("TranslateBetweenGridsGatherComm: ",
+                   "Number of columns should be evenly divided by the size of the grid A (parent grid)");
     }
     const int totalSizeComm = mLocB * numParentLayers * int(n/sizeB);
     
@@ -2996,6 +3077,13 @@ void TranslateBetweenGridsBroadcastOptComm
     const Int numSubGrids = int(B_Vector.size());
     const Int sizeA = A.Grid().VCSize();
 
+    //Asserting parent grid evenly divides number of columns 
+    if(n%sizeA!=0)
+    {
+        LogicError("TranslateBetweenGridsBroadcastOptComm: ",
+                   "Number of columns should be evenly divided by the size of the grid A (parent grid)");
+    }
+
 
 
 
@@ -3177,6 +3265,12 @@ void TranslateBetweenGridsBroadcastBasic
     const Int numSubGrids = int(B_Vector.size());
     const Int sizeA = A.Grid().VCSize();
 
+    //Asserting parent grid evenly divides number of columns 
+    if(n%sizeA!=0)
+    {
+        LogicError("TranslateBetweenGridsBroadcastBasic: ",
+                   "Number of columns should be evenly divided by the size of the grid A (parent grid)");
+    }
 
 
 

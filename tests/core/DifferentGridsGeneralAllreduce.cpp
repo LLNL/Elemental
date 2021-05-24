@@ -161,6 +161,9 @@ main( int argc, char* argv[] )
         mpi::Split(mpi::NewWorldComm(), posInSubGrid, rank, allreduceComm);
         SyncInfo<D> syncGeneral = SyncInfo<D>();
 
+        // Brodcast variables to sub-grids 
+        El::copy::TranslateBetweenGridsBroadcast<double,D,D>(A,B_vector,allreduceComm,syncGeneral);
+
 
             
         auto duration_all =0;
