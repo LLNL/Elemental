@@ -204,12 +204,6 @@ void TranslateBetweenConatSliceFirstChannel
   mpi::Comm const& gatherComm, 
   SyncInfo<D1> & syncGeneral);
 
-
-
-// void TranslateBetweenGridsBroadcast
-// (DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> const& A,
-//   std::vector<DistMatrix<double,STAR,VC,ELEMENT,Device::CPU>>& B_Vector);
-
 // The fallback case that simply throws an exception
 template<typename T,Dist U,Dist V,Device D1,Device D2>
 void TranslateBetweenGrids
