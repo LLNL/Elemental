@@ -388,13 +388,13 @@ void TranslateBetweenGridsAllreduceOptComm
 {
     //<T,STAR,VC,ELEMENT,D2>
     /*
-    This function is specific to the LBANN with implementation for specific cases
-    Subgrids in B_vector are assumed to be subset of resources in A grid 
-    Sum the output from different subgrids to parent grid
-    This function requires comm object 
-    MPI_COMM_SPLIT is an expensive operation on GPU
-    LBANN uses this function in subgraph parallelism
-
+    Logically, the values in B_vector are summed together and copied to A.
+    This function is specific to LBANN sub-graph parallelism with implementations for
+    specific cases.
+    
+    Subgrids in B_vector are assumed to evenly divide the grid in A.
+    This is a segmented allreduce implementation that requires a
+    a communicator over corresponding processes in the subgrids.
     */
     EL_DEBUG_CSE
 
@@ -4336,4 +4336,3 @@ void TranslateBetweenGrids
 
 
 // template TranslateBetweenGridsBroadcast<double, Device::CPU,Device::CPU>;
-
