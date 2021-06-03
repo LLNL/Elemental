@@ -119,7 +119,7 @@ void Scatter
     if (B.Participating())
     {
         if (A.Participating())
-            B.Matrix() = A.LockedMatrix();
+            El::Copy(A.LockedMatrix(), B.Matrix());
         El::Broadcast(B, A.CrossComm(), A.Root());
     }
 }
@@ -135,7 +135,7 @@ void Scatter
     if (B.Participating())
     {
         if (A.Participating())
-            B.Matrix() = A.LockedMatrix();
+            El::Copy(A.LockedMatrix(), B.Matrix());
         El::Broadcast(B, A.CrossComm(), A.Root());
     }
 }

@@ -3,6 +3,10 @@ set_full_path(THIS_DIR_SOURCES
   BasicBlockDistMatrix.cpp
   Constants.cpp
   DifferentGrids.cpp
+  DifferentGridsGeneralAllreduce.cpp
+  DifferentGridsGeneralBroadcastAll.cpp
+  DifferentGridsGeneralGather.cpp
+  DifferentGridsGeneralScatter.cpp
   #DistMatrix.cpp
   Matrix.cpp
   Pow.cpp
