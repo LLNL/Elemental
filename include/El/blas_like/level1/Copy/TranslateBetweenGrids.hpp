@@ -949,14 +949,10 @@ void TranslateBetweenGridsScatterOptComm
     for(Int localDataRankA = 0; localDataRankA < int(rowLCM/sizeB); localDataRankA++)
     {
 
-        MPI_Scatter((void *)sendBuf, sendCounts, mpi::TypeMap<T>(), (void *)recvTransposedMatrix.Buffer(), sendCounts, mpi::TypeMap<T>(), localDataRankA, ScatterComm.GetMPIComm());
-
-         // mpi::Scatter(sendBuf, sendCounts, recvTransposedMatrix.Buffer(), sendCounts, localDataRankA, ScatterComm,
-         //        syncGeneral);
-
-        Synchronize(syncGeneral);
-
-
+        mpi::Scatter(
+          sendBuf, sendCounts,
+          recvTransposedMatrix.Buffer(), sendCounts,
+          localDataRankA, ScatterComm, syncGeneral);
 
         for(Int childLayerSubGrid = 0; childLayerSubGrid < numMatricesInSubGrid; ++childLayerSubGrid)
         {
