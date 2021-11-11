@@ -2,8 +2,8 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #include <El-lite.hpp>
@@ -20,6 +20,8 @@ void Hemv
     Symv( uplo, alpha, A, x, beta, y, true );
 }
 
+#if 0 // TOM
+
 template<typename T>
 void Hemv
 ( UpperOrLower uplo,
@@ -32,15 +34,20 @@ void Hemv
     Symv( uplo, alpha, A, x, beta, y, true, ctrl );
 }
 
+#endif // 0 TOM
+
 #define PROTO(T) \
   template void Hemv \
   ( UpperOrLower uplo, T alpha, \
-    const Matrix<T>& A, const Matrix<T>& x, T beta, Matrix<T>& y ); \
-  template void Hemv \
+    const Matrix<T>& A, const Matrix<T>& x, T beta, Matrix<T>& y );
+
+/*
+  template void Hemv            \
   ( UpperOrLower uplo, T alpha, \
     const AbstractDistMatrix<T>& A, const AbstractDistMatrix<T>& x, \
     T beta, AbstractDistMatrix<T>& y, \
     const SymvCtrl<T>& ctrl );
+*/
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

@@ -7,14 +7,14 @@
 
    This file is loosely based upon the LAPACK routines dlarfg.f and zlarfg.f.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #include <El.hpp>
 
-#include "./Householder/Col.hpp"
-#include "./Householder/Row.hpp"
+// #include "./Householder/Col.hpp"
+// #include "./Householder/Row.hpp"
 
 namespace El {
 
@@ -23,14 +23,14 @@ namespace El {
 //
 //   H = I - tau [1; v] [1; v]',
 //
-// but adjoint(H) [chi; x] = [beta; 0]. 
+// but adjoint(H) [chi; x] = [beta; 0].
 //
 // Elemental simply uses H [chi; x] = [beta; 0].
 //
 // On exit, chi is overwritten with beta, and x is overwritten with v.
 //
-// Another major difference from LAPACK is in the treatment of the special case 
-// of x=0, where LAPACK would put H := I, which is not a valid Householder 
+// Another major difference from LAPACK is in the treatment of the special case
+// of x=0, where LAPACK would put H := I, which is not a valid Householder
 // reflector. We instead use the valid Householder reflector:
 //    H [chi; 0] = [-chi; 0],
 // which is accomplished by setting tau=2, and v=0.
@@ -61,6 +61,8 @@ F LeftReflector( Matrix<F>& chi, Matrix<F>& x )
 
     return tau;
 }
+
+#if 0 // TOM
 
 template<typename F>
 F LeftReflector( AbstractDistMatrix<F>& chi, AbstractDistMatrix<F>& x )
@@ -105,6 +107,8 @@ F LeftReflector( F& chi, AbstractDistMatrix<F>& x )
     return tau;
 }
 
+#endif // 0 TOM
+
 //
 // Defines tau and v such that
 //
@@ -142,6 +146,8 @@ F RightReflector( F& chi, Matrix<F>& x )
     Conjugate( x );
     return tau;
 }
+
+#if 0 // TOM
 
 template<typename F>
 F RightReflector( AbstractDistMatrix<F>& chi, AbstractDistMatrix<F>& x )
@@ -186,15 +192,19 @@ F RightReflector( F& chi, AbstractDistMatrix<F>& x )
     return tau;
 }
 
+#endif // 0 TOM
+
 #define PROTO(F) \
   template F LeftReflector( F& chi, Matrix<F>& x ); \
-  template F LeftReflector( F& chi, AbstractDistMatrix<F>& x ); \
   template F LeftReflector( Matrix<F>& chi, Matrix<F>& x ); \
+  template F RightReflector( F& chi, Matrix<F>& x ); \
+  template F RightReflector( Matrix<F>& chi, Matrix<F>& x );
+
+/*
+  template F LeftReflector( F& chi, AbstractDistMatrix<F>& x ); \
   template F LeftReflector \
   ( AbstractDistMatrix<F>& chi, AbstractDistMatrix<F>& x ); \
-  template F RightReflector( F& chi, Matrix<F>& x ); \
   template F RightReflector( F& chi, AbstractDistMatrix<F>& x ); \
-  template F RightReflector( Matrix<F>& chi, Matrix<F>& x ); \
   template F RightReflector \
   ( AbstractDistMatrix<F>& chi, AbstractDistMatrix<F>& x ); \
   template F reflector::Col( F& chi, AbstractDistMatrix<F>& x ); \
@@ -203,6 +213,7 @@ F RightReflector( F& chi, AbstractDistMatrix<F>& x )
   template F reflector::Row( F& chi, AbstractDistMatrix<F>& x ); \
   template F reflector::Row \
   ( AbstractDistMatrix<F>& chi, AbstractDistMatrix<F>& x );
+*/
 
 #define EL_NO_INT_PROTO
 #define EL_ENABLE_DOUBLEDOUBLE

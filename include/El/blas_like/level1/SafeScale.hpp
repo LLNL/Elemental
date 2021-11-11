@@ -80,7 +80,7 @@ void SafeScale
         done =
           SafeScaleStep
           ( numerator, denominator, scaleStep, zero, smallNum, bigNum );
-        A *= scaleStep;
+        Scale(scaleStep, A);
     }
 }
 
@@ -154,8 +154,8 @@ void SafeScaleHermitianTridiag
         done =
           SafeScaleStep
           ( numerator, denominator, scaleStep, zero, smallNum, bigNum );
-        d *= scaleStep;
-        e *= scaleStep;
+        Scale(scaleStep, d);
+        Scale(scaleStep, e);
     }
 }
 

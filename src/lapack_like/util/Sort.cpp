@@ -43,6 +43,8 @@ void Sort( Matrix<Real>& X, SortType sort, bool stable )
     }
 }
 
+#if 0 // TOM
+
 template<typename Real,
          typename/*=DisableIf<IsComplex<Real>>*/>
 void Sort( AbstractDistMatrix<Real>& X, SortType sort, bool stable )
@@ -70,6 +72,8 @@ void Sort( AbstractDistMatrix<Real>& X, SortType sort, bool stable )
         Copy( X_CIRC_CIRC, X );
     }
 }
+
+#endif // 0 TOM
 
 // Tagged sort
 
@@ -115,6 +119,8 @@ TaggedSort( const Matrix<Real>& x, SortType sort, bool stable )
     return pairs;
 }
 
+#if 0 // TOM
+
 template<typename Real,
          typename/*=DisableIf<IsComplex<Real>>*/>
 vector<ValueInt<Real>>
@@ -132,6 +138,8 @@ TaggedSort( const AbstractDistMatrix<Real>& x, SortType sort, bool stable )
     }
 }
 
+#endif // 0 TOM
+
 template<typename Real,typename Field>
 void ApplyTaggedSortToEachRow
 ( const vector<ValueInt<Real>>& sortPairs,
@@ -148,6 +156,8 @@ void ApplyTaggedSortToEachRow
     }
     Z = ZPerm;
 }
+
+#if 0 // TOM
 
 template<typename Real,typename Field>
 void ApplyTaggedSortToEachColumn
@@ -214,6 +224,8 @@ void ApplyTaggedSortToEachColumn
     Copy( ZPerm_STAR_VR, Z );
 }
 
+#endif // 0 TOM
+
 template<typename Real,
          typename/*=DisableIf<IsComplex<Real>>*/>
 void SortingPermutation
@@ -226,6 +238,8 @@ void SortingPermutation
     for( Int i=0; i<n; ++i )
         sortPerm.SetImage( sortPairs[i].index, i );
 }
+
+#if 0 // TOM
 
 template<typename Real,
          typename/*=DisableIf<IsComplex<Real>>*/>
@@ -266,11 +280,15 @@ void MergeSortingPermutation
         sortPerm.SetImage( pairs[i].index, i );
 }
 
+#endif // 0 TOM
+
 #define PROTO_COMPLEX(Field) \
   template void ApplyTaggedSortToEachRow \
   ( const vector<ValueInt<Base<Field>>>& sortPairs, \
-          Matrix<Field>& Z ); \
-  template void ApplyTaggedSortToEachColumn \
+          Matrix<Field>& Z );
+
+/*
+  template void ApplyTaggedSortToEachColumn           \
   ( const vector<ValueInt<Base<Field>>>& sortPairs, \
           Matrix<Field>& Z ); \
   template void ApplyTaggedSortToEachRow \
@@ -279,38 +297,48 @@ void MergeSortingPermutation
   template void ApplyTaggedSortToEachColumn \
   ( const vector<ValueInt<Base<Field>>>& sortPairs, \
           AbstractDistMatrix<Field>& Z );
+*/
 
 #define PROTO(Real) \
   PROTO_COMPLEX(Real) \
   template void Sort( Matrix<Real>& x, SortType sort, bool stable ); \
-  template void Sort \
-  ( AbstractDistMatrix<Real>& x, SortType sort, bool stable ); \
   template vector<ValueInt<Real>> TaggedSort \
   ( const Matrix<Real>& x, SortType sort, bool stable ); \
-  template vector<ValueInt<Real>> TaggedSort \
-  ( const AbstractDistMatrix<Real>& x, SortType sort, bool stable ); \
   template void SortingPermutation \
   ( const Matrix<Real>& x, Permutation& sortPerm, SortType sort, bool stable );
+
+/*
+  template void Sort                                             \
+  ( AbstractDistMatrix<Real>& x, SortType sort, bool stable ); \
+  template vector<ValueInt<Real>> TaggedSort \
+  ( const AbstractDistMatrix<Real>& x, SortType sort, bool stable ); \
+*/
 
 // For support for double-precision MRRR with float eigenvectors
 
 #define PROTO_FLOAT \
-  PROTO(float) \
-  template void ApplyTaggedSortToEachRow \
+  PROTO(float)
+
+/*
+  template void ApplyTaggedSortToEachRow      \
   ( const vector<ValueInt<float>>& sortPairs, \
     AbstractDistMatrix<double>& Z ); \
   template void ApplyTaggedSortToEachColumn \
   ( const vector<ValueInt<float>>& sortPairs, \
     AbstractDistMatrix<double>& Z );
+*/
 
-#define PROTO_COMPLEX_FLOAT \
-  PROTO_COMPLEX(Complex<float>) \
-  template void ApplyTaggedSortToEachRow \
+#define PROTO_COMPLEX_FLOAT                     \
+  PROTO_COMPLEX(Complex<float>)
+
+/*
+  template void ApplyTaggedSortToEachRow      \
   ( const vector<ValueInt<float>>& sortPairs, \
     AbstractDistMatrix<Complex<double>>& Z ); \
   template void ApplyTaggedSortToEachColumn \
   ( const vector<ValueInt<float>>& sortPairs, \
     AbstractDistMatrix<Complex<double>>& Z );
+*/
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

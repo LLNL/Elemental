@@ -1334,7 +1334,7 @@ SecularEVD
         {
             q(i) = r(i) / q(i);
         }
-        q *= Real(1) / FrobeniusNorm( q );
+        Scale(Real(1) / FrobeniusNorm( q ), q);
     }
 
     return info;
@@ -1348,7 +1348,10 @@ SecularEVD
     const Real& rho, \
     const Matrix<Real>& z, \
           Real& eigenvalue, \
-    const SecularEVDCtrl<Real>& ctrl ); \
+          Matrix<Real>& dMinusShift, \
+    const SecularEVDCtrl<Real>& ctrl );
+
+/*
   template SecularEVDInfo \
   SecularEigenvalue \
   ( Int whichValue, \
@@ -1356,7 +1359,6 @@ SecularEVD
     const Real& rho, \
     const Matrix<Real>& z, \
           Real& eigenvalue, \
-          Matrix<Real>& dMinusShift, \
     const SecularEVDCtrl<Real>& ctrl ); \
   template SecularEVDInfo \
   SecularEVD \
@@ -1366,6 +1368,7 @@ SecularEVD
           Matrix<Real>& w, \
           Matrix<Real>& Q, \
     const SecularEVDCtrl<Real>& ctrl );
+*/
 
 #define EL_NO_INT_PROTO
 #define EL_NO_COMPLEX_PROTO

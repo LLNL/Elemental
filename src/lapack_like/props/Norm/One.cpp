@@ -74,6 +74,8 @@ Base<Ring> SymmetricOneNorm( UpperOrLower uplo, const Matrix<Ring>& A )
     return HermitianOneNorm( uplo, A );
 }
 
+#if 0 // TOM
+
 template<typename Ring>
 Base<Ring> OneNorm( const AbstractDistMatrix<Ring>& A )
 {
@@ -232,6 +234,8 @@ SymmetricOneNorm( UpperOrLower uplo, const AbstractDistMatrix<Ring>& A )
     return HermitianOneNorm( uplo, A );
 }
 
+#endif // 0 TOM
+
 template<typename Ring>
 Base<Ring> HermitianTridiagOneNorm
 ( const Matrix<Base<Ring>>& d, const Matrix<Ring>& e )
@@ -261,17 +265,20 @@ Base<Ring> HermitianTridiagOneNorm
 
 #define PROTO(Ring) \
   template Base<Ring> OneNorm( const Matrix<Ring>& A ); \
-  template Base<Ring> OneNorm ( const AbstractDistMatrix<Ring>& A ); \
   template Base<Ring> HermitianOneNorm \
   ( UpperOrLower uplo, const Matrix<Ring>& A ); \
-  template Base<Ring> HermitianOneNorm \
-  ( UpperOrLower uplo, const AbstractDistMatrix<Ring>& A ); \
   template Base<Ring> SymmetricOneNorm \
   ( UpperOrLower uplo, const Matrix<Ring>& A ); \
-  template Base<Ring> SymmetricOneNorm \
-  ( UpperOrLower uplo, const AbstractDistMatrix<Ring>& A ); \
   template Base<Ring> HermitianTridiagOneNorm \
   ( const Matrix<Base<Ring>>& d, const Matrix<Ring>& e );
+
+/*
+  template Base<Ring> OneNorm ( const AbstractDistMatrix<Ring>& A ); \
+  template Base<Ring> HermitianOneNorm \
+  ( UpperOrLower uplo, const AbstractDistMatrix<Ring>& A ); \
+  template Base<Ring> SymmetricOneNorm \
+  ( UpperOrLower uplo, const AbstractDistMatrix<Ring>& A ); \
+*/
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

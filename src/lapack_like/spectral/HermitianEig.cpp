@@ -8,7 +8,7 @@
 */
 #include <El.hpp>
 
-#include "./HermitianEig/SDC.hpp"
+//#include "./HermitianEig/SDC.hpp"
 
 // The targeted number of pieces to break the eigenvectors into during the
 // redistribution from the [* ,VR] distribution after PMRRR to the [MC,MR]
@@ -17,12 +17,16 @@
 
 namespace El {
 
+#if 0 // TOM
+
 // TODO(poulson): Decide if this should be lifted
 template<typename T>
 bool IsDistributed( const AbstractDistMatrix<T>& A )
 {
     return A.ColStride() != 1 || A.RowStride() != 1 || A.CrossSize() != 1;
 }
+
+#endif // 0 TOM
 
 // Forward declarations:
 
@@ -39,6 +43,8 @@ void SortAndFilter
   Matrix<F>& Q,
   const HermitianTridiagEigCtrl<Base<F>>& ctrl );
 
+#if 0 // TOM
+
 template<typename Real>
 void SortAndFilter
 ( AbstractDistMatrix<Real>& w,
@@ -50,7 +56,11 @@ void SortAndFilter
   AbstractDistMatrix<F>& Q,
   const HermitianTridiagEigCtrl<Base<F>>& ctrl );
 
+#endif // 0 TOM
+
 } // namespace herm_eig
+
+#if 0 // TOM
 
 namespace herm_tridiag_eig {
 
@@ -163,6 +173,8 @@ void InPlaceRedist( DistMatrix<F>& Q, Int rowAlign, const Base<F>* readBuffer )
 
 } // namespace herm_eig
 
+#endif // 0 TOM
+
 // Compute eigenvalues
 // ===================
 
@@ -265,13 +277,17 @@ HermitianEig
         LogicError("Hermitian matrices must be square");
     if( ctrl.useSDC )
     {
+        RuntimeError("Let's all use SDC.");
+
         HermitianEigInfo info;
-        herm_eig::SDC( uplo, A, w, ctrl.sdcCtrl );
-        herm_eig::SortAndFilter( w, ctrl.tridiagEigCtrl );
+        // herm_eig::SDC( uplo, A, w, ctrl.sdcCtrl );
+        // herm_eig::SortAndFilter( w, ctrl.tridiagEigCtrl );
         return info;
     }
     return herm_eig::BlackBox( uplo, A, w, ctrl );
 }
+
+#if 0 // TOM
 
 namespace herm_eig {
 
@@ -532,6 +548,8 @@ HermitianEig
     return herm_eig::BlackBox( uplo, APre, w, ctrl );
 }
 
+#endif // 0 TOM
+
 // Compute eigenpairs
 // ==================
 
@@ -562,6 +580,8 @@ BlackBox
 
     return info;
 }
+
+#if 0 // TOM
 
 template<typename F>
 HermitianEigInfo
@@ -607,6 +627,8 @@ BlackBox
 
     return info;
 }
+
+#endif // 0 TOM
 
 } // namespace herm_eig
 
@@ -677,8 +699,9 @@ HermitianEig
 
     if( ctrl.useSDC )
     {
-        herm_eig::SDC( uplo, A, w, Q, ctrl.sdcCtrl );
-        herm_eig::SortAndFilter( w, Q, ctrl.tridiagEigCtrl );
+        RuntimeError("Let's not use SDC.");
+        // herm_eig::SDC( uplo, A, w, Q, ctrl.sdcCtrl );
+        // herm_eig::SortAndFilter( w, Q, ctrl.tridiagEigCtrl );
     }
     else
     {
@@ -697,6 +720,8 @@ HermitianEig
 
     return info;
 }
+
+#if 0 // TOM
 
 namespace herm_eig {
 
@@ -1124,17 +1149,21 @@ HermitianEig
     return info;
 }
 
+#endif // 0 TOM
+
 #define EIGVAL_PROTO(F) \
   template HermitianEigInfo HermitianEig\
   ( UpperOrLower uplo, \
     Matrix<F>& A, \
     Matrix<Base<F>>& w, \
-    const HermitianEigCtrl<F>& ctrl ); \
+    const HermitianEigCtrl<F>& ctrl );
+/*
   template HermitianEigInfo HermitianEig\
   ( UpperOrLower uplo, \
     AbstractDistMatrix<F>& A, \
     AbstractDistMatrix<Base<F>>& w, \
     const HermitianEigCtrl<F>& ctrl );
+*/
 
 #define EIGPAIR_PROTO(F) \
   template HermitianEigInfo HermitianEig\
@@ -1142,16 +1171,18 @@ HermitianEig
     Matrix<F>& A, \
     Matrix<Base<F>>& w, \
     Matrix<F>& Q,\
-    const HermitianEigCtrl<F>& ctrl ); \
-  template HermitianEigInfo HermitianEig\
+    const HermitianEigCtrl<F>& ctrl );
+/*
+  template HermitianEigInfo HermitianEig      \
   ( UpperOrLower uplo, \
     AbstractDistMatrix<F>& A, \
     AbstractDistMatrix<Base<F>>& w, \
     AbstractDistMatrix<F>& Q, \
     const HermitianEigCtrl<F>& ctrl );
+*/
 
-#define PROTO(F) \
-  EIGVAL_PROTO(F) \
+#define PROTO(F)                                \
+  EIGVAL_PROTO(F)                               \
   EIGPAIR_PROTO(F)
 
 #define EL_NO_INT_PROTO

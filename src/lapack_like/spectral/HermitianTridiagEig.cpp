@@ -55,6 +55,8 @@ void SortAndFilter
     }
 }
 
+#if 0 // TOM
+
 template<typename Real>
 void SortAndFilter
 ( AbstractDistMatrix<Real>& wPre, const HermitianTridiagEigCtrl<Real>& ctrl )
@@ -97,6 +99,8 @@ void SortAndFilter
         Sort( w, ctrl.sort );
     }
 }
+
+#endif // 0 TOM
 
 template<typename F>
 void SortAndFilter
@@ -157,6 +161,8 @@ void SortAndFilter
         ApplyTaggedSortToEachRow( sortPairs, Q );
     }
 }
+
+#if 0 // TOM
 
 template<typename F>
 void SortAndFilter
@@ -228,6 +234,8 @@ void SortAndFilter
     }
 }
 
+#endif // 0 TOM
+
 } // namespace herm_eig
 
 namespace herm_tridiag_eig {
@@ -253,6 +261,8 @@ void RemovePhase
     }
 }
 
+#if 0 // TOM
+
 template<typename Real>
 void RemovePhase
 ( const DistMatrix<Complex<Real>,STAR,STAR>& dSub,
@@ -265,6 +275,8 @@ void RemovePhase
     dSubReal.Resize( n-1, 1 );
     RemovePhase( dSub.LockedMatrix(), dSubReal.Matrix() );
 }
+
+#endif // 0 TOM
 
 template<typename Real>
 void RemovePhase
@@ -289,6 +301,8 @@ void RemovePhase
     }
 }
 
+#if 0 // TOM
+
 template<typename Real>
 void RemovePhase
 ( const DistMatrix<Complex<Real>,STAR,STAR>& dSub,
@@ -304,6 +318,8 @@ void RemovePhase
     phase.Resize( n, 1 );
     RemovePhase( dSub.LockedMatrix(), dSubReal.Matrix(), phase.Matrix() );
 }
+
+#endif // 0 TOM
 
 template<typename Real>
 HermitianTridiagEigInfo
@@ -460,6 +476,8 @@ HermitianTridiagEig
     EL_DEBUG_CSE
     return herm_tridiag_eig::Helper( d, dSub, w, ctrl );
 }
+
+#if 0 // TOM
 
 namespace herm_tridiag_eig {
 
@@ -785,6 +803,8 @@ HermitianTridiagEig
     return herm_tridiag_eig::Helper( d, dSub, w, ctrl );
 }
 
+#endif // 0 TOM
+
 // Return eigenpairs
 // =================
 
@@ -984,6 +1004,8 @@ HermitianTridiagEig
     EL_DEBUG_CSE
     return herm_tridiag_eig::Helper( d, dSub, w, Q, ctrl );
 }
+
+#if 0 // TOM
 
 namespace herm_tridiag_eig {
 
@@ -1581,14 +1603,12 @@ MRRRPostEstimate
 
 } // namespace herm_tridiag_eig
 
+#endif // 0 TOM
+
 #define PROTO(F) \
   template void herm_eig::SortAndFilter \
   ( Matrix<Base<F>>& w, \
     Matrix<F>& Q, \
-    const HermitianTridiagEigCtrl<Base<F>>& ctrl ); \
-  template void herm_eig::SortAndFilter \
-  ( AbstractDistMatrix<Base<F>>& w, \
-    AbstractDistMatrix<F>& Q, \
     const HermitianTridiagEigCtrl<Base<F>>& ctrl ); \
   template HermitianTridiagEigInfo HermitianTridiagEig \
   ( const Matrix<Base<F>>& d, \
@@ -1600,6 +1620,12 @@ MRRRPostEstimate
     const Matrix<F>& dSub, \
           Matrix<Base<F>>& w, \
           Matrix<F>& Q, \
+    const HermitianTridiagEigCtrl<Base<F>>& ctrl );
+
+/*
+  template void herm_eig::SortAndFilter           \
+  ( AbstractDistMatrix<Base<F>>& w, \
+    AbstractDistMatrix<F>& Q, \
     const HermitianTridiagEigCtrl<Base<F>>& ctrl ); \
   template HermitianTridiagEigInfo HermitianTridiagEig \
   ( const AbstractDistMatrix<Base<F>>& d, \
@@ -1612,13 +1638,16 @@ MRRRPostEstimate
           AbstractDistMatrix<Base<F>>& w, \
           AbstractDistMatrix<F>& Q, \
     const HermitianTridiagEigCtrl<Base<F>>& ctrl );
+*/
 
 #define PROTO_REAL(Real) \
   PROTO(Real) \
   template void herm_eig::SortAndFilter \
   ( Matrix<Real>& w, \
-    const HermitianTridiagEigCtrl<Real>& ctrl ); \
-  template void herm_eig::SortAndFilter \
+    const HermitianTridiagEigCtrl<Real>& ctrl );
+
+/*
+  template void herm_eig::SortAndFilter           \
   ( AbstractDistMatrix<Real>& w, \
     const HermitianTridiagEigCtrl<Real>& ctrl ); \
   template Int herm_tridiag_eig::MRRREstimate \
@@ -1633,6 +1662,7 @@ MRRRPostEstimate
           SortType sort, \
           Real vl, \
           Real vu );
+*/
 
 #define EL_NO_INT_PROTO
 #define EL_ENABLE_QUAD

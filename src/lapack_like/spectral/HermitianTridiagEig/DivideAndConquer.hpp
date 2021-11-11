@@ -10,8 +10,8 @@
 #define EL_HERM_TRIDIAG_EIG_DC_HPP
 
 // TODO(poulson): Move said routine into a utility function
-#include "../Schur/SDC.hpp"
-using El::schur::SplitGrid;
+// #include "../Schur/SDC.hpp"
+// using El::schur::SplitGrid;
 
 namespace El {
 namespace herm_tridiag_eig {
@@ -413,7 +413,7 @@ Merge
     // ==================================================
     auto undeflatedInd = IR(0,numUndeflated);
     const Real zUndeflatedNorm = FrobeniusNorm( zUndeflated );
-    zUndeflated *= Real(1) / zUndeflatedNorm;
+    Scale(Real(1) / zUndeflatedNorm, zUndeflated);
     const Real rho = 2*Abs(beta)*zUndeflatedNorm*zUndeflatedNorm;
 
     if( ctrl.progress )
@@ -560,6 +560,8 @@ Merge
 
     return info;
 }
+
+#if 0 // TOM
 
 template<typename Real>
 DCInfo
@@ -956,7 +958,7 @@ Merge
     // ==================================================
     auto undeflatedInd = IR(0,numUndeflated);
     const Real zUndeflatedNorm = FrobeniusNorm( zUndeflated );
-    zUndeflated *= Real(1) / zUndeflatedNorm;
+    Scale(Real(1) / zUndeflatedNorm, zUndeflated);
     const Real rho = 2*Abs(beta)*zUndeflatedNorm*zUndeflatedNorm;
 
     if( ctrl.progress && amRoot )
@@ -1114,6 +1116,8 @@ Merge
     return info;
 }
 
+#endif // 0 TOM
+
 template<typename Real>
 DCInfo
 DivideAndConquer
@@ -1218,6 +1222,8 @@ DivideAndConquer
 
     return info;
 }
+
+#if 0 // TOM
 
 // We pass in mainDiag and superDiag in sequential form to avoid potential
 // confusion from avoiding unnecessarily creating separate copies distributed
@@ -1456,6 +1462,8 @@ DivideAndConquer
 
     return info;
 }
+
+#endif // 0 TOM
 
 } // namespace herm_tridiag_eig
 } // namespace El

@@ -1,16 +1,16 @@
 # Add the source files for this directory
 set_full_path(THIS_DIR_SOURCES
-#  ApplyGivensSequence.cpp
+  ApplyGivensSequence.cpp
   Gemv.cpp
-#  Ger.cpp
+  Ger.cpp
 #  Geru.cpp
-#  Hemv.cpp
+  Hemv.cpp
 #  Her.cpp
-#  Her2.cpp
+  Her2.cpp
 #  QuasiTrsv.cpp
-#  Symv.cpp
+  Symv.cpp
 #  Syr.cpp
-#  Syr2.cpp
+  Syr2.cpp
 #  Trmv.cpp
 #  Trr.cpp
 #  Trr2.cpp

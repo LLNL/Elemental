@@ -2,8 +2,8 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #include <El-lite.hpp>
@@ -55,6 +55,8 @@ void Symv
           beta,  y.Buffer(), incy );
     }
 }
+
+#if 0 // TOM
 
 template<typename T>
 void Symv
@@ -305,6 +307,8 @@ void LocalRowAccumulate
 
 } // namespace symv
 
+#endif // 0 TOM
+
 #define PROTO(T) \
   template void Symv \
   ( UpperOrLower uplo, \
@@ -313,8 +317,10 @@ void LocalRowAccumulate
     const Matrix<T>& x, \
     T beta, \
          Matrix<T>& y, \
-    bool conjugate ); \
-  template void Symv \
+    bool conjugate );
+
+#if 0 // TOM
+  template void Symv   \
   ( UpperOrLower uplo, \
     T alpha, \
     const AbstractDistMatrix<T>& A, \
@@ -341,6 +347,7 @@ void LocalRowAccumulate
           DistMatrix<T,STAR,MC>& z_STAR_MC, \
           DistMatrix<T,STAR,MR>& z_STAR_MR, bool conjugate, \
     const SymvCtrl<T>& ctrl );
+#endif // 0 TOM
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

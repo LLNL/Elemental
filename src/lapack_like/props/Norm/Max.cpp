@@ -53,6 +53,8 @@ Base<Ring> HermitianMaxNorm( UpperOrLower uplo, const Matrix<Ring>& A )
     return maxAbs;
 }
 
+#if 0 // TOM
+
 template<typename Ring>
 Base<Ring> SymmetricMaxNorm( UpperOrLower uplo, const Matrix<Ring>& A )
 {
@@ -125,17 +127,22 @@ SymmetricMaxNorm( UpperOrLower uplo, const AbstractDistMatrix<Ring>& A )
     return HermitianMaxNorm( uplo, A );
 }
 
+#endif // 0 TOM
+
 #define PROTO(Ring) \
   template Base<Ring> MaxNorm( const Matrix<Ring>& A ); \
-  template Base<Ring> MaxNorm ( const AbstractDistMatrix<Ring>& A ); \
   template Base<Ring> HermitianMaxNorm \
-  ( UpperOrLower uplo, const Matrix<Ring>& A ); \
+  ( UpperOrLower uplo, const Matrix<Ring>& A );
+
+/*
+  template Base<Ring> MaxNorm ( const AbstractDistMatrix<Ring>& A ); \
   template Base<Ring> HermitianMaxNorm \
   ( UpperOrLower uplo, const AbstractDistMatrix<Ring>& A ); \
   template Base<Ring> SymmetricMaxNorm \
   ( UpperOrLower uplo, const Matrix<Ring>& A ); \
   template Base<Ring> SymmetricMaxNorm \
   ( UpperOrLower uplo, const AbstractDistMatrix<Ring>& A );
+*/
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

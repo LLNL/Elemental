@@ -2,14 +2,14 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #ifndef EL_HERMITIANTRIDIAG_LOWER_BLOCKED_HPP
 #define EL_HERMITIANTRIDIAG_LOWER_BLOCKED_HPP
 
-#include "./LowerPanel.hpp"
+// #include "./LowerPanel.hpp"
 
 namespace El {
 namespace herm_tridiag {
@@ -57,13 +57,15 @@ void LowerBlocked( Matrix<F>& A, Matrix<F>& householderScalars )
     }
 }
 
+#if 0 // TOM
+
 // TODO(poulson):
 // If there is only a single MPI process, fall down to the sequential
 // implementation.
-template<typename F> 
+template<typename F>
 void LowerBlocked
 ( AbstractDistMatrix<F>& APre,
-  AbstractDistMatrix<F>& householderScalarsPre, 
+  AbstractDistMatrix<F>& householderScalarsPre,
   const SymvCtrl<F>& ctrl )
 {
     EL_DEBUG_CSE
@@ -99,7 +101,7 @@ void LowerBlocked
     const Int bsize = Blocksize();
     for( Int k=0; k<n; k+=bsize )
     {
-        const Int nb = Min(bsize,n-k); 
+        const Int nb = Min(bsize,n-k);
 
         const Range<Int> ind1( k,    k+nb ),
                          indB( k,    n    ), indR( k, n ),
@@ -128,7 +130,7 @@ void LowerBlocked
 
             LowerPanel
             ( ABR, WPan, householderScalars1,
-              APan_MC_STAR, APan_MR_STAR, 
+              APan_MC_STAR, APan_MR_STAR,
               WPan_MC_STAR, WPan_MR_STAR, ctrl );
 
             auto A21_MC_STAR = APan_MC_STAR( ind2-k, ind1-k );
@@ -156,6 +158,8 @@ void LowerBlocked
     // Redistribute from matrix-diagonal form to fully replicated
     householderScalars = householderScalarsDiag;
 }
+
+#endif // 0 TOM
 
 } // namespace herm_tridiag
 } // namespace El

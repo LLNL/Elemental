@@ -1,9 +1,9 @@
 # Add the source files for this directory
 set_full_path(THIS_DIR_SOURCES
-  DistPermutation.cpp
+  # DistPermutation.cpp
   Permutation.cpp
-  PermutationMeta.cpp
-  PivotsToPartialPermutation.cpp
+  # PermutationMeta.cpp
+  # PivotsToPartialPermutation.cpp
   )
 
 # Propagate the files up the tree

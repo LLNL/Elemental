@@ -2,11 +2,13 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #include <El.hpp>
+
+#if 0 // TOM
 
 namespace El {
 namespace herm_tridiag {
@@ -41,10 +43,12 @@ void Ger2Sub
 } // namespace herm_tridiag
 } // namespace El
 
+#endif // 0 TOM
+
 #include "./HermitianTridiag/LowerBlocked.hpp"
-#include "./HermitianTridiag/LowerBlockedSquare.hpp"
+// #include "./HermitianTridiag/LowerBlockedSquare.hpp"
 #include "./HermitianTridiag/UpperBlocked.hpp"
-#include "./HermitianTridiag/UpperBlockedSquare.hpp"
+// #include "./HermitianTridiag/UpperBlockedSquare.hpp"
 
 #include "./HermitianTridiag/ApplyQ.hpp"
 
@@ -61,7 +65,9 @@ void HermitianTridiag
         herm_tridiag::UpperBlocked( A, householderScalars );
 }
 
-template<typename F> 
+#if 0 // TOM
+
+template<typename F>
 void HermitianTridiag
 ( UpperOrLower uplo,
   AbstractDistMatrix<F>& APre,
@@ -87,7 +93,7 @@ void HermitianTridiag
     }
     else if( ctrl.approach == HERMITIAN_TRIDIAG_SQUARE )
     {
-        // Drop down to a square mesh 
+        // Drop down to a square mesh
         const Int p = grid.Size();
         const Int pSqrt = Int(sqrt(double(p)));
 
@@ -135,7 +141,7 @@ void HermitianTridiag
     }
     else
     {
-        // Use the normal approach unless we're already on a square 
+        // Use the normal approach unless we're already on a square
         // grid, in which case we use the fast square method.
         if( grid.Height() == grid.Width() )
         {
@@ -144,7 +150,7 @@ void HermitianTridiag
                 ( A, householderScalars, ctrl.symvCtrl );
             else
                 herm_tridiag::UpperBlockedSquare
-                ( A, householderScalars, ctrl.symvCtrl ); 
+                ( A, householderScalars, ctrl.symvCtrl );
         }
         else
         {
@@ -157,6 +163,8 @@ void HermitianTridiag
         }
     }
 }
+
+#endif // 0 TOM
 
 namespace herm_tridiag {
 
@@ -172,10 +180,12 @@ void ExplicitCondensed( UpperOrLower uplo, Matrix<F>& A )
         MakeTrapezoidal( UPPER, A, -1 );
 }
 
+#if 0 // TOM
+
 template<typename F>
 void ExplicitCondensed
 ( UpperOrLower uplo,
-  AbstractDistMatrix<F>& A, 
+  AbstractDistMatrix<F>& A,
   const HermitianTridiagCtrl<F>& ctrl )
 {
     EL_DEBUG_CSE
@@ -187,6 +197,8 @@ void ExplicitCondensed
         MakeTrapezoidal( UPPER, A, -1 );
 }
 
+#endif // 0 TOM
+
 } // namespace herm_tridiag
 
 #define PROTO(F) \
@@ -194,24 +206,26 @@ void ExplicitCondensed
   ( UpperOrLower uplo, \
     Matrix<F>& A, \
     Matrix<F>& householderScalars ); \
-  template void HermitianTridiag \
-  ( UpperOrLower uplo, \
-    AbstractDistMatrix<F>& A, \
-    AbstractDistMatrix<F>& householderScalars, \
-    const HermitianTridiagCtrl<F>& ctrl ); \
   template void herm_tridiag::ExplicitCondensed \
   ( UpperOrLower uplo, Matrix<F>& A ); \
-  template void herm_tridiag::ExplicitCondensed \
-  ( UpperOrLower uplo, \
-    AbstractDistMatrix<F>& A, \
-    const HermitianTridiagCtrl<F>& ctrl ); \
   template void herm_tridiag::ApplyQ \
   ( LeftOrRight side, \
     UpperOrLower uplo, \
     Orientation orientation, \
     const Matrix<F>& A, \
     const Matrix<F>& householderScalars, \
-          Matrix<F>& B ); \
+          Matrix<F>& B );
+
+/*
+  template void HermitianTridiag \
+  ( UpperOrLower uplo, \
+    AbstractDistMatrix<F>& A, \
+    AbstractDistMatrix<F>& householderScalars, \
+    const HermitianTridiagCtrl<F>& ctrl ); \
+  template void herm_tridiag::ExplicitCondensed \
+  ( UpperOrLower uplo, \
+    AbstractDistMatrix<F>& A, \
+    const HermitianTridiagCtrl<F>& ctrl ); \
   template void herm_tridiag::ApplyQ \
   ( LeftOrRight side, \
     UpperOrLower uplo, \
@@ -219,6 +233,7 @@ void ExplicitCondensed
     const AbstractDistMatrix<F>& A, \
     const AbstractDistMatrix<F>& householderScalars, \
           AbstractDistMatrix<F>& B );
+*/
 
 #define EL_NO_INT_PROTO
 #define EL_ENABLE_DOUBLEDOUBLE

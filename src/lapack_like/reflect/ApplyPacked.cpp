@@ -2,8 +2,8 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #include <El.hpp>
@@ -28,10 +28,10 @@
 
 namespace El {
 
-template<typename F> 
+template<typename F>
 void ApplyPackedReflectors
-( LeftOrRight side, UpperOrLower uplo, 
-  VerticalOrHorizontal dir, ForwardOrBackward order, 
+( LeftOrRight side, UpperOrLower uplo,
+  VerticalOrHorizontal dir, ForwardOrBackward order,
   Conjugation conjugation,
   Int offset,
   const Matrix<F>& H,
@@ -107,7 +107,9 @@ void ApplyPackedReflectors
     }
 }
 
-template<typename F> 
+#if 0 // TOM
+
+template<typename F>
 void ApplyPackedReflectors
 ( LeftOrRight side, UpperOrLower uplo,
   VerticalOrHorizontal dir, ForwardOrBackward order,
@@ -186,6 +188,8 @@ void ApplyPackedReflectors
     }
 }
 
+#endif // 0 TOM
+
 #define PROTO(F) \
   template void ApplyPackedReflectors \
   ( LeftOrRight side, UpperOrLower uplo, \
@@ -193,14 +197,17 @@ void ApplyPackedReflectors
     Conjugation conjugation, Int offset, \
     const Matrix<F>& H, \
     const Matrix<F>& householderScalars, \
-          Matrix<F>& A ); \
-  template void ApplyPackedReflectors \
+          Matrix<F>& A );
+
+/*
+  template void ApplyPackedReflectors    \
   ( LeftOrRight side, UpperOrLower uplo, \
     VerticalOrHorizontal dir, ForwardOrBackward order, \
     Conjugation conjugation, Int offset, \
     const AbstractDistMatrix<F>& H, \
     const AbstractDistMatrix<F>& householderScalars, \
           AbstractDistMatrix<F>& A );
+*/
 
 #define EL_NO_INT_PROTO
 #define EL_ENABLE_DOUBLEDOUBLE
