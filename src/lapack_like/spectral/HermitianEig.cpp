@@ -277,7 +277,7 @@ HermitianEig
         LogicError("Hermitian matrices must be square");
     if( ctrl.useSDC )
     {
-        RuntimeError("Let's all use SDC.");
+        RuntimeError("HermitianEig with SDC is not supported");
 
         HermitianEigInfo info;
         // herm_eig::SDC( uplo, A, w, ctrl.sdcCtrl );
@@ -699,7 +699,7 @@ HermitianEig
 
     if( ctrl.useSDC )
     {
-        RuntimeError("Let's not use SDC.");
+        RuntimeError("HermitianEig with SDC is not supported");
         // herm_eig::SDC( uplo, A, w, Q, ctrl.sdcCtrl );
         // herm_eig::SortAndFilter( w, Q, ctrl.tridiagEigCtrl );
     }
