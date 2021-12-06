@@ -112,15 +112,6 @@ void TranslateBetweenGrids
     mpi::Translate(
         owningGroupA, sizeA, ranks.data(), viewingCommB, rankMap.data());
 
-    // Have each member of A's grid individually send to all numRow x numCol
-    // processes in order, while the members of this grid receive from all
-    // necessary processes at each step.
-    Int requiredMemory = 0;
-    if(inAGrid)
-        requiredMemory += maxSendSize;
-    if(inBGrid)
-        requiredMemory += maxSendSize;
-
     SyncInfo<D1> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
     SyncInfo<D2> syncInfoB = SyncInfoFromMatrix(B.LockedMatrix());
 
@@ -3676,15 +3667,6 @@ void TranslateBetweenGridsAsync
     mpi::Translate(
         owningGroupA, sizeA, ranks.data(), viewingCommB, rankMap.data());
 
-    Int requiredMemory = 0;
-    if(inAGrid)
-        requiredMemory += maxSendSize;
-    if(inBGrid)
-        requiredMemory += maxSendSize;
-
-
-
-
     std::vector<simple_buffer<T,D1>> sendBufVector(numRowSends);
 
     for(Int i=0; i<numRowSends; ++i)
@@ -3969,12 +3951,6 @@ void TranslateBetweenGrids
     }
     mpi::Translate(
         owningGroupA, sizeA, ranks.data(), viewingCommB, rankMap.data());
-
-    Int requiredMemory = 0;
-    if(inAGrid)
-        requiredMemory += maxSendSize;
-    if(inBGrid)
-        requiredMemory += maxSendSize;
 
     simple_buffer<T,D1> send_buf(inAGrid ? maxSendSize : 0, syncInfoA);
     simple_buffer<T,D2> recv_buf(inBGrid ? maxSendSize : 0, syncInfoB);
