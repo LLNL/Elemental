@@ -38,6 +38,7 @@ enum class BLAS_Op
 
 enum class LAPACK_Op
 {
+    HEEV,
     POTRF,
 }; // enum class LAPACK_Op
 

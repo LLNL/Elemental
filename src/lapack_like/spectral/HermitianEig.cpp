@@ -262,14 +262,31 @@ BlackBox
     return info;
 }
 
+#ifdef HYDROGEN_HAVE_GPU
+template <typename F>
+HermitianEigInfo Lapack(UpperOrLower uplo,
+                        Matrix<F, El::Device::GPU>& A,
+                        Matrix<Base<F>, El::Device::GPU>& w,
+                        const HermitianEigCtrl<F>& ctrl)
+{
+    hydrogen::gpu_lapack::HermitianEig(
+        UpperOrLowerToFillMode(uplo),
+        A.Height(),
+        A.Buffer(),
+        A.LDim(),
+        w.Buffer(),
+        El::SyncInfoFromMatrix(A));
+    return HermitianEigInfo{};
+}
+#endif // HYDROGEN_HAVE_GPU
 } // namespace herm_eig
 
 template<typename F>
 HermitianEigInfo
 HermitianEig
 ( UpperOrLower uplo,
-  Matrix<F>& A,
-  Matrix<Base<F>>& w,
+  Matrix<F, El::Device::CPU>& A,
+  Matrix<Base<F>, El::Device::CPU>& w,
   const HermitianEigCtrl<F>& ctrl )
 {
     EL_DEBUG_CSE
@@ -286,6 +303,26 @@ HermitianEig
     }
     return herm_eig::BlackBox( uplo, A, w, ctrl );
 }
+
+#ifdef HYDROGEN_HAVE_GPU
+// For GPU matrices, the only method is currently LAPACK
+// (cuSOLVER/rocSOLVER).
+template <typename F>
+HermitianEigInfo
+HermitianEig(UpperOrLower uplo,
+             Matrix<F, El::Device::GPU>& A,
+             Matrix<Base<F>, El::Device::GPU>& w,
+             HermitianEigCtrl<F> const& ctrl)
+{
+  EL_DEBUG_CSE
+  if (A.Height() != A.Width())
+      LogicError("Hermitian matrices must be square");
+  if (ctrl.useSDC || ctrl.useScaLAPACK)
+      LogicError("HermitianEig with SDC is not supported.");
+
+  return herm_eig::Lapack(uplo, A, w, ctrl);
+}
+#endif // HYDROGEN_HAVE_GPU
 
 #if 0 // TOM
 
@@ -721,6 +758,24 @@ HermitianEig
     return info;
 }
 
+#ifdef HYDROGEN_HAVE_GPU
+// The "values-only" approach above also always computes the
+// eigenvectors. So we just use that impl and copy them out.
+template <typename F>
+HermitianEigInfo
+HermitianEig(UpperOrLower uplo,
+             Matrix<F, El::Device::GPU>& A,
+             Matrix<Base<F>, El::Device::GPU>& w,
+             Matrix<F, El::Device::GPU>& Q,
+             HermitianEigCtrl<F> const& ctrl)
+{
+    EL_DEBUG_CSE;
+    auto ret = HermitianEig(uplo, A, w, ctrl);
+    Copy(A, Q);
+    return ret;
+}
+#endif // HYDROGEN_HAVE_GPU
+
 #if 0 // TOM
 
 namespace herm_eig {
@@ -1151,12 +1206,12 @@ HermitianEig
 
 #endif // 0 TOM
 
-#define EIGVAL_PROTO(F) \
-  template HermitianEigInfo HermitianEig\
-  ( UpperOrLower uplo, \
-    Matrix<F>& A, \
-    Matrix<Base<F>>& w, \
-    const HermitianEigCtrl<F>& ctrl );
+#define EIGVAL_PROTO_DEVICE(F, D)                                              \
+    template HermitianEigInfo HermitianEig(UpperOrLower uplo,                  \
+                                           Matrix<F, D>& A,                    \
+                                           Matrix<Base<F>, D>& w,              \
+                                           const HermitianEigCtrl<F>& ctrl)
+
 /*
   template HermitianEigInfo HermitianEig\
   ( UpperOrLower uplo, \
@@ -1165,13 +1220,12 @@ HermitianEig
     const HermitianEigCtrl<F>& ctrl );
 */
 
-#define EIGPAIR_PROTO(F) \
-  template HermitianEigInfo HermitianEig\
-  ( UpperOrLower uplo, \
-    Matrix<F>& A, \
-    Matrix<Base<F>>& w, \
-    Matrix<F>& Q,\
-    const HermitianEigCtrl<F>& ctrl );
+#define EIGPAIR_PROTO_DEVICE(F, D)                                             \
+    template HermitianEigInfo HermitianEig(UpperOrLower uplo,                  \
+                                           Matrix<F, D>& A,                    \
+                                           Matrix<Base<F>, D>& w,              \
+                                           Matrix<F, D>& Q,                    \
+                                           const HermitianEigCtrl<F>& ctrl)
 /*
   template HermitianEigInfo HermitianEig      \
   ( UpperOrLower uplo, \
@@ -1181,9 +1235,17 @@ HermitianEig
     const HermitianEigCtrl<F>& ctrl );
 */
 
-#define PROTO(F)                                \
-  EIGVAL_PROTO(F)                               \
-  EIGPAIR_PROTO(F)
+#define PROTO_DEVICE(F, D)                                                     \
+    EIGVAL_PROTO_DEVICE(F, D);                                                 \
+    EIGPAIR_PROTO_DEVICE(F, D)
+
+#ifndef HYDROGEN_HAVE_GPU
+#define PROTO(F) PROTO_DEVICE(F, Device::CPU);
+#else
+#define PROTO(F)                                                               \
+    PROTO_DEVICE(F, Device::CPU);                                              \
+    PROTO_DEVICE(F, Device::GPU);
+#endif
 
 #define EL_NO_INT_PROTO
 #define EL_ENABLE_DOUBLEDOUBLE

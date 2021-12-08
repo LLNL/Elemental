@@ -426,12 +426,12 @@ struct HermitianEigInfo
 
 // Compute eigenvalues
 // -------------------
-template<typename Field>
+template<typename Field, El::Device D>
 HermitianEigInfo
 HermitianEig
 (       UpperOrLower uplo,
-        Matrix<Field>& A,
-        Matrix<Base<Field>>& w,
+        Matrix<Field, D>& A,
+        Matrix<Base<Field>, D>& w,
   const HermitianEigCtrl<Field>& ctrl=HermitianEigCtrl<Field>() );
 template<typename Field>
 HermitianEigInfo
@@ -443,13 +443,13 @@ HermitianEig
 
 // Compute eigenpairs
 // ------------------
-template<typename Field>
+template<typename Field, El::Device D>
 HermitianEigInfo
 HermitianEig
 (       UpperOrLower uplo,
-        Matrix<Field>& A,
-        Matrix<Base<Field>>& w,
-        Matrix<Field>& Q,
+        Matrix<Field, D>& A,
+        Matrix<Base<Field>, D>& w,
+        Matrix<Field, D>& Q,
   const HermitianEigCtrl<Field>& ctrl=HermitianEigCtrl<Field>() );
 template<typename Field>
 HermitianEigInfo

@@ -587,6 +587,24 @@ void Dgmm(SideMode side,
 namespace gpu_lapack
 {
 
+/** @brief Compute the eigenvalues and eigenvectors of A.
+ *
+ *  At this time, we only support the computation of values AND vectors.
+ *
+ *  @note Some workspace memory is allocated internally, using a
+ *        caching allocator when possible.
+ *  @note The "info" parameter to the solver routine is only checked
+ *        in DEBUG builds.
+ */
+template <typename T, typename SizeT>
+void HermitianEig(
+    FillMode uplo,
+    SizeT n,
+    T* A,
+    SizeT lda,
+    TmpBase<T>* W,
+    SyncInfo<Device::GPU> const& si);
+
 /** @brief Compute the Cholesky factorization of A.
  *
  *  This routine will allocate the properly-sized workspace and info
