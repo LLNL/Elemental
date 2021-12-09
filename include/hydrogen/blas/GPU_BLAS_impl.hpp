@@ -1102,9 +1102,6 @@ void HermitianEigImpl(
     using NTP = MakePointer<NativeType<T>>;
     using RealNTP = MakePointer<NativeType<TmpBase<T>>>;
 
-    SyncManager mgr(GetDenseLibraryHandle(), si);
-    simple_buffer<gpu_lapack_impl::InfoT, Device::GPU> info(1, si);
-
     auto workspace_size = gpu_lapack_impl::GetHeevWorkspaceSize(
         GetDenseLibraryHandle(),
         ToNativeFillMode(uplo),
@@ -1112,7 +1109,10 @@ void HermitianEigImpl(
         reinterpret_cast<NTP>(A),
         ToSizeT(lda),
         reinterpret_cast<RealNTP>(W));
+
+    SyncManager mgr(GetDenseLibraryHandle(), si);
     simple_buffer<T, Device::GPU> workspace(workspace_size, si);
+    simple_buffer<gpu_lapack_impl::InfoT, Device::GPU> info(1, si);
 
     // NOTE: This excludes the "jobz" parameter -- we ALWAYS compute
     // the eigenvalues for now.

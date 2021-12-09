@@ -56,8 +56,6 @@ void Symv
     }
 }
 
-#if 0 // TOM
-
 template<typename T>
 void Symv
 ( UpperOrLower uplo,
@@ -307,7 +305,6 @@ void LocalRowAccumulate
 
 } // namespace symv
 
-#endif // 0 TOM
 
 #define PROTO(T) \
   template void Symv \
@@ -317,9 +314,7 @@ void LocalRowAccumulate
     const Matrix<T>& x, \
     T beta, \
          Matrix<T>& y, \
-    bool conjugate );
-
-#if 0 // TOM
+    bool conjugate ); \
   template void Symv   \
   ( UpperOrLower uplo, \
     T alpha, \
@@ -347,7 +342,6 @@ void LocalRowAccumulate
           DistMatrix<T,STAR,MC>& z_STAR_MC, \
           DistMatrix<T,STAR,MR>& z_STAR_MR, bool conjugate, \
     const SymvCtrl<T>& ctrl );
-#endif // 0 TOM
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

@@ -6,7 +6,7 @@ namespace El
 
 template<typename T>
 void CopyFromRoot(const Matrix<T>& A, DistMatrix<T,CIRC,CIRC>& B,
-                  bool includingViewers)
+                  bool includingViewers=false)
 {
     EL_DEBUG_CSE;
     if (B.CrossRank() != B.Root())
@@ -17,7 +17,7 @@ void CopyFromRoot(const Matrix<T>& A, DistMatrix<T,CIRC,CIRC>& B,
 }
 
 template<typename T>
-void CopyFromNonRoot(DistMatrix<T,CIRC,CIRC>& B, bool includingViewers)
+void CopyFromNonRoot(DistMatrix<T,CIRC,CIRC>& B, bool includingViewers=false)
 {
     EL_DEBUG_CSE;
     if (B.CrossRank() == B.Root())
@@ -27,7 +27,7 @@ void CopyFromNonRoot(DistMatrix<T,CIRC,CIRC>& B, bool includingViewers)
 
 template<typename T>
 void CopyFromRoot (const Matrix<T>& A, DistMatrix<T,CIRC,CIRC,BLOCK>& B,
-                   bool includingViewers)
+                   bool includingViewers=false)
 {
     EL_DEBUG_CSE;
     if (B.CrossRank() != B.Root())
@@ -38,7 +38,8 @@ void CopyFromRoot (const Matrix<T>& A, DistMatrix<T,CIRC,CIRC,BLOCK>& B,
 }
 
 template<typename T>
-void CopyFromNonRoot (DistMatrix<T,CIRC,CIRC,BLOCK>& B, bool includingViewers)
+void CopyFromNonRoot (DistMatrix<T,CIRC,CIRC,BLOCK>& B,
+                      bool includingViewers=false)
 {
     EL_DEBUG_CSE;
     if (B.CrossRank() == B.Root())

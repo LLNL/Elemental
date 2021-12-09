@@ -23,7 +23,7 @@ void Reduce( const AbstractDistMatrix<F>& A, TreeData<F>& treeData )
     )
     const Int m =  A.Height();
     const Int n = A.Width();
-    const mpi::Comm colComm = A.ColComm();
+    const mpi::Comm& colComm = A.ColComm();
     const Int p = mpi::Size( colComm );
     if( p == 1 )
         return;
@@ -52,13 +52,15 @@ void Reduce( const AbstractDistMatrix<F>& A, TreeData<F>& treeData )
         {
             ZTop = lastZ;
             MakeTrapezoidal( UPPER, ZTop );
-            mpi::Recv( ZBot.Buffer(), n*n, partner, colComm );
+            mpi::Recv( ZBot.Buffer(), n*n, partner, colComm,
+                       SyncInfo<El::Device::CPU>{} );
         }
         else
         {
             ZBot = lastZ;
             MakeTrapezoidal( UPPER, ZBot );
-            mpi::Send( ZBot.LockedBuffer(), n*n, partner, colComm );
+            mpi::Send( ZBot.LockedBuffer(), n*n, partner, colComm,
+                       SyncInfo<El::Device::CPU>{} );
             break;
         }
 
@@ -194,7 +196,7 @@ void Scatter( AbstractDistMatrix<F>& A, const TreeData<F>& treeData )
     )
     const Int m = A.Height();
     const Int n = A.Width();
-    const mpi::Comm colComm = A.ColComm();
+    const mpi::Comm& colComm = A.ColComm();
     const Int p = mpi::Size( colComm );
     if( p == 1 )
         return;
@@ -238,26 +240,29 @@ void Scatter( AbstractDistMatrix<F>& A, const TreeData<F>& treeData )
             }
             // Send bottom-half to partner and keep top half
             ZHalf = ZBot;
-            mpi::Send( ZHalf.LockedBuffer(), n*n, partner, colComm );
+            mpi::Send( ZHalf.LockedBuffer(), n*n, partner, colComm,
+                       SyncInfo<El::Device::CPU>{} );
             ZHalf = ZTop;
         }
         else
         {
             // Recv top half from partner
-            mpi::Recv( ZHalf.Buffer(), n*n, partner, colComm );
+            mpi::Recv( ZHalf.Buffer(), n*n, partner, colComm,
+                       SyncInfo<El::Device::CPU>{} );
         }
     }
 
     // Apply the initial Q
     Zero( A );
-    auto ATop = A.Matrix()( IR(0,n), IR(0,n) );
+    auto& A_matrix = dynamic_cast<Matrix<F, El::Device::CPU>&>(A.Matrix());
+    auto ATop = A_matrix(IR(0, n), IR(0, n));
     ATop = ZHalf;
 
     // TODO: Exploit sparsity
     ApplyQ
     ( LEFT, NORMAL,
       treeData.QR0, treeData.householderScalars0, treeData.signature0,
-      A.Matrix() );
+      A_matrix );
 }
 
 template<typename F>
@@ -293,11 +298,12 @@ FormQ( AbstractDistMatrix<F>& A, TreeData<F>& treeData )
     const Int p = mpi::Size( A.ColComm() );
     if( p == 1 )
     {
-        A.Matrix() = treeData.QR0;
+        auto& A_matrix = dynamic_cast<Matrix<F>&>(A.Matrix());
+        A_matrix = treeData.QR0;
         ExpandPackedReflectors
         ( LOWER, VERTICAL, CONJUGATED, 0,
-          A.Matrix(), RootHouseholderScalars(A,treeData) );
-        DiagonalScale( RIGHT, NORMAL, RootSignature(A,treeData), A.Matrix() );
+          A_matrix, RootHouseholderScalars(A,treeData) );
+        DiagonalScale( RIGHT, NORMAL, RootSignature(A,treeData), A_matrix );
     }
     else
     {

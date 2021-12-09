@@ -197,10 +197,12 @@ FindColPivot
 
     if( smallestFirst )
         return mpi::AllReduce
-               ( pivot, mpi::MinLocOp<Real>(), A.Grid().RowComm() );
+        ( pivot, mpi::MinLocOp<Real>(), A.Grid().RowComm(),
+          SyncInfo<El::Device::CPU>{} );
     else
         return mpi::AllReduce
-               ( pivot, mpi::MaxLocOp<Real>(), A.Grid().RowComm() );
+        ( pivot, mpi::MaxLocOp<Real>(), A.Grid().RowComm(),
+          SyncInfo<El::Device::CPU>{} );
 }
 
 template<typename F>
@@ -211,8 +213,8 @@ Base<F> ColNorms( const DistMatrix<F>& A, vector<Base<F>>& norms )
     const Int localHeight = A.LocalHeight();
     const Int localWidth = A.LocalWidth();
     const Matrix<F>& ALoc = A.LockedMatrix();
-    mpi::Comm colComm = A.Grid().ColComm();
-    mpi::Comm rowComm = A.Grid().RowComm();
+    mpi::Comm const& colComm = A.Grid().ColComm();
+    mpi::Comm const& rowComm = A.Grid().RowComm();
 
     // Carefully perform the local portion of the computation
     vector<Real> localScales(localWidth,0),
@@ -225,7 +227,8 @@ Base<F> ColNorms( const DistMatrix<F>& A, vector<Base<F>>& norms )
     // Find the maximum relative scales
     vector<Real> scales(localWidth);
     mpi::AllReduce
-    ( localScales.data(), scales.data(), localWidth, mpi::MAX, colComm );
+    ( localScales.data(), scales.data(), localWidth, mpi::MAX, colComm,
+      SyncInfo<El::Device::CPU>{} );
 
     // Equilibrate the local scaled sums to the maximum scale
     for( Int jLoc=0; jLoc<localWidth; ++jLoc )
@@ -240,7 +243,8 @@ Base<F> ColNorms( const DistMatrix<F>& A, vector<Base<F>>& norms )
     // Now sum the local contributions (can ignore results where scale is 0)
     vector<Real> scaledSquares(localWidth);
     mpi::AllReduce
-    ( localScaledSquares.data(), scaledSquares.data(), localWidth, colComm );
+    ( localScaledSquares.data(), scaledSquares.data(), localWidth, colComm,
+      SyncInfo<El::Device::CPU>{} );
 
     // Finish the computation
     Real maxLocalNorm = 0;
@@ -253,7 +257,8 @@ Base<F> ColNorms( const DistMatrix<F>& A, vector<Base<F>>& norms )
             norms[jLoc] = 0;
         maxLocalNorm = Max( maxLocalNorm, norms[jLoc] );
     }
-    return mpi::AllReduce( maxLocalNorm, mpi::MAX, rowComm );
+    return mpi::AllReduce( maxLocalNorm, mpi::MAX, rowComm,
+                           SyncInfo<El::Device::CPU>{} );
 }
 
 template<typename F>
@@ -268,7 +273,7 @@ void ReplaceColNorms
     const Int localHeight = A.LocalHeight();
     const Int numInaccurate = inaccurateNorms.size();
     const Matrix<F>& ALoc = A.LockedMatrix();
-    mpi::Comm colComm = A.Grid().ColComm();
+    mpi::Comm const& colComm = A.Grid().ColComm();
 
     // Carefully perform the local portion of the computation
     vector<Real> localScales(numInaccurate,0),
@@ -282,7 +287,8 @@ void ReplaceColNorms
     // Find the maximum relative scales
     vector<Real> scales(numInaccurate);
     mpi::AllReduce
-    ( localScales.data(), scales.data(), numInaccurate, mpi::MAX, colComm );
+    ( localScales.data(), scales.data(), numInaccurate, mpi::MAX, colComm,
+      SyncInfo<El::Device::CPU>{} );
 
     // Equilibrate the local scaled sums to the maximum scale
     for( Int s=0; s<numInaccurate; ++s )
@@ -297,7 +303,8 @@ void ReplaceColNorms
     // Now sum the local contributions (can ignore results where scale is 0)
     vector<Real> scaledSquares(numInaccurate);
     mpi::AllReduce
-    ( localScaledSquares.data(), scaledSquares.data(), numInaccurate, colComm );
+    ( localScaledSquares.data(), scaledSquares.data(), numInaccurate, colComm,
+      SyncInfo<El::Device::CPU>{} );
 
     // Finish the computation
     for( Int s=0; s<numInaccurate; ++s )
@@ -400,7 +407,8 @@ void BusingerGolub
             {
                 const Int kLoc = A.LocalCol(k);
                 mpi::SendRecv
-                ( A.Buffer(0,kLoc), mLocal, pivOwner, pivOwner, g.RowComm() );
+                ( A.Buffer(0,kLoc), mLocal, pivOwner, pivOwner, g.RowComm(),
+                  SyncInfo<El::Device::CPU>{} );
                 mpi::Send( norms[kLoc], pivOwner, g.RowComm() );
             }
             else if( myPiv )
@@ -408,7 +416,8 @@ void BusingerGolub
                 const Int jPivLoc = A.LocalCol(jPiv);
                 mpi::SendRecv
                 ( A.Buffer(0,jPivLoc), mLocal,
-                  curOwner, curOwner, g.RowComm() );
+                  curOwner, curOwner, g.RowComm(),
+                  SyncInfo<El::Device::CPU>{} );
                 norms[jPivLoc] = mpi::Recv<Real>( curOwner, g.RowComm() );
             }
         }

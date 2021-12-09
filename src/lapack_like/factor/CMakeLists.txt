@@ -7,7 +7,7 @@ set_full_path(THIS_DIR_SOURCES
 #  LDL.cpp
 #  LQ.cpp
 #  LU.cpp
-#  QR.cpp
+  QR.cpp
 #  RQ.cpp
 #  Skeleton.cpp
   )
@@ -17,7 +17,7 @@ add_subdirectory(Cholesky)
 #add_subdirectory(LDL)
 #add_subdirectory(LQ)
 #add_subdirectory(LU)
-#add_subdirectory(QR)
+add_subdirectory(QR)
 #add_subdirectory(RQ)
 #add_subdirectory(RegularizedLDL)
 

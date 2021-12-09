@@ -269,6 +269,7 @@ HermitianEigInfo Lapack(UpperOrLower uplo,
                         Matrix<Base<F>, El::Device::GPU>& w,
                         const HermitianEigCtrl<F>& ctrl)
 {
+    w.Resize(A.Height(), 1);
     hydrogen::gpu_lapack::HermitianEig(
         UpperOrLowerToFillMode(uplo),
         A.Height(),

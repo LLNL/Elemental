@@ -1,7 +1,7 @@
 # Add the subdirectories
 add_subdirectory(blas_like)
 add_subdirectory(core)
-#add_subdirectory(lapack_like)
+add_subdirectory(lapack_like)
 
 foreach (src_file ${SOURCES})
 
@@ -19,3 +19,9 @@ foreach (src_file ${SOURCES})
     COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 4 ${MPI_PREFLAGS}
     $<TARGET_FILE:${__test_name}> ${MPI_POSTFLAGS})
 endforeach ()
+
+set_target_properties(HermitianEig
+  PROPERTIES
+  CXX_STANDARD 17
+  CXX_EXTENSIONS OFF
+  CXX_STANDARD_REQUIRED TRUE)

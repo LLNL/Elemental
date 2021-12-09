@@ -7,9 +7,10 @@
    http://opensource.org/licenses/BSD-2-Clause
 */
 #include <El.hpp>
+
 using namespace El;
 
-template<typename F>
+template <typename F>
 void TestCorrectness
 ( bool print,
   UpperOrLower uplo,
@@ -36,7 +37,7 @@ void TestCorrectness
     // Find the residual ||X-QW||_oo = ||AQ-QW||_oo
     Matrix<F> QW( Q );
     DiagonalScale( RIGHT, NORMAL, w, QW );
-    X -= QW;
+    Axpy(-1, QW, X);
     const Real oneNormA = HermitianOneNorm( uplo, AOrig );
     if( oneNormA == Real(0) )
         LogicError("Tried to test relative accuracy on zero matrix...");
@@ -51,6 +52,7 @@ void TestCorrectness
         LogicError("Relative error was unacceptably large");
 }
 
+#if 0 // TOM
 template<typename F>
 void TestCorrectness
 ( bool print,
@@ -94,10 +96,11 @@ void TestCorrectness
     if( relError > Real(10) )
         LogicError("Relative error was unacceptably large");
 }
+#endif // 0 TOM
 
-template<typename F>
+template<typename F, Device D=Device::CPU>
 void TestHermitianEigSequential
-( Int m,
+( Int matrixSize,
   UpperOrLower uplo,
   bool onlyEigvals,
   bool clustered,
@@ -106,27 +109,33 @@ void TestHermitianEigSequential
   const HermitianEigCtrl<F>& ctrl )
 {
     typedef Base<F> Real;
-    Matrix<F> A, AOrig, Q;
-    Matrix<Real> w;
-    Output("Testing with ",TypeName<F>());
+    Matrix<F, D> A_dev, Q;
+    Matrix<F, Device::CPU> A_cpu, AOrig;
+    Matrix<Real, D> w;
+    Output("Testing with ",TypeName<F>(), " on ", DeviceName<D>());
     PushIndent();
 
     if( clustered )
-        Wilkinson( A, m/2 );
+        Wilkinson( A_cpu, matrixSize/2 );
     else
-        HermitianUniformSpectrum( A, m, -10, 10 );
+        HermitianUniformSpectrum( A_cpu, matrixSize, -10, 10 );
     if( correctness && !onlyEigvals )
-        AOrig = A;
+        AOrig = A_cpu;
     if( print )
-        Print( A, "A" );
+        Print( A_cpu, "A" );
+
+    if constexpr (D != Device::CPU)
+        Copy(A_cpu, A_dev);
+    else
+        View(A_dev, A_cpu);
 
     Timer timer;
     Output("Starting Hermitian eigensolver...");
     timer.Start();
     if( onlyEigvals )
-        HermitianEig( uplo, A, w, ctrl );
+        HermitianEig( uplo, A_dev, w, ctrl );
     else
-        HermitianEig( uplo, A, w, Q, ctrl );
+        HermitianEig( uplo, A_dev, w, Q, ctrl );
     const double runTime = timer.Stop();
     Output("Time = ",runTime," seconds");
     if( print )
@@ -136,9 +145,26 @@ void TestHermitianEigSequential
             Print( Q, "eigenvectors:" );
     }
     if( correctness && !onlyEigvals )
-        TestCorrectness( print, uplo, AOrig, A, w, Q );
+    {
+        Matrix<F, Device::CPU> Q_cpu;
+        Matrix<Real, Device::CPU> w_cpu;
+        if constexpr (D != Device::CPU)
+        {
+            Copy(A_dev, A_cpu);
+            Copy(Q, Q_cpu);
+            Copy(w, w_cpu);
+        }
+        else {
+            View(Q_cpu, Q);
+            View(w_cpu, w);
+        }
+        TestCorrectness( print, uplo, AOrig, A_cpu, w_cpu, Q_cpu );
+    }
     PopIndent();
 }
+
+#if 0 // TOM
+
 template<typename F,Dist U=MC,Dist V=MR,Dist S=MC>
 void TestHermitianEig
 ( Int m,
@@ -187,9 +213,11 @@ void TestHermitianEig
     PopIndent();
 }
 
+#endif // 0 TOM
+
 template<typename F>
 void TestSuite
-( Int m,
+( Int matrixSize,
   UpperOrLower uplo,
   bool onlyEigvals,
   bool clustered,
@@ -197,6 +225,7 @@ void TestSuite
   bool distributed,
   bool correctness,
   bool print,
+  char device,
   const Grid& g,
   const HermitianEigCtrl<double>& ctrlDbl )
 {
@@ -225,13 +254,33 @@ void TestSuite
     ctrl.tridiagEigCtrl.subset = subset;
     ctrl.tridiagEigCtrl.progress = ctrlDbl.tridiagEigCtrl.progress;
 
-    if( sequential && g.Rank() == 0 )
+    if (sequential && g.Rank() == 0)
     {
-        TestHermitianEigSequential<F>
-        ( m, uplo, onlyEigvals, clustered, correctness, print, ctrl );
+        if (device == 'C')
+            TestHermitianEigSequential<F, Device::CPU>(matrixSize,
+                                                       uplo,
+                                                       onlyEigvals,
+                                                       clustered,
+                                                       correctness,
+                                                       print,
+                                                       ctrl);
+#ifdef HYDROGEN_HAVE_GPU
+        else if (device == 'G')
+            TestHermitianEigSequential<F, Device::GPU>(matrixSize,
+                                                       uplo,
+                                                       onlyEigvals,
+                                                       clustered,
+                                                       correctness,
+                                                       print,
+                                                       ctrl);
+#endif // HYDROGEN_HAVE_GPU
+        else
+            LogicError("Invalid device.");
     }
     if( distributed )
     {
+        RuntimeError("Distributed testing not supported at this time.");
+#if 0 // TOM
         OutputFromRoot(g.Comm(),"Normal tridiag algorithms:");
         ctrl.tridiagCtrl.approach = HERMITIAN_TRIDIAG_NORMAL;
         TestHermitianEig<F>
@@ -253,61 +302,77 @@ void TestSuite
         OutputFromRoot(g.Comm(),"Nonstandard distributions:");
         TestHermitianEig<F,MR,MC,MC>
         ( m, uplo, onlyEigvals, clustered, correctness, print, g, ctrl );
+#endif // 0 TOM
     }
 
     PopIndent();
 }
 
+std::set<char> enabled_devices = {
+    'C',
+#ifdef HYDROGEN_HAVE_GPU
+    'G',
+#endif
+};
+
 int
 main( int argc, char* argv[] )
 {
-    Environment env( argc, argv );
-    mpi::Comm comm = mpi::COMM_WORLD;
+    Environment env(argc, argv);
+    mpi::Comm comm = mpi::NewWorldComm();
 
     try
     {
-        int gridHeight = Input("--gridHeight","height of process grid",0);
-        const bool colMajor = Input("--colMajor","column-major ordering?",true);
+        int gridHeight = Input("--gridHeight", "height of process grid", 0);
+        const bool colMajor =
+            Input("--colMajor", "column-major ordering?", true);
         const bool onlyEigvals =
-          Input("--onlyEigvals","only compute eigenvalues?",false);
+            Input("--onlyEigvals", "only compute eigenvalues?", false);
         const char range =
-          Input("--range",
-           "range of eigenpairs: 'A' for all, 'I' for index range, "
-           "'V' for value range",'A');
-        const Int il = Input("--il","lower bound of index range",0);
-        const Int iu = Input("--iu","upper bound of index range",100);
-        const double vl = Input("--vl","lower bound of value range",0.);
-        const double vu = Input("--vu","upper bound of value range",100.);
-        const Int sortInt = Input("--sort","sort type",0);
+            Input("--range",
+                  "range of eigenpairs: 'A' for all, 'I' for index range, "
+                  "'V' for value range",
+                  'A');
+        const Int matrixSize = Input("--height", "height of matrix", 100);
+        const Int il = Input("--il", "lower bound of index range", 0);
+        const Int iu = Input("--iu", "upper bound of index range", matrixSize);
+        const double vl = Input("--vl", "lower bound of value range", 0.);
+        const double vu = Input("--vu", "upper bound of value range", 100.);
+        const Int sortInt = Input("--sort", "sort type", 0);
         const bool clustered =
-          Input("--cluster","force clustered eigenvalues?",false);
-        const char uploChar = Input("--uplo","upper or lower storage: L/U",'L');
-        const Int m = Input("--height","height of matrix",100);
-        const Int nb = Input("--nb","algorithmic blocksize",96);
-        const Int nbLocal = Input("--nbLocal","local blocksize",32);
+            Input("--cluster", "force clustered eigenvalues?", false);
+        const char uploChar =
+            Input("--uplo", "upper or lower storage: L/U", 'L');
+        const Int nb = Input("--nb", "algorithmic blocksize", 96);
+        const Int nbLocal = Input("--nbLocal", "local blocksize", 32);
         const bool avoidTrmv =
-          Input("--avoidTrmv","avoid Trmv based Symv",true);
+            Input("--avoidTrmv", "avoid Trmv based Symv", true);
         const bool useScaLAPACK =
-          Input("--useScaLAPACK","test ScaLAPACK?",false);
-        const Int algInt = Input("--algInt","0: QR, 1: D&C, 2: MRRR",1);
-        const bool sequential =
-          Input("--sequential","test sequential?",true);
+            Input("--useScaLAPACK", "test ScaLAPACK?", false);
+        const Int algInt = Input("--algInt", "0: QR, 1: D&C, 2: MRRR", 0);
+        const bool sequential = Input("--sequential", "test sequential?", true);
         const bool distributed =
-          Input("--distributed","test distributed?",true);
+            Input("--distributed", "test distributed?", false);
         const bool correctness =
-          Input("--correctness","test correctness?",true);
-        const bool progress = Input("--progress","print progress?",false);
-        const bool print = Input("--print","print matrices?",false);
-        const bool testReal = Input("--testReal","test real matrices?",true);
-        const bool testCpx = Input("--testCpx","test complex matrices?",true);
-        const bool timeStages = Input("--timeStages","time stages?",true);
+            Input("--correctness", "test correctness?", true);
+        const bool progress = Input("--progress", "print progress?", false);
+        const bool print = Input("--print", "print matrices?", false);
+        const bool testReal = Input("--testReal", "test real matrices?", true);
+        const bool testCpx =
+            Input("--testCpx", "test complex matrices?", false);
+        const bool timeStages = Input("--timeStages", "time stages?", true);
+        const char deviceChar = Input("--device", "C: CPU, G: GPU", 'C');
+
         ProcessInput();
         PrintInputReport();
+
+        if (enabled_devices.count(deviceChar) != 1)
+            RuntimeError("Invalid device character.");
 
         if( gridHeight == 0 )
             gridHeight = Grid::DefaultHeight( mpi::Size(comm) );
         const GridOrder order = colMajor ? COLUMN_MAJOR : ROW_MAJOR;
-        const Grid g( comm, gridHeight, order );
+        const Grid g( std::move(comm), gridHeight, order );
         const UpperOrLower uplo = CharToUpperOrLower( uploChar );
         const auto alg = static_cast<HermitianTridiagEigAlg>(algInt);
         SetBlocksize( nb );
@@ -348,12 +413,12 @@ main( int argc, char* argv[] )
         if( testReal )
         {
             TestSuite<float>
-            ( m, uplo, onlyEigvals, clustered,
-              sequential, distributed, correctness, print, g, ctrl );
+            ( matrixSize, uplo, onlyEigvals, clustered,
+              sequential, distributed, correctness, print, deviceChar, g, ctrl );
 
             TestSuite<double>
-            ( m, uplo, onlyEigvals, clustered,
-              sequential, distributed, correctness, print, g, ctrl );
+            ( matrixSize, uplo, onlyEigvals, clustered,
+              sequential, distributed, correctness, print, deviceChar, g, ctrl );
 
 #ifdef EL_HAVE_QD
             TestSuite<DoubleDouble>
@@ -379,12 +444,12 @@ main( int argc, char* argv[] )
          if( testCpx )
          {
             TestSuite<Complex<float>>
-            ( m, uplo, onlyEigvals, clustered,
-              sequential, distributed, correctness, print, g, ctrl );
+            ( matrixSize, uplo, onlyEigvals, clustered,
+              sequential, distributed, correctness, print, deviceChar, g, ctrl );
 
             TestSuite<Complex<double>>
-            ( m, uplo, onlyEigvals, clustered,
-              sequential, distributed, correctness, print, g, ctrl );
+            ( matrixSize, uplo, onlyEigvals, clustered,
+              sequential, distributed, correctness, print, deviceChar, g, ctrl );
 
 #ifdef EL_HAVE_QD
             TestSuite<Complex<DoubleDouble>>
