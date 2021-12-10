@@ -1071,10 +1071,6 @@ namespace gpu_lapack
 namespace details
 {
 
-#ifndef H_SYEVD_THRESHOLD
-#define H_SYEVD_THRESHOLD 2048
-#endif // H_SYEVD_THRESHOLD
-
 // These might be unique.
 using gpu_lapack_impl::ToSizeT;
 using gpu_lapack_impl::GetDenseLibraryHandle;
