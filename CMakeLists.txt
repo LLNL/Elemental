@@ -1,10 +1,6 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.21)
 
 project(Hydrogen CXX)
-
-if (NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 14)
-endif ()
 
 # Setup version information
 find_program(__GIT_EXECUTABLE git)
@@ -85,69 +81,28 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 
 # Add warning flags
-include(CheckCXXCompilerFlag)
-macro (add_cxx_flag_as_library FLAG_LIST_VAR FLAG)
-  LIST(APPEND ${FLAG_LIST_VAR} $<$<COMPILE_LANGUAGE:CXX>:${FLAG}>)
-endmacro()
+include(CheckCompilerFlag)
+set(__CXX_FLAGS "-Wno-unused-parameter")
+set(__CXX_DEVELOPER_FLAGS "-Wall" "-Wextra" "-Wpedantic" "-pedantic")
+set(__CUDA_FLAGS)
+set(__CUDA_DEVELOPER_FLAGS)
 
-LIST(APPEND INITIAL_CXX_FLAGS
-  "-Wall" "-Wextra" "-Wno-unused-parameter")
-
-# Check all the CXX flags
-foreach (flag IN LISTS INITIAL_CXX_FLAGS)
-  check_cxx_compiler_flag("${flag}" CXX_COMPILER_HAS_FLAG${flag})
-  if (CXX_COMPILER_HAS_FLAG${flag})
-    add_cxx_flag_as_library(EXTRA_CXX_FLAGS "${flag}")
-  endif ()
-endforeach ()
-
-# No sense having both, but some compilers support both. Probably overkill.
-check_cxx_compiler_flag("-pedantic" CXX_COMPILER_HAS_PEDANTIC_FLAG)
-if (CXX_COMPILER_HAS_PEDANTIC_FLAG)
-  add_cxx_flag_as_library(EXTRA_CXX_FLAGS "-pedantic")
-else ()
-  check_cxx_compiler_flag("-Wpedantic" CXX_COMPILER_HAS_WPEDANTIC_FLAG)
-  if (CXX_COMPILER_HAS_WPEDANTIC_FLAG)
-    add_cxx_flag_as_library(EXTRA_CXX_FLAGS "-Wpedantic")
-  endif ()
-endif ()
-
-# Configuration options
-option(Hydrogen_EXPORT_PACKAGE_REGISTRY
-  "Export the build directory to the user's CMake package registry." OFF)
-if (NOT Hydrogen_EXPORT_PACKAGE_REGISTRY)
+# Handle some CMake basics.
+#
+# These are highlighted because they default to OFF, but we prefer
+# that they default to ON.
+if (NOT DEFINED CMAKE_EXPORT_NO_PACKAGE_REGISTRY)
   set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
 endif ()
 
-option(CMAKE_POSITION_INDEPENDENT_CODE
-  "Build using position-independent code" ON)
+if (NOT DEFINED CMAKE_POSITION_INDEPENDENT_CODE)
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif ()
 
-option(CMAKE_INTERPROCEDURAL_OPTIMIZATION
-  "Build Hydrogen with interprocedural optimization enabled" OFF)
-
-option(Hydrogen_ENABLE_BOUNDS_CHECKING
-  "Do bounds checking in various routines."
-  OFF)
-set(HYDROGEN_DO_BOUNDS_CHECKING ${Hydrogen_ENABLE_BOUNDS_CHECKING})
-
-option(Hydrogen_ENABLE_TESTING
-  "Build the test suite in the tests directory." ON)
-
-option(Hydrogen_ENABLE_UNIT_TESTS
-  "Build the Catch2-based unit tests." OFF)
-
-option(Hydrogen_ENABLE_QUADMATH
-  "Search for quadmath library and enable related features if found." OFF)
-
-option(Hydrogen_ENABLE_QD
-  "Search for QD library and enable related features if found." OFF)
-
-option(Hydrogen_ENABLE_MPC
-  "Search for MPC(+MPFR+GMP) library and enable related features if found."
-  OFF)
+# Feature-related options
 
 option(Hydrogen_ENABLE_ALUMINUM
-  "Enable the Aluminum package for improved Allreduces."
+  "Enable the Aluminum package for improved device-side communication."
   OFF)
 
 option(Hydrogen_ENABLE_CUDA
@@ -180,6 +135,16 @@ if (Hydrogen_ENABLE_CUDA OR Hydrogen_ENABLE_ROCM)
     ON)
 endif ()
 
+option(Hydrogen_ENABLE_QUADMATH
+  "Search for quadmath library and enable related features if found." OFF)
+
+option(Hydrogen_ENABLE_QD
+  "Search for QD library and enable related features if found." OFF)
+
+option(Hydrogen_ENABLE_MPC
+  "Search for MPC(+MPFR+GMP) library and enable related features if found."
+  OFF)
+
 #
 # MEMORY-RELATED OPTIONS
 #
@@ -211,6 +176,19 @@ if (Hydrogen_USE_64BIT_INTS)
   set(EL_USE_64BIT_INTS ON)
 endif ()
 
+# Debugging and testing options
+
+option(Hydrogen_ENABLE_BOUNDS_CHECKING
+  "Do bounds checking in various routines regardless of DEBUG build."
+  OFF)
+set(HYDROGEN_DO_BOUNDS_CHECKING ${Hydrogen_ENABLE_BOUNDS_CHECKING})
+
+option(Hydrogen_ENABLE_TESTING
+  "Build the test suite in the tests directory." ON)
+
+option(Hydrogen_ENABLE_UNIT_TESTS
+  "Build the Catch2-based unit tests." OFF)
+
 option(Hydrogen_ZERO_INIT "Initialize buffers to zero by default?" OFF)
 mark_as_advanced(Hydrogen_ZERO_INIT)
 if (Hydrogen_ZERO_INIT)
@@ -224,9 +202,7 @@ if (Hydrogen_ENABLE_VALGRIND)
   set(EL_ENABLE_VALGRIND ${Hydrogen_ENABLE_VALGRIND})
 endif ()
 
-#
-# Profiling
-#
+# Profiling options
 
 option(Hydrogen_ENABLE_NVPROF
   "Search for NVProf and enable related features" OFF)
@@ -239,9 +215,7 @@ if (Hydrogen_ENABLE_SYNCHRONOUS_PROFILING)
   set(HYDROGEN_DEFAULT_SYNC_PROFILING TRUE)
 endif ()
 
-#
-# OpenMP
-#
+# Thread/OpenMP parallelism options
 
 option(Hydrogen_ENABLE_OPENMP
   "Enable OpenMP support in Hydrogen" OFF)
@@ -251,12 +225,10 @@ if (Hydrogen_ENABLE_OPENMP)
     "Use taskloops instead of parallel for" OFF)
 endif ()
 
-#
-# MPI
-#
+# MPI-related options
 
 # CUDA-aware MPI can provide a benefit, if it works. However, it is
-# often buggy. We can avoid it by setting this to ON
+# often buggy. We can avoid it by setting this to ON.
 option(Hydrogen_AVOID_CUDA_AWARE_MPI "Avoid CUDA-aware MPI" OFF)
 
 option(Hydrogen_USE_CUSTOM_ALLTOALLV
@@ -288,9 +260,7 @@ if (Hydrogen_USE_BYTE_ALLGATHERS)
   set(EL_USE_BYTE_ALLGATHERS ${Hydrogen_USE_BYTE_ALLGATHERS})
 endif ()
 
-#
-# Runtime warnings
-#
+# Runtime feedback options
 
 # Print a warning any time a redistribution is performed which unpacks
 # a large amount of data with a non-unit stride
@@ -321,9 +291,7 @@ if (Hydrogen_VECTOR_WARNINGS)
   set(EL_VECTOR_WARNINGS ${Hydrogen_VECTOR_WARNINGS})
 endif ()
 
-#
 # Check the compiler features
-#
 
 if (Hydrogen_ENABLE_HALF)
   find_package(HALF REQUIRED)
@@ -333,16 +301,12 @@ endif ()
 if (Hydrogen_ENABLE_CUDA)
   enable_language(CUDA)
 
-  if (NOT CMAKE_CUDA_STANDARD
-      OR CMAKE_CUDA_STANDARD EQUAL 98
-      OR CMAKE_CUDA_STANDARD LESS 14)
-    set(CMAKE_CUDA_STANDARD 14)
-    set(CMAKE_CUDA_STANDARD_REQUIRED TRUE)
-  endif ()
-
-  find_package(CUDA REQUIRED) # Enable all the macros
   find_package(CUDAToolkit REQUIRED)
-  find_package(NVML REQUIRED)
+  set(H_CUDA_CXX_LIBS
+    CUDA::cudart
+    CUDA::cublas
+    CUDA::cusolver
+    CUDA::nvml)
 
   if (Hydrogen_ENABLE_GPU_TENSOR_MATH)
     set(HYDROGEN_GPU_USE_TENSOR_OP_MATH TRUE)
@@ -353,106 +317,69 @@ if (Hydrogen_ENABLE_CUDA)
   endif ()
 
   if (Hydrogen_ENABLE_CUB)
-    find_package(CUB REQUIRED)
+    if (CUDAToolkit_VERSION_MAJOR LESS 11)
+      find_package(CUB MODULE REQUIRED)
+      set(H_EXTERNAL_CUB TRUE)
+      list(APPEND H_CUDA_CXX_LIBS cuda::cub)
+    endif ()
     set(HYDROGEN_HAVE_CUB TRUE)
-  else ()
-    set(HYDROGEN_HAVE_CUB FALSE)
   endif ()
 
   if (Hydrogen_ENABLE_NVPROF)
-    find_package(NVTX REQUIRED)
+    if (TARGET CUDA::nvToolsExt)
+      list(APPEND H_CUDA_CXX_LIBS CUDA::nvToolsExt)
+    else ()
+      find_package(NVTX MODULE REQUIRED)
+      set(H_EXTERNAL_NVTX TRUE)
+      list(APPEND H_CUDA_CXX_LIBS cuda::nvtx)
+    endif ()
     set(HYDROGEN_HAVE_NVPROF TRUE)
-  else ()
-    set(HYDROGEN_HAVE_NVPROF FALSE)
   endif ()
 
-  if (NOT TARGET cuda::toolkit)
-
-    add_library(cuda::toolkit INTERFACE IMPORTED)
-
-    foreach (lib IN LISTS CUDA_CUBLAS_LIBRARIES CUDA_LIBRARIES
-        CUDA_CUDA_LIBRARY CUB_LIBRARIES NVML_LIBRARIES
-        CUDA_cusolver_LIBRARY)
-
-      if (lib)
-        list(APPEND _CUDA_TOOLKIT_LIBS ${lib})
-      endif ()
-
-    endforeach ()
-
-    set_property(TARGET cuda::toolkit PROPERTY
-      INTERFACE_LINK_LIBRARIES "${_CUDA_TOOLKIT_LIBS}")
-
-    set_property(TARGET cuda::toolkit PROPERTY
-      INTERFACE_COMPILE_OPTIONS
-      $<$<COMPILE_LANGUAGE:CUDA>:-arch=sm_60>
+  add_library(H_CUDA_extended_lambda INTERFACE IMPORTED)
+  check_compiler_flag(CUDA "--expt-extended-lambda"
+    CUDA_COMPILER_SUPPORTS_EXTENDED_LAMBDA)
+  if (CUDA_COMPILER_SUPPORTS_EXTENDED_LAMBDA)
+    set_property(TARGET H_CUDA_extended_lambda
+      PROPERTY INTERFACE_COMPILE_OPTIONS
       $<$<COMPILE_LANGUAGE:CUDA>:--expt-extended-lambda>)
-
-    set_property(TARGET cuda::toolkit PROPERTY
-      INTERFACE_INCLUDE_DIRECTORIES "${CUDA_INCLUDE_DIRS}")
   endif ()
+
   set(HYDROGEN_HAVE_CUDA TRUE)
+  set(H_CUDA_CUDA_LIBS
+    H_CUDA_extended_lambda)
+
 endif (Hydrogen_ENABLE_CUDA)
 
 if (Hydrogen_ENABLE_ROCM)
-  # Prefer explicit cache variables, then env variables.
-  if (ROCM_PATH)
-    set(_INTERNAL_ROCM_PREFIX ${ROCM_PATH})
-  elseif (DEFINED ENV{ROCM_PATH})
-    set(_INTERNAL_ROCM_PREFIX $ENV{ROCM_PATH})
-  else ()
-    # I don't have a better idea here.
-    find_program(SOME_ROCM_PROGRAM
-      NAMES rocm-smi rocminfo rocprof
-      DOC "A program used to attempt to deduce the ROCm path.")
-    mark_as_advanced(SOME_ROCM_PROGRAM)
-    if (SOME_ROCM_PROGRAM)
-      get_filename_component(ROCM_PROGRAM_BIN_DIR
-        "${SOME_ROCM_PROGRAM}"
-        DIRECTORY)
-      get_filename_component(_INTERNAL_ROCM_PREFIX
-        "${ROCM_PROGRAM_BIN_DIR}"
-        DIRECTORY)
-    else ()
-      # Ok, at this point, there's nothing better to be done.
-      set(_INTERNAL_ROCM_PREFIX "/opt/rocm")
-    endif ()
-  endif ()
-  message(STATUS
-    "Searching for HIP/ROCm infrastructure: ${_INTERNAL_ROCM_PREFIX}")
-  set(CMAKE_MODULE_PATH
-    "${_INTERNAL_ROCM_PREFIX}/hip/cmake"
-    ${CMAKE_MODULE_PATH})
-  find_package(HIP REQUIRED)
+  # This *must* come first!
+  find_package(hip CONFIG REQUIRED)
+
+  enable_language(HIP)
 
   if (Hydrogen_ENABLE_CUB)
-    set(CMAKE_PREFIX_PATH
-      "${_INTERNAL_ROCM_PREFIX}/hip"
-      ${CMAKE_PREFIX_PATH})
-
-    # This is finnicky; the HIP we found first is just CMakery. Now we
-    # need to pretend we haven't found it, so that we can find the HIP
-    # runtime.
-    set(HIP_FOUND FALSE)
-    find_package(HIP CONFIG REQUIRED)
-
-    # It looks like hipCUB has added "find_dependency(rocPRIM)", so
-    # hopefully this will just work now.
-    find_package(hipCUB REQUIRED)
+    find_package(hipcub REQUIRED)
     set(HYDROGEN_HAVE_CUB TRUE)
   else ()
     set(HYDROGEN_HAVE_CUB FALSE)
   endif ()
 
-  if (HIP_FOUND)
-    find_package(rocblas CONFIG REQUIRED)
-    find_package(rocsolver CONFIG REQUIRED)
-    find_package(rocthrust CONFIG REQUIRED)
-    set(HYDROGEN_HAVE_ROCM TRUE)
-    message(STATUS "Found ROCm/HIP toolchain. Using HIP/ROCm.")
-  else ()
-    message(FATAL_ERROR "ROCm requested but not found.")
-  endif ()
+  find_package(rocblas CONFIG REQUIRED)
+  find_package(rocsolver CONFIG REQUIRED)
+  find_package(rocthrust CONFIG REQUIRED)
+
+  set(HYDROGEN_HAVE_ROCM TRUE)
+  message(STATUS "Found ROCm/HIP toolchain. Using HIP/ROCm.")
+
+  set(H_ROCM_CXX_LIBS
+    hip::host
+    hip::hipcub
+    roc::rocblas
+    roc::rocsolver
+    roc::rocthrust)
+
+  set(H_ROCM_HIP_LIBS
+    hip::device)
 endif (Hydrogen_ENABLE_ROCM)
 
 if (HYDROGEN_HAVE_CUDA OR HYDROGEN_HAVE_ROCM)
@@ -460,19 +387,22 @@ if (HYDROGEN_HAVE_CUDA OR HYDROGEN_HAVE_ROCM)
 endif ()
 
 if (Hydrogen_ENABLE_ALUMINUM)
-  find_package(Aluminum 1.0.0 NO_MODULE QUIET
-    HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
-    $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
-    PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
-    NO_DEFAULT_PATH)
-  find_package(Aluminum 1.0.0 NO_MODULE QUIET)
+  find_package(Aluminum 1.0.0 CONFIG QUIET)
+  if (NOT Aluminum_FOUND AND Aluminum_NOT_FOUND_MESSAGE)
+    message(STATUS
+      "A candidate Aluminum > v1.0.0 was found, but was not selected:")
+    message(STATUS
+      "  ${Aluminum_NOT_FOUND_MESSAGE}")
+  endif ()
+  # Try again, since we're technically ok with >v0.7.0
   if (NOT Aluminum_FOUND)
-    find_package(Aluminum 0.7.0 NO_MODULE QUIET
-      HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
-      $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
-      PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
-      NO_DEFAULT_PATH)
-    find_package(Aluminum 0.7.0 NO_MODULE QUIET)
+    find_package(Aluminum 0.7.0 CONFIG QUIET)
+    if (NOT Aluminum_FOUND AND Aluminum_NOT_FOUND_MESSAGE)
+      message(STATUS
+        "A candidate Aluminum > v0.7.0 was found, but was not selected:")
+      message(STATUS
+        "  ${Aluminum_NOT_FOUND_MESSAGE}")
+    endif ()
   endif ()
 
   if (Aluminum_FOUND)
@@ -501,21 +431,16 @@ if (Hydrogen_ENABLE_ALUMINUM)
       set(HYDROGEN_HAVE_AL_MPI_CUDA FALSE)
     endif (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
   else ()
-    set(HYDROGEN_HAVE_ALUMINUM FALSE)
-    set(HYDROGEN_HAVE_NCCL2 FALSE)
-    set(HYDROGEN_HAVE_AL_MPI_CUDA FALSE)
-    set(Hydrogen_ENABLE_ALUMINUM FALSE)
     message(FATAL_ERROR "Aluminum support requested but not found. "
       "Please set Aluminum_DIR to point to the installation prefix "
       "for Aluminum.")
   endif (Aluminum_FOUND)
 endif (Hydrogen_ENABLE_ALUMINUM)
 
+# Sets up EL_RESTRICT and EL_HAVE_PRETTY_FUNCTION
 include(detect/CXX)
 
-#
-# Find third-party libraries
-#
+# Other TPLs
 
 if (Hydrogen_ENABLE_VTUNE)
   find_package(VTUNE REQUIRED)
@@ -542,17 +467,11 @@ include(FindAndVerifyExtendedPrecision)
 
 # Catch2
 if (Hydrogen_ENABLE_UNIT_TESTS)
-  find_package(Catch2 2.0.0 CONFIG QUIET
-    HINTS ${CATCH2_DIR} $ENV{CATCH2_DIR} ${CATCH_DIR} $ENV{CATCH_DIR}
-    PATH_SUFFIXES lib64/cmake/Catch2 lib/cmake/Catch2
-    NO_DEFAULT_PATH)
-  if (NOT Catch2_FOUND)
-    find_package(Catch2 2.0.0 CONFIG QUIET REQUIRED)
-  endif ()
-  message(STATUS "Found Catch2: ${Catch2_DIR}")
-
+  find_package(Catch2 2.0.0 CONFIG REQUIRED)
   include(Catch)
 endif ()
+
+# Get the source files
 
 # Macro for setting up full paths
 macro(set_full_path VAR)
@@ -570,30 +489,32 @@ set(HYDROGEN_SOURCES)
 add_subdirectory(include)
 add_subdirectory(src)
 
+# Setup the configuration files for both "Elemental" and
+# "Hydrogen". There's also one for Doxygen for building "build tree"
+# docs (which has the advantage that preprocessing will take
+# "{,hydrogen_}config.h" into consideration).
 configure_file("${PROJECT_SOURCE_DIR}/cmake/configure_files/config.h.in"
   "${PROJECT_BINARY_DIR}/include/El/config.h")
 configure_file("${PROJECT_SOURCE_DIR}/cmake/configure_files/hydrogen_config.h.in"
   "${PROJECT_BINARY_DIR}/include/El/hydrogen_config.h")
-
 configure_file("${PROJECT_SOURCE_DIR}/doxy/Doxyfile.in"
   "${PROJECT_BINARY_DIR}/doxy/Doxyfile")
 
-if (HYDROGEN_HAVE_ROCM)
-  hip_add_library(Hydrogen_CXX "${HYDROGEN_SOURCES}" "${HYDROGEN_HEADERS}")
-else ()
-  add_library(Hydrogen_CXX "${HYDROGEN_SOURCES}" "${HYDROGEN_HEADERS}")
-endif ()
-
+add_library(Hydrogen_CXX "${HYDROGEN_SOURCES}" "${HYDROGEN_HEADERS}")
 target_include_directories(Hydrogen_CXX PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/El>
   $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 
-# These flags don't need to be propagated. Just because Hydrogen_CXX is
-# built with "-Werror", for instance, doesn't mean downstreams should
-# be forced to build with that (even though they maybe should)...
-target_compile_options(Hydrogen_CXX PRIVATE ${EXTRA_CXX_FLAGS})
+# For now, add all flags regardless of "developer" or not.
+foreach (_FLAG IN LISTS __CXX_FLAGS __CXX_DEVELOPER_FLAGS)
+  check_compiler_flag(CXX "${_FLAG}" CXX_COMPLER_HAS_FLAG_${_FLAG})
+  if (CXX_COMPILER_HAS_FLAG_${_FLAG})
+    target_compile_options(Hydrogen_CXX PRIVATE
+      $<$<COMPILE_LANGUAGE:CXX>:${_FLAG}>)
+  endif ()
+endforeach ()
 
 target_link_libraries(
   Hydrogen_CXX PUBLIC
@@ -605,14 +526,16 @@ target_link_libraries(
   $<TARGET_NAME_IF_EXISTS:MPI::MPI_CXX>
   $<TARGET_NAME_IF_EXISTS:LAPACK::lapack>
   $<TARGET_NAME_IF_EXISTS:EP::extended_precision>
-  $<TARGET_NAME_IF_EXISTS:CUDA::cublas>
-  $<TARGET_NAME_IF_EXISTS:CUDA::toolkit>
-  $<TARGET_NAME_IF_EXISTS:hip::rocprim_hip>
-  $<TARGET_NAME_IF_EXISTS:hip::hipcub>
-  $<TARGET_NAME_IF_EXISTS:roc::rocblas>
-  $<TARGET_NAME_IF_EXISTS:roc::rocsolver>
-  $<TARGET_NAME_IF_EXISTS:roc::rocthrust>
+
+  ${H_CUDA_CXX_LIBS}
+  ${H_ROCM_CXX_LIBS}
   )
+
+if (NOT CMAKE_CXX_STANDARD)
+  set_target_properties(Hydrogen_CXX
+    PROPERTIES
+    CXX_STANDARD 17)
+endif ()
 
 # Add the CXX library to "Hydrogen"
 set(HYDROGEN_LIBRARIES Hydrogen_CXX)
@@ -624,19 +547,38 @@ if (HYDROGEN_HAVE_CUDA)
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
-  target_link_libraries(
-    Hydrogen_CUDA PUBLIC
+  target_link_libraries(Hydrogen_CUDA
+    PUBLIC
     ${HALF_LIBRARIES}
-    ${NVTX_LIBRARIES}
-    $<TARGET_NAME_IF_EXISTS:cuda::toolkit>
+    ${H_CUDA_CUDA_LIBS}
     )
+
+  foreach (_FLAG IN LISTS __CUDA_FLAGS __CUDA_DEVELOPER_FLAGS)
+    check_compiler_flag(CUDA "${_FLAG}" CUDA_COMPLER_HAS_FLAG_${_FLAG})
+    if (CUDA_COMPILER_HAS_FLAG_${_FLAG})
+      target_compile_options(Hydrogen_CUDA PRIVATE
+        $<$<COMPILE_LANGUAGE:CUDA>:${_FLAG}>)
+    endif ()
+  endforeach ()
+
+  if (NOT CMAKE_CUDA_STANDARD)
+    set_target_properties(Hydrogen_CUDA
+      PROPERTIES CUDA_STANDARD 17)
+  endif ()
 
   target_link_libraries(Hydrogen_CXX PUBLIC Hydrogen_CUDA)
   list(APPEND HYDROGEN_LIBRARIES Hydrogen_CUDA)
 endif ()
 
 if (HYDROGEN_HAVE_ROCM)
-  hip_add_library(Hydrogen_ROCM STATIC "${HYDROGEN_GPU_SOURCES}")
+  add_library(Hydrogen_ROCM STATIC "${HYDROGEN_GPU_SOURCES}")
+
+  # HIP files use the ".hip" extension. Since we don't want to copy
+  # these files, we have to explicitly set their language to be HIP.
+  get_target_property(H_HIP_SOURCES Hydrogen_ROCM SOURCES)
+  set_source_files_properties(${H_HIP_SOURCES}
+    PROPERTIES LANGUAGE HIP)
+
   target_include_directories(Hydrogen_ROCM PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
@@ -647,6 +589,14 @@ if (HYDROGEN_HAVE_ROCM)
     ${HALF_LIBRARIES}
     ${ROCBLAS_LIBRARIES}
     )
+
+  foreach (_FLAG IN LISTS __HIP_FLAGS __HIP_DEVELOPER_FLAGS)
+    check_compiler_flag(HIP "${_FLAG}" HIP_COMPLER_HAS_FLAG_${_FLAG})
+    if (HIP_COMPILER_HAS_FLAG_${_FLAG})
+      target_compile_options(Hydrogen_ROCM PRIVATE
+        $<$<COMPILE_LANGUAGE:HIP>:${_FLAG}>)
+    endif ()
+  endforeach ()
 
   #set_target_properties(Hydrogen_ROCM PROPERTIES LINKER_LANGUAGE CXX)
   list(APPEND HYDROGEN_LIBRARIES Hydrogen_ROCM)
