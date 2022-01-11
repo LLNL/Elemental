@@ -337,18 +337,7 @@ if (Hydrogen_ENABLE_CUDA)
     set(HYDROGEN_HAVE_NVPROF TRUE)
   endif ()
 
-  add_library(H_CUDA_extended_lambda INTERFACE IMPORTED)
-  check_compiler_flag(CUDA "--expt-extended-lambda"
-    CUDA_COMPILER_SUPPORTS_EXTENDED_LAMBDA)
-  if (CUDA_COMPILER_SUPPORTS_EXTENDED_LAMBDA)
-    set_property(TARGET H_CUDA_extended_lambda
-      PROPERTY INTERFACE_COMPILE_OPTIONS
-      $<$<COMPILE_LANGUAGE:CUDA>:--expt-extended-lambda>)
-  endif ()
-
   set(HYDROGEN_HAVE_CUDA TRUE)
-  set(H_CUDA_CUDA_LIBS
-    H_CUDA_extended_lambda)
 
 endif (Hydrogen_ENABLE_CUDA)
 
@@ -550,9 +539,7 @@ if (HYDROGEN_HAVE_CUDA)
 
   target_link_libraries(Hydrogen_CUDA
     PUBLIC
-    ${HALF_LIBRARIES}
-    ${H_CUDA_CUDA_LIBS}
-    )
+    ${HALF_LIBRARIES})
 
   foreach (_FLAG IN LISTS __CUDA_FLAGS __CUDA_DEVELOPER_FLAGS)
     check_compiler_flag(CUDA "${_FLAG}" CUDA_COMPLER_HAS_FLAG_${_FLAG})

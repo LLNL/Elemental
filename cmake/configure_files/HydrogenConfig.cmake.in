@@ -80,7 +80,6 @@ if (_HYDROGEN_HAVE_CUDA)
   set(_HYDROGEN_EXTERNAL_CUB @H_EXTERNAL_CUB@)
   set(_HYDROGEN_EXTERNAL_NVTX @H_EXTERNAL_NVTX@)
 
-  enable_language(CUDA)
   find_dependency(CUDAToolkit)
 
   if (_HYDROGEN_EXTERNAL_CUB)
@@ -89,16 +88,6 @@ if (_HYDROGEN_HAVE_CUDA)
 
   if (_HYDROGEN_EXTERNAL_NVTX)
     find_dependency(NVTX MODULE)
-  endif ()
-
-  # Re-create this IMPORTED target.
-  add_library(H_CUDA_extended_lambda INTERFACE IMPORTED)
-  check_compiler_flag(CUDA "--expt-extended-lambda"
-    CUDA_COMPILER_SUPPORTS_EXTENDED_LAMBDA)
-  if (CUDA_COMPILER_SUPPORTS_EXTENDED_LAMBDA)
-    set_property(TARGET H_CUDA_extended_lambda
-      PROPERTY INTERFACE_COMPILE_OPTIONS
-      $<$<COMPILE_LANGUAGE:CUDA>:--expt-extended-lambda>)
   endif ()
 endif ()
 
