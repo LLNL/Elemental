@@ -521,6 +521,10 @@ target_link_libraries(
   ${H_ROCM_CXX_LIBS}
   )
 
+set_target_properties(Hydrogen_CXX
+  PROPERTIES
+  VERSION ${HYDROGEN_VERSION})
+
 if (NOT CMAKE_CXX_STANDARD)
   set_target_properties(Hydrogen_CXX
     PROPERTIES
@@ -548,6 +552,10 @@ if (HYDROGEN_HAVE_CUDA)
         $<$<COMPILE_LANGUAGE:CUDA>:${_FLAG}>)
     endif ()
   endforeach ()
+
+  set_target_properties(Hydrogen_CUDA
+    PROPERTIES
+    VERSION ${HYDROGEN_VERSION})
 
   if (NOT CMAKE_CUDA_STANDARD)
     set_target_properties(Hydrogen_CUDA
@@ -577,6 +585,10 @@ if (HYDROGEN_HAVE_ROCM)
     ${HALF_LIBRARIES}
     ${ROCBLAS_LIBRARIES}
     )
+
+  set_target_properties(Hydrogen_ROCM
+    PROPERTIES
+    VERSION ${HYDROGEN_VERSION})
 
   foreach (_FLAG IN LISTS __HIP_FLAGS __HIP_DEVELOPER_FLAGS)
     check_compiler_flag(HIP "${_FLAG}" HIP_COMPLER_HAS_FLAG_${_FLAG})
