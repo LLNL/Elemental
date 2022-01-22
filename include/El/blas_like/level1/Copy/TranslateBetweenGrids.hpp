@@ -3870,60 +3870,108 @@ void TranslateBetweenGrids(
   DistMatrix<T,STAR,VC,ELEMENT,D> const& A,
   DistMatrix<T,STAR,VC,ELEMENT,D>& B)
 {
-    EL_DEBUG_CSE;
-    const Int m = A.Height();
-    const Int n = A.Width();
-    B.Resize(m, n);
+  EL_DEBUG_CSE;
 
-    mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
-    mpi::Group owningGroupA = A.Grid().OwningGroup(); // Assume it's a subset of viewingCommB
-    const Int rankA = A.RowRank();
-    const Int rankB = B.RowRank();
-    const bool inAGrid = A.Participating();
-    const bool inBGrid = B.Participating();
-    if (!inAGrid && !inBGrid)
-        return;
+  // Matrix dimensions
+  const Int m = A.Height();
+  const Int n = A.Width();
+  B.Resize(m, n);
+  const Int nLocA = A.LocalWidth();
+  const Int nLocB = B.LocalWidth();
 
-    // Synchronize compute streams
-    SyncInfo<D> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
-    SyncInfo<D> syncInfoB = SyncInfoFromMatrix(B.Matrix());
-    auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
+  // Compute the number of messages that each process will send
+  const Int rankA = A.RowRank();
+  const Int rankB = B.RowRank();
+  const Int strideA = A.RowStride();
+  const Int strideB = B.RowStride();
+  const Int shiftA = A.RowShift();
+  const Int shiftB = B.RowShift();
+  const Int alignA = A.RowAlign();
+  const Int alignB = B.RowAlign();
+  const Int strideGCD = GCD( strideA, strideB );
+  const Int strideLCM = strideA*strideB / strideGCD;
+  const Int numSends = strideA / strideGCD;
 
-    // Translate the ranks from A's VC communicator to B's viewing so that
-    // we can match send/recv communicators. Since A's VC communicator is not
-    // necessarily defined on every process, we instead work with A's owning
-    // group.
-    const int sizeA = A.Grid().Size();
-    vector<int> rankMap(sizeA), ranks(sizeA);
-    std::iota(ranks.begin(), ranks.end(), 0);
-    mpi::Translate(owningGroupA, sizeA, ranks.data(), viewingCommB, rankMap.data());
+  // Return immediately if there is no local data
+  const bool inAGrid = A.Participating();
+  const bool inBGrid = B.Participating();
+  if (!inAGrid && !inBGrid) {
+    return;
+  }
 
-    // Send individual columns of A to columns of B
-    for (Int j=0; j<n; ++j) {
-      const Int sendVCRank = A.ColOwner(j);
-      const Int recvVCRank = B.ColOwner(j);
-      const bool isSending = inAGrid && rankA == sendVCRank;
-      const bool isRecving = inBGrid && rankB == recvVCRank;
-      if (isSending && isRecving) {
-        copy::util::InterleaveMatrix(
-          m, 1,
-          A.LockedBuffer(0,A.LocalCol(j)), 1, A.LDim(),
-          B.Buffer(0,B.LocalCol(j)), 1, B.LDim(),
-          syncInfoB);
-      }
-      else if (isSending) {
-        const Int recvViewingRank = B.Grid().VCToViewing(recvVCRank);
-        mpi::Send(
-          A.LockedBuffer(0,A.LocalCol(j)), m,
-          recvViewingRank, viewingCommB, syncInfoB);
-      }
-      else if (isRecving) {
-        const Int sendViewingRank = rankMap[sendVCRank];
-        mpi::Recv(
-          B.Buffer(0,B.LocalCol(j)), m,
-          sendViewingRank, viewingCommB, syncInfoB);
-      }
+  // Synchronize compute streams
+  SyncInfo<D> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
+  SyncInfo<D> syncInfoB = SyncInfoFromMatrix(B.Matrix());
+  auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
+
+  // Translate the ranks from A's VC communicator to B's viewing so that
+  // we can match send/recv communicators. Since A's VC communicator is not
+  // necessarily defined on every process, we instead work with A's owning
+  // group.
+  mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
+  mpi::Group owningGroupA = A.Grid().OwningGroup();
+  const int sizeA = A.Grid().Size();
+  vector<int> rankMap(sizeA), ranks(sizeA);
+  std::iota(ranks.begin(), ranks.end(), 0);
+  mpi::Translate(owningGroupA, sizeA, ranks.data(), viewingCommB, rankMap.data());
+  const Int viewingRank
+    = inAGrid ? rankMap[rankA] : B.Grid().VCToViewing(rankB);
+  if (viewingRank < 0 || viewingRank >= viewingCommB.Size()) {
+    LogicError(
+      "TranslateBetweenGrids: Owning group for matrix A "
+      "is not a subset of viewing communicator for matrix B");
+  }
+
+  // Workspace buffers
+  const Int maxSendSize = m * ((n+strideA*numSends-1) / (strideA*numSends));
+  simple_buffer<T,D> sendBuf(inAGrid ? maxSendSize : 0, syncInfoB);
+  simple_buffer<T,D> recvBuf(inBGrid ? maxSendSize : 0, syncInfoB);
+
+  // Figure out which ranks to send and receive messages
+  std::map<Int,std::pair<Int,Int>> messages;
+  for (Int jLocA=0; jLocA<nLocA; ++jLocA) {
+    const Int j = A.GlobalCol(jLocA);
+    const Int recvVCRank = B.ColOwner(j);
+    const Int recvViewingRank = B.Grid().VCToViewing(recvVCRank);
+    messages[j] = std::pair<Int,Int>(viewingRank, recvViewingRank);
+  }
+  for (Int jLocB=0; jLocB<nLocB; ++jLocB) {
+    const Int j = B.GlobalCol(jLocB);
+    const Int sendVCRank = A.ColOwner(j);
+    const Int sendViewingRank = rankMap[sendVCRank];
+    messages[j] = std::pair<Int,Int>(sendViewingRank, viewingRank);
+  }
+
+  // Send and recieve messages
+  for (auto const& message : messages) {
+    const Int j = message.first;
+    const Int sendViewingRank = message.second.first;
+    const Int recvViewingRank = message.second.second;
+    if (viewingRank == sendViewingRank && viewingRank == recvViewingRank) {
+      // Copy data locally
+      const Int jLocA = A.LocalCol(j);
+      const Int jLocB = B.LocalCol(j);
+      copy::util::InterleaveMatrix(
+        m, 1,
+        A.LockedBuffer(0,jLocA), 1, A.LDim(),
+        B.Buffer(0,jLocB), 1, B.LDim(),
+        syncInfoB);
     }
+    else if (viewingRank == sendViewingRank) {
+      // Send data to other rank
+      const Int jLocA = A.LocalCol(j);
+      mpi::Send(
+        A.LockedBuffer(0,jLocA), m,
+        recvViewingRank, viewingCommB, syncInfoB);
+    }
+    else if (viewingRank == recvViewingRank) {
+      // Recieve data from other rank
+      const Int jLocB = B.LocalCol(j);
+      mpi::Recv(
+        B.Buffer(0,jLocB), m,
+        sendViewingRank, viewingCommB, syncInfoB);
+    }
+  }
 
 }
 
