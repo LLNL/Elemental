@@ -19,12 +19,21 @@ void Scatter(const DistMatrix<T, CIRC, CIRC, ELEMENT, D>& A,
              ElementalMatrix<T>& B)
 {
     EL_DEBUG_CSE
-    AssertSameGrids(A, B);
     if (B.GetLocalDevice() != D)
-        RuntimeError("Device mismatch.");
+        LogicError("Scatter: Inter-device scatter not implemented.");
+
+    // Matrix dimensions
     const Int m = A.Height();
     const Int n = A.Width();
     B.Resize(m, n);
+    if (m <= 0 || n <= 0) {
+      return;
+    }
+
+    // Nothing needs to be done if we are not participating in grid
+    AssertSameGrids(A, B);
+    if (!B.Grid().InGrid())
+        return;
 
     if (B.CrossSize() != 1 || B.RedundantSize() != 1)
     {
@@ -35,6 +44,7 @@ void Scatter(const DistMatrix<T, CIRC, CIRC, ELEMENT, D>& A,
         return;
     }
 
+    // Avoid communication if not needed
     if (B.DistSize() == 1)
     {
         Copy(A.LockedMatrix(), B.Matrix());

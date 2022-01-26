@@ -18,14 +18,25 @@ void Gather(
     DistMatrix<T,CIRC,CIRC,ELEMENT,D>& B)
 {
     EL_DEBUG_CSE
-    AssertSameGrids(Apre, B);
 
+    // Matrix dimensions
+    const Int height = Apre.Height();
+    const Int width = Apre.Width();
+    B.Resize(height, width);
+    if(height <= 0 || width <= 0) {
+      return;
+    }
+
+    // Nothing needs to be done if we are not participating in grid
+    AssertSameGrids(Apre, B);
+    if(!B.Grid().InGrid())
+        return;
+
+    // Make sure A and B are on same device
     AbstractDistMatrixReadDeviceProxy<T, D> Aprox(Apre);
     auto const& A = static_cast<ElementalMatrix<T> const&>(Aprox.GetLocked());
 
-    if (A.GetLocalDevice() != D)
-        LogicError("Gather: Inter-device gather not implemented.");
-
+    // Avoid communication if not needed
     if(A.DistSize() == 1 && A.CrossSize() == 1)
     {
         B.Resize(A.Height(), A.Width());
@@ -35,16 +46,11 @@ void Gather(
         return;
     }
 
-    const Int height = A.Height();
-    const Int width = A.Width();
-    B.SetGrid(A.Grid());
-    B.Resize(height, width);
-
+    // Synchronize compute streams
     auto syncInfoA = SyncInfoFromMatrix(
         static_cast<Matrix<T,D> const&>(A.LockedMatrix()));
     auto syncInfoB = SyncInfoFromMatrix(B.LockedMatrix());
     SyncInfo<Device::CPU> syncInfoCPU;
-
     auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
 
     // Gather the colShifts and rowShifts
@@ -113,6 +119,8 @@ void Gather
 {
     EL_DEBUG_CSE
     AssertSameGrids(A, B);
+    if (!B.Grid().InGrid())
+        return;
     if(A.DistSize() == 1 && A.CrossSize() == 1)
     {
         B.Resize(A.Height(), A.Width());

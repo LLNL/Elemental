@@ -37,15 +37,13 @@ void Translate
 
 template<typename T,Device D>
 void TranslateBetweenGrids
+( const DistMatrix<T,CIRC,CIRC,ELEMENT,D>& A, DistMatrix<T,CIRC,CIRC,ELEMENT,D>& B );
+template<typename T,Device D>
+void TranslateBetweenGrids
 ( const DistMatrix<T,MC,MR,ELEMENT,D>& A, DistMatrix<T,MC,MR,ELEMENT,D>& B );
 template<typename T,Device D>
 void TranslateBetweenGrids
 ( const DistMatrix<T,STAR,VC,ELEMENT,D>& A, DistMatrix<T,STAR,VC,ELEMENT,D>& B );
-
-template<typename T,Device D1,Device D2>
-void TranslateBetweenGrids
-( DistMatrix<T,STAR,STAR,ELEMENT,D1> const& A,
-  DistMatrix<T,STAR,STAR,ELEMENT,D2>& B );
 
 template<typename T, Device D1, Device D2>
 void TranslateBetweenGridsBroadcastBasic

@@ -16,18 +16,62 @@ namespace copy
 {
 
 template<typename T,Dist U,Dist V,Device D1,Device D2>
-void TranslateBetweenGrids
-(DistMatrix<T,U,V,ELEMENT,D1> const& A,
+void TranslateBetweenGrids(
+  DistMatrix<T,U,V,ELEMENT,D1> const& A,
   DistMatrix<T,U,V,ELEMENT,D2>& B)
 {
     EL_DEBUG_CSE
+    DistMatrix<T,CIRC,CIRC,ELEMENT,D2> ACirc(A.Grid(), A.Root()), BCirc(B.Grid(), B.Root());
+    ACirc.Resize(A.Height(), A.Width());
+    BCirc.Resize(A.Height(), A.Width());
+    B.Resize(A.Height(), A.Width());
+    if (A.Participating()) {
+      El::Copy(A, ACirc);
+    }
+    TranslateBetweenGrids(ACirc, BCirc);
+    if (B.Participating()) {
+      El::Copy(BCirc, B);
+    }
+}
 
+template<typename T, Device D>
+void TranslateBetweenGrids(
+  DistMatrix<T,CIRC,CIRC,ELEMENT,D> const& A,
+  DistMatrix<T,CIRC,CIRC,ELEMENT,D>& B)
+{
 
-    if (D1 != D2)
-        LogicError("TranslateBetweenGrids: ",
-                   "Mixed-device implementation not implemented.");
+  // Matrix dimensions
+  const Int m = A.Height();
+  const Int n = A.Width();
+  B.Resize(m, n);
+  if (m <= 0 || n <= 0) {
+    return;
+  }
 
-    GeneralPurpose(A, B);
+  const bool amRootA = A.IsLocalCol(0);
+  const bool amRootB = B.IsLocalCol(0);
+  mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
+  if (amRootA && amRootB) {
+    El::Copy(A.LockedMatrix(), B.Matrix());
+  }
+  else if (amRootA) {
+    const Int recvViewingRank = B.Grid().VCToViewing(B.Root());
+    El::Send(A.LockedMatrix(), viewingCommB, recvViewingRank);
+  }
+  else if (amRootB) {
+    mpi::Group owningGroupA = A.Grid().OwningGroup();
+    const Int sendViewingRank = mpi::Translate(
+      owningGroupA,
+      A.Root(),
+      viewingCommB);
+    if (sendViewingRank < 0 || sendViewingRank >= viewingCommB.Size()) {
+      LogicError(
+        "TranslateBetweenGrids: Owning group for matrix A "
+        "is not a subset of viewing communicator for matrix B");
+    }
+    El::Recv(B.Matrix(), viewingCommB, sendViewingRank);
+  }
+
 }
 
 template<typename T, Device D>
@@ -73,6 +117,7 @@ void TranslateBetweenGrids(
   SyncInfo<D> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
   SyncInfo<D> syncInfoB = SyncInfoFromMatrix(B.Matrix());
   auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
+  const SyncInfo<D>& syncInfo = syncHelper;
 
   // Translate the ranks from A's VC communicator to B's viewing so
   // that we can match send/recv communicators. Since A's VC
@@ -116,17 +161,17 @@ void TranslateBetweenGrids(
 
   // Workspace buffer to pack/unpack data
   Int messageBufSize = 0;
-  if (inAGrid) {
+  if (inAGrid && numColSends > 0 && numRowSends > 0) {
     messageBufSize = Max(
-      Length(mLocA,0,numColSends)*Length(nLocA,0,numRowSends),
+      MaxLength(mLocA,numColSends)*MaxLength(nLocA,numRowSends),
       messageBufSize);
   }
-  if (inBGrid) {
+  if (inBGrid && numColRecvs > 0 && numRowRecvs > 0) {
     messageBufSize = Max(
-      Length(mLocB,0,numColRecvs)*Length(nLocB,0,numRowRecvs),
+      MaxLength(mLocB,numColRecvs)*MaxLength(nLocB,numRowRecvs),
       messageBufSize);
   }
-  simple_buffer<T,D> messageBuf(messageBufSize, syncInfoB);
+  simple_buffer<T,D> messageBuf(messageBufSize, syncInfo);
 
   // Figure out which ranks to send/recv messages
   std::map<Int,std::pair<Int,Int>> messageColRanks, messageRowRanks;
@@ -193,7 +238,7 @@ void TranslateBetweenGrids(
           messageHeight, messageWidth,
           A.LockedBuffer(iLocA,jLocA), numColSends, numRowSends*A.LDim(),
           B.Buffer(iLocB,jLocB), numColRecvs, numRowRecvs*B.LDim(),
-          syncInfoB);
+          syncInfo);
       }
       else if (viewingRank == sendViewingRank) {
         // Send data to other rank
@@ -201,28 +246,27 @@ void TranslateBetweenGrids(
           messageHeight, messageWidth,
           A.LockedBuffer(iLocA,jLocA), numColSends, numRowSends*A.LDim(),
           messageBuf.data(), 1, messageHeight,
-          syncInfoB);
+          syncInfo);
         mpi::Send(
           messageBuf.data(), messageHeight*messageWidth,
-          recvViewingRank, viewingCommB, syncInfoB);
+          recvViewingRank, viewingCommB, syncInfo);
       }
       else if (viewingRank == recvViewingRank) {
         // Receive data from other rank
         mpi::Recv(
           messageBuf.data(), messageHeight*messageWidth,
-          sendViewingRank, viewingCommB, syncInfoB);
+          sendViewingRank, viewingCommB, syncInfo);
         copy::util::InterleaveMatrix(
           messageHeight, messageWidth,
           messageBuf.data(), 1, messageHeight,
           B.Buffer(iLocB,jLocB), numColRecvs, numRowRecvs*B.LDim(),
-          syncInfoB);
+          syncInfo);
       }
 
     }
   }
 
 }
-
 
 template<typename T, Device D1, Device D2>
 void TranslateBetweenGridsAllreduceBasic
@@ -3804,7 +3848,6 @@ void TranslateBetweenGridsAsync
 
 }
 
-
 template<typename T, Device D>
 void TranslateBetweenGrids(
   DistMatrix<T,STAR,VC,ELEMENT,D> const& A,
@@ -3864,6 +3907,7 @@ void TranslateBetweenGrids(
   SyncInfo<D> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
   SyncInfo<D> syncInfoB = SyncInfoFromMatrix(B.Matrix());
   auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
+  const SyncInfo<D>& syncInfo = syncHelper;
 
   // Translate the ranks from A's VC communicator to B's viewing so
   // that we can match send/recv communicators. Since A's VC
@@ -3886,13 +3930,13 @@ void TranslateBetweenGrids(
 
   // Workspace buffer to pack/unpack data
   Int messageBufSize = 0;
-  if (inAGrid) {
-    messageBufSize = Max(m*Length(nLocA,0,numSends), messageBufSize);
+  if (inAGrid && numSends > 0) {
+    messageBufSize = Max(m*MaxLength(nLocA,numSends), messageBufSize);
   }
-  if (inBGrid) {
-    messageBufSize = Max(m*Length(nLocB,0,numRecvs), messageBufSize);
+  if (inBGrid && numRecvs > 0) {
+    messageBufSize = Max(m*MaxLength(nLocB,numRecvs), messageBufSize);
   }
-  simple_buffer<T,D> messageBuf(messageBufSize, syncInfoB);
+  simple_buffer<T,D> messageBuf(messageBufSize, syncInfo);
 
   // Figure out which ranks to send/recv messages
   std::map<Int,std::pair<Int,Int>> messageRanks;
@@ -3934,7 +3978,7 @@ void TranslateBetweenGrids(
         m, messageWidth,
         A.LockedBuffer(0,jLocA), 1, numSends*A.LDim(),
         B.Buffer(0,jLocB), 1, numRecvs*B.LDim(),
-        syncInfoB);
+        syncInfo);
     }
     else if (viewingRank == sendViewingRank) {
       // Send data to other rank
@@ -3942,27 +3986,26 @@ void TranslateBetweenGrids(
         m, messageWidth,
         A.LockedBuffer(0,jLocA), 1, numSends*A.LDim(),
         messageBuf.data(), 1, m,
-        syncInfoB);
+        syncInfo);
       mpi::Send(
         messageBuf.data(), m*messageWidth,
-        recvViewingRank, viewingCommB, syncInfoB);
+        recvViewingRank, viewingCommB, syncInfo);
     }
     else if (viewingRank == recvViewingRank) {
       // Receive data from other rank
       mpi::Recv(
         messageBuf.data(), m*messageWidth,
-        sendViewingRank, viewingCommB, syncInfoB);
+        sendViewingRank, viewingCommB, syncInfo);
       copy::util::InterleaveMatrix(
         m, messageWidth,
         messageBuf.data(), 1, m,
         B.Buffer(0,jLocB), 1, numRecvs*B.LDim(),
-        syncInfoB);
+        syncInfo);
     }
 
   }
 
 }
-
 
 template void TranslateBetweenGridsAsync<double, Device::CPU, Device::CPU>(
     DistMatrix<double, STAR, VC, ELEMENT, Device::CPU> const&,
@@ -3970,143 +4013,6 @@ template void TranslateBetweenGridsAsync<double, Device::CPU, Device::CPU>(
 #ifdef HYDROGEN_HAVE_GPU
 template void TranslateBetweenGridsAsync<double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> const& ,DistMatrix<double,STAR,VC,ELEMENT,Device::GPU>& );
 #endif // HYDROGEN_HAVE_GPU
-
-template<typename T, Device D1, Device D2>
-void TranslateBetweenGrids
-(const DistMatrix<T,STAR,STAR,ELEMENT,D1>& A,
-  DistMatrix<T,STAR,STAR,ELEMENT,D2>& B)
-{
-    EL_DEBUG_CSE;
-    const Int height = A.Height();
-    const Int width = A.Width();
-    B.Resize(height, width);
-
-    // Attempt to distinguish between the owning groups of A and B both being
-    // subsets of the same viewing communicator, the owning group of A being
-    // the same as the viewing communicator of B (A is the *parent* of B),
-    // and the viewing communicator of A being the owning communicator of B
-    // (B is the *parent* of A).
-    //
-    // TODO(poulson): Decide whether these condition can be simplified.
-    mpi::Comm const& commA = A.Grid().VCComm();
-    mpi::Comm const& commB = B.Grid().VCComm();
-    mpi::Comm const& viewingCommA = A.Grid().ViewingComm();
-    mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
-    const int commSizeA = mpi::Size(commA);
-    const int commSizeB = mpi::Size(commB);
-    const int viewingCommSizeA = mpi::Size(viewingCommA);
-    const int viewingCommSizeB = mpi::Size(viewingCommB);
-    bool usingViewingA=false, usingViewingB=false;
-    //mpi::Comm activeCommA, activeCommB;
-
-    mpi::Comm const& activeCommA = (viewingCommSizeA == viewingCommSizeB) ?
-    						A.Grid().ViewingComm() :
-    							viewingCommSizeA == commSizeB ?
-    							A.Grid().ViewingComm():
-
-    								commSizeA == viewingCommSizeB ?
-    								A.Grid().VCComm() :
-    								A.Grid().VCComm()
-
-
-    						;
-
-    mpi::Comm const& activeCommB = (viewingCommSizeA == viewingCommSizeB) ?
-    						B.Grid().ViewingComm():
-    							viewingCommSizeA == commSizeB ?
-    							B.Grid().VCComm():
-
-    								commSizeA == viewingCommSizeB ?
-    								B.Grid().ViewingComm() :
-    								B.Grid().VCComm()
-
-
-    						;
-
-    usingViewingA = (viewingCommSizeA == viewingCommSizeB) ?
-    						true :
-    							viewingCommSizeA == commSizeB ?
-    							true :
-
-    								commSizeA == viewingCommSizeB ?
-    								false :
-    								false
-
-
-    						;
-
-    usingViewingB = (viewingCommSizeA == viewingCommSizeB) ?
-    						true :
-    							viewingCommSizeA == commSizeB ?
-    							false :
-
-    								commSizeA == viewingCommSizeB ?
-    								true :
-    								false
-
-
-    						;
-
-
-    if(!mpi::Congruent(activeCommA, activeCommB))
-            LogicError("communicators were not congruent");
-
-
-
-    const Int rankA = A.RedundantRank();
-    const Int rankB = B.RedundantRank();
-
-    simple_buffer<T,D1> sendBuffer(rankA == 0 ? height*width : 0);
-    simple_buffer<T,D2> bcastBuffer(B.Participating() ? height*width : 0);
-
-    SyncInfo<D1> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
-    SyncInfo<D2> syncInfoB = SyncInfoFromMatrix(B.LockedMatrix());
-
-    // Send from the root of A to the root of B's matrix's grid
-    mpi::Request<T> sendRequest;
-    if(rankA == 0)
-    {
-        if (sendBuffer.size() != size_t(height*width))
-            RuntimeError("TranslateBetweenGrids: Bad sendBuffer size!");
-
-        util::InterleaveMatrix(
-            height, width,
-            A.LockedBuffer(), 1, A.LDim(),
-            sendBuffer.data(), 1, height, syncInfoA);
-        // TODO(poulson): Use mpi::Translate instead?
-        const Int recvRank = (usingViewingB ? B.Grid().VCToViewing(0) : 0);
-        mpi::ISend(
-            sendBuffer.data(), height*width, recvRank, activeCommB, sendRequest);
-    }
-
-    // Receive on the root of B's matrix's grid and then broadcast
-    // over the owning communicator
-    if(B.Participating())
-    {
-        if (bcastBuffer.size() != size_t(height*width))
-            RuntimeError("TranslateBetweenGrids: Bad bcastBuffer size!");
-        if(rankB == 0)
-        {
-            // TODO(poulson): Use mpi::Translate instead?
-            const Int sendRank =
-              (usingViewingA ? A.Grid().VCToViewing(0) : 0);
-            mpi::Recv(bcastBuffer.data(), height*width, sendRank, activeCommB,
-                      syncInfoB);
-        }
-
-        mpi::Broadcast(bcastBuffer.data(), height*width, 0, B.RedundantComm(),
-                       syncInfoB);
-
-        util::InterleaveMatrix(
-            height, width,
-            bcastBuffer.data(), 1, height,
-            B.Buffer(),  1, B.LDim(), syncInfoB);
-    }
-
-    if(rankA == 0)
-        mpi::Wait(sendRequest);
-//#endif // EL_TRANSLATE_BETWEEN_GRIDS_REENABLE__
-}
 
 } // namespace copy
 } // namespace El
