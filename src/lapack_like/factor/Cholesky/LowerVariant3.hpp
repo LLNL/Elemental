@@ -9,6 +9,7 @@
 #ifndef EL_CHOLESKY_LOWER_VARIANT3_HPP
 #define EL_CHOLESKY_LOWER_VARIANT3_HPP
 
+#include "core/environment/decl.hpp"
 namespace El {
 namespace cholesky {
 
@@ -75,8 +76,8 @@ void LowerVariant3Blocked(Matrix<F,D>& A)
     }
 }
 
-template <typename F>
-void LowerVariant3Blocked(AbstractDistMatrix<F>& APre)
+template <typename F, Device D>
+void LowerVariant3Blocked(AbstractDistMatrix<F>& APre, DeviceTag<D>)
 {
     EL_DEBUG_CSE;
     EL_DEBUG_ONLY(
@@ -85,14 +86,14 @@ void LowerVariant3Blocked(AbstractDistMatrix<F>& APre)
    )
     const Grid& grid = APre.Grid();
 
-    DistMatrixReadWriteProxy<F,F,MC,MR> AProx(APre);
+    DistMatrixReadWriteProxy<F,F,MC,MR,ELEMENT,D> AProx(APre);
     auto& A = AProx.Get();
 
-    DistMatrix<F,STAR,STAR> A11_STAR_STAR(grid);
-    DistMatrix<F,VC,  STAR> A21_VC_STAR(grid);
-    DistMatrix<F,VR,  STAR> A21_VR_STAR(grid);
-    DistMatrix<F,STAR,MC  > A21Trans_STAR_MC(grid);
-    DistMatrix<F,STAR,MR  > A21Adj_STAR_MR(grid);
+    DistMatrix<F,STAR,STAR,ELEMENT,D> A11_STAR_STAR(grid);
+    DistMatrix<F,VC,  STAR,ELEMENT,D> A21_VC_STAR(grid);
+    DistMatrix<F,VR,  STAR,ELEMENT,D> A21_VR_STAR(grid);
+    DistMatrix<F,STAR,MC  ,ELEMENT,D> A21Trans_STAR_MC(grid);
+    DistMatrix<F,STAR,MR  ,ELEMENT,D> A21Adj_STAR_MR(grid);
 
     const Int n = A.Height();
     const Int bsize = Blocksize();
@@ -130,6 +131,24 @@ void LowerVariant3Blocked(AbstractDistMatrix<F>& APre)
             F(-1), A21Trans_STAR_MC, A21Adj_STAR_MR, F(1), A22);
 
         Transpose(A21Trans_STAR_MC, A21);
+    }
+}
+
+template <typename F>
+void LowerVariant3Blocked(AbstractDistMatrix<F>& APre)
+{
+    switch (APre.GetLocalDevice())
+    {
+    case Device::CPU:
+        LowerVariant3Blocked(APre, DeviceTag<Device::CPU>{});
+        break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+        LowerVariant3Blocked(APre, DeviceTag<Device::GPU>{});
+        break;
+#endif
+    default:
+        RuntimeError("Unknown device type.");
     }
 }
 
