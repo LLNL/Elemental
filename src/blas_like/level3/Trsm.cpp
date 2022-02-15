@@ -466,6 +466,25 @@ void LocalTrsm
          checkIfSingular);
 }
 
+
+#define LOCALTRSM_PROTO_DEVICE(F, D)                                           \
+    template void LocalTrsm(LeftOrRight side,                                  \
+                            UpperOrLower uplo,                                 \
+                            Orientation orientation,                           \
+                            UnitOrNonUnit diag,                                \
+                            F alpha,                                           \
+                            DistMatrix<F, STAR, STAR, ELEMENT, D> const& A,    \
+                            AbstractDistMatrix<F>& X,                          \
+                            bool checkIfSingular)
+#ifdef HYDROGEN_HAVE_GPU
+#define LOCALTRSM_PROTO(F)                                                     \
+    LOCALTRSM_PROTO_DEVICE(F, Device::CPU);                                    \
+    LOCALTRSM_PROTO_DEVICE(F, Device::GPU)
+#else
+#define LOCALTRSM_PROTO(F)                                                     \
+    LOCALTRSM_PROTO_DEVICE(F, Device::CPU)
+#endif
+
 #define PROTO(F) \
   template void Trsm \
   ( LeftOrRight side, \
@@ -486,15 +505,7 @@ void LocalTrsm
           AbstractDistMatrix<F>& B, \
     bool checkIfSingular, \
     TrsmAlgorithm alg ); \
-  template void LocalTrsm \
-  ( LeftOrRight side, \
-    UpperOrLower uplo, \
-    Orientation orientation, \
-    UnitOrNonUnit diag, \
-    F alpha, \
-    const DistMatrix<F,STAR,STAR>& A, \
-          AbstractDistMatrix<F>& X, \
-    bool checkIfSingular );
+  LOCALTRSM_PROTO(F);
 
 #define EL_NO_INT_PROTO
 #define EL_ENABLE_DOUBLEDOUBLE
