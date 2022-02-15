@@ -347,13 +347,13 @@ void TrrkTNKernel
 }
 
 // Distributed C := alpha A^{T/H} B + C
-template<typename T>
+template<typename T, Device D>
 void LocalTrrkKernel
 (UpperOrLower uplo,
   Orientation orientationOfA,
-  T alpha, const DistMatrix<T,STAR,MC>& A,
-           const DistMatrix<T,STAR,MR>& B,
-                 DistMatrix<T>& C)
+ T alpha, DistMatrix<T,STAR,MC,ELEMENT,D> const& A,
+ DistMatrix<T,STAR,MR,ELEMENT,D> const& B,
+ DistMatrix<T,MC  ,MR,ELEMENT,D>& C)
 {
     EL_DEBUG_CSE
     EL_DEBUG_ONLY(CheckInput(A, B, C))
@@ -779,13 +779,14 @@ void LocalTrrk
 }
 
 // Distributed C := alpha A^{T/H} B + beta C
-template<typename T>
-void LocalTrrk
-(UpperOrLower uplo,
-  Orientation orientationOfA,
-  T alpha, const DistMatrix<T,STAR,MC>& A,
-           const DistMatrix<T,STAR,MR>& B,
-  T beta,        DistMatrix<T>& C)
+template <typename T, Device D>
+void LocalTrrk(UpperOrLower uplo,
+               Orientation orientationOfA,
+               T alpha,
+               DistMatrix<T, STAR, MC, ELEMENT, D> const& A,
+               DistMatrix<T, STAR, MR, ELEMENT, D> const& B,
+               T beta,
+               DistMatrix<T, MC, MR, ELEMENT, D>& C)
 {
     EL_DEBUG_CSE
     using namespace trrk;
