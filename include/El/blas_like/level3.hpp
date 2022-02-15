@@ -417,12 +417,12 @@ void Trsm(
     bool checkIfSingular=false,
     TrsmAlgorithm alg=TRSM_DEFAULT);
 
-template<typename F>
+template<typename F, Device D>
 void LocalTrsm
 ( LeftOrRight side, UpperOrLower uplo,
   Orientation orientation, UnitOrNonUnit diag,
   F alpha,
-  const DistMatrix<F,STAR,STAR>& A,
+  const DistMatrix<F,STAR,STAR,ELEMENT,D>& A,
         AbstractDistMatrix<F>& X,
   bool checkIfSingular=false );
 

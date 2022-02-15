@@ -19,6 +19,7 @@
 #include "./Trsm/RLT.hpp"
 #include "./Trsm/RUN.hpp"
 #include "./Trsm/RUT.hpp"
+#include "core/environment/decl.hpp"
 
 namespace El {
 
@@ -435,15 +436,15 @@ void Trsm
     }
 }
 
-template<typename F>
+template<typename F, Device D>
 void LocalTrsm
 ( LeftOrRight side,
   UpperOrLower uplo,
   Orientation orientation,
   UnitOrNonUnit diag,
   F alpha,
-  const DistMatrix<F,STAR,STAR>& A,
-        AbstractDistMatrix<F>& X,
+  DistMatrix<F,STAR,STAR,ELEMENT,D> const& A,
+  AbstractDistMatrix<F>& X,
   bool checkIfSingular )
 {
     EL_DEBUG_CSE
@@ -453,9 +454,16 @@ void LocalTrsm
           LogicError
           ("Dist of RHS must conform with that of triangle");
     )
-    Trsm
-    ( side, uplo, orientation, diag,
-      alpha, A.LockedMatrix(), X.Matrix(), checkIfSingular );
+    if (X.GetLocalDevice() != D)
+        LogicError("LocalTrsm: Device mismatch.");
+    Trsm(side,
+         uplo,
+         orientation,
+         diag,
+         alpha,
+         A.LockedMatrix(),
+         static_cast<Matrix<F, D>&>(X.Matrix()),
+         checkIfSingular);
 }
 
 #define PROTO(F) \
