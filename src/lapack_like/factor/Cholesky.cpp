@@ -170,9 +170,9 @@ void Cholesky
 }
 #endif // HYDROGEN_ENABLE_PIVOTED_CHOLESKY
 
-template <typename F>
+template <typename F, Device D>
 void Cholesky
-(UpperOrLower uplo, DistMatrix<F,STAR,STAR>& A)
+(UpperOrLower uplo, DistMatrix<F,STAR,STAR,ELEMENT,D>& A)
 { Cholesky(uplo, A.Matrix()); }
 
 #ifdef HYDROGEN_ENABLE_REVERSE_CHOLESKY
@@ -330,4 +330,17 @@ void HPSDCholesky(UpperOrLower uplo, AbstractDistMatrix<F>& APre)
 #define EL_ENABLE_HALF
 #include <El/macros/Instantiate.h>
 
+#if defined HYDROGEN_HAVE_GPU
+#define PROTO_GPU(F)                                                           \
+    template void Cholesky(UpperOrLower,                                       \
+                           DistMatrix<F, STAR, STAR, ELEMENT, Device::GPU>&)
+
+PROTO_GPU(float);
+PROTO_GPU(double);
+PROTO_GPU(El::Complex<float>);
+PROTO_GPU(El::Complex<double>);
+#ifdef HDYROGEN_GPU_USE_FP16
+PROTO_GPU(gpu_half_type);
+#endif
+#endif
 } // namespace El

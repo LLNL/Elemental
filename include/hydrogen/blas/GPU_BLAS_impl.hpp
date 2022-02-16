@@ -1005,6 +1005,8 @@ void Trsm(
     T* B, SizeT ldb,
     SyncInfo<Device::GPU> const& syncinfo)
 {
+    if (m == 0UL || n == 0UL)
+        return;
     details::TrsmImpl(side, uplo, trans, diag, m, n,
                       alpha, A, lda, B, ldb, syncinfo);
 }

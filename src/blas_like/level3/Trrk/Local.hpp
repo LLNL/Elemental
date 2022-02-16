@@ -382,13 +382,13 @@ void LocalTrrkKernel
     }
 
     // TODO(poulson): Avoid the temporary copy
-    DistMatrix<T> DTL(g);
+    DistMatrix<T,MC,MR,ELEMENT,D> DTL(g);
     DTL.AlignWith(CTL);
     LocalGemm(orientationOfA, NORMAL, alpha, AL, BL, DTL);
     LocalAxpyTrapezoid(uplo, To<T>(1), DTL, CTL);
 
     // TODO(poulson): Avoid the temporary copy
-    DistMatrix<T> DBR(g);
+    DistMatrix<T,MC,MR,ELEMENT,D> DBR(g);
     DBR.AlignWith(CBR);
     LocalGemm(orientationOfA, NORMAL, alpha, AR, BR, DBR);
     LocalAxpyTrapezoid(uplo, To<T>(1), DBR, CBR);

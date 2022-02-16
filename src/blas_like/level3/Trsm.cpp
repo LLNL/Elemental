@@ -42,7 +42,7 @@ void Trsm(
         LeftOrRightToSideMode(side), UpperOrLowerToFillMode(uplo),
         OrientationToTransposeMode(orientation),
         UnitOrNonUnitToDiagType(diag),
-        A.Height(), A.Width(),
+        B.Height(), B.Width(),
         alpha, A.LockedBuffer(), A.LDim(),
         B.Buffer(), B.LDim(),
         multisync);
