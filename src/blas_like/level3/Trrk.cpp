@@ -175,9 +175,6 @@ LOCALTRRK_PROTO(float);
 LOCALTRRK_PROTO(double);
 LOCALTRRK_PROTO(El::Complex<float>);
 LOCALTRRK_PROTO(El::Complex<double>);
-#if defined HYDROGEN_HAVE_HALF && defined HYDROGEN_GPU_USE_FP16
-LOCALTRRK_PROTO(gpu_half_type);
-#endif
 #endif // HYDROGEN_HAVE_GPU
 
 } // namespace El

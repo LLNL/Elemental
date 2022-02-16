@@ -15,7 +15,7 @@ template<typename T,typename S>
 void ScaleTrapezoid( S alphaS, UpperOrLower uplo, Matrix<T>& A, Int offset )
 {
     EL_DEBUG_CSE
-    if( alphaS == S(1) )
+    if( alphaS == To<S>(1) )
         return;
     const Int height = A.Height();
     const Int width = A.Width();
@@ -49,7 +49,7 @@ ScaleTrapezoid
 ( S alphaS, UpperOrLower uplo, AbstractDistMatrix<T>& A, Int offset )
 {
     EL_DEBUG_CSE
-    if( alphaS == S(1) )
+    if( alphaS == To<S>(1) )
         return;
     const Int height = A.Height();
     const Int localHeight = A.LocalHeight();

@@ -134,6 +134,24 @@ void LowerVariant3Blocked(AbstractDistMatrix<F>& APre, DeviceTag<D>)
     }
 }
 
+#if defined HYDROGEN_HAVE_GPU
+
+#if defined HYDROGEN_HAVE_HALF
+void LowerVariant3Blocked(AbstractDistMatrix<cpu_half_type>&, DeviceTag<Device::GPU>)
+{
+    RuntimeError("This function is not supported on GPU with this type.");
+}
+#endif
+
+#if defined HYDROGEN_GPU_USE_FP16
+void LowerVariant3Blocked(AbstractDistMatrix<gpu_half_type>&, DeviceTag<Device::CPU>)
+{
+    RuntimeError("This function is not supported on GPU with this type.");
+}
+#endif
+
+#endif // HYDROGEN_HAVE_GPU
+
 template <typename F>
 void LowerVariant3Blocked(AbstractDistMatrix<F>& APre)
 {
