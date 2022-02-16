@@ -17,42 +17,42 @@ namespace trrk {
 
 #ifndef EL_RELEASE
 
-template<typename T>
+template<typename T,Device D>
 void EnsureConformal
-(const DistMatrix<T,MC,STAR>& A, const DistMatrix<T>& C, string name)
+(const DistMatrix<T,MC,STAR,ELEMENT,D>& A, const DistMatrix<T,MC,MR,ELEMENT,D>& C, string name)
 {
     if (A.Height() != C.Height() || A.ColAlign() != C.ColAlign())
         LogicError(name," not conformal with C");
 }
 
-template<typename T>
+template<typename T,Device D>
 void EnsureConformal
-(const DistMatrix<T,STAR,MC>& A, const DistMatrix<T>& C, string name)
+(const DistMatrix<T,STAR,MC,ELEMENT,D>& A, const DistMatrix<T,MC,MR,ELEMENT,D>& C, string name)
 {
     if (A.Width() != C.Height() || A.RowAlign() != C.ColAlign())
         LogicError(name," not conformal with C");
 }
 
-template<typename T>
+template<typename T,Device D>
 void EnsureConformal
-(const DistMatrix<T,MR,STAR>& A, const DistMatrix<T>& C, string name)
+(const DistMatrix<T,MR,STAR,ELEMENT,D>& A, const DistMatrix<T,MC,MR,ELEMENT,D>& C, string name)
 {
     if (A.Height() != C.Width() || A.ColAlign() != C.RowAlign())
         LogicError(name," not conformal with C");
 }
 
-template<typename T>
+template<typename T,Device D>
 void EnsureConformal
-(const DistMatrix<T,STAR,MR>& A, const DistMatrix<T>& C, string name)
+(const DistMatrix<T,STAR,MR,ELEMENT,D>& A, const DistMatrix<T,MC,MR,ELEMENT,D>& C, string name)
 {
     if (A.Width() != C.Width() || A.RowAlign() != C.RowAlign())
         LogicError(name," not conformal with C");
 }
 
-template<typename T,Dist UA,Dist VA,Dist UB,Dist VB>
+template<typename T,Dist UA,Dist VA,Dist UB,Dist VB,Device D>
 void CheckInput
-(const DistMatrix<T,UA,VA>& A, const DistMatrix<T,UB,VB>& B,
-  const DistMatrix<T>& C)
+(const DistMatrix<T,UA,VA,ELEMENT,D>& A, const DistMatrix<T,UB,VB,ELEMENT,D>& B,
+ const DistMatrix<T,MC,MR,ELEMENT,D>& C)
 {
     AssertSameGrids(A, B, C);
     EnsureConformal(A, C, "A");
