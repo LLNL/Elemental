@@ -158,7 +158,7 @@ void Trsm
     B *= alpha;
 
     // Call the single right-hand side algorithm if appropriate
-    if( side == LEFT && B.Width() == 1 )
+    if( side == LEFT && B.Width() == 1 && D == Device::CPU )
     {
         Trsv( uplo, orientation, diag, A, B );
         return;
@@ -181,7 +181,7 @@ void Trsm
             if( alg == TRSM_DEFAULT )
             {
                 if( B.Width() > 5*p )
-                  trsm::LLNLarge( diag, A, B, checkIfSingular, dtag );
+                    trsm::LLNLarge( diag, A, B, checkIfSingular, dtag );
                 else
                     trsm::LLNMedium( diag, A, B, checkIfSingular, dtag );
             }
@@ -484,11 +484,13 @@ void Trsm(LeftOrRight side,
 {
   switch (A.GetLocalDevice()) {
   case Device::CPU:
-    Trsm(side, uplo, orientation, diag, alpha, A, B, checkIfSingular, alg, DeviceTag<Device::CPU>{});
+    Trsm(side, uplo, orientation, diag, alpha, A, B, checkIfSingular, alg,
+         DeviceTag<Device::CPU>{});
     break;
 #ifdef HYDROGEN_HAVE_GPU
   case Device::GPU:
-    Trsm(side, uplo, orientation, diag, alpha, A, B, checkIfSingular, alg, DeviceTag<Device::GPU>{});
+    Trsm(side, uplo, orientation, diag, alpha, A, B, checkIfSingular, alg,
+         DeviceTag<Device::GPU>{});
     break;
 #endif // HYDROGEN_HAVE_GPU
   default:
