@@ -2,40 +2,41 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 
 namespace El {
 namespace trsm {
 
-// Left Lower NORMAL (Non)Unit Trsm 
+// Left Lower NORMAL (Non)Unit Trsm
 //   X := tril(L)^-1  X, or
 //   X := trilu(L)^-1 X
 
 // For large numbers of RHS's, e.g., width(X) >> p
-template<typename F>
+template <typename F, Device D>
 void LLNLarge
-( UnitOrNonUnit diag, 
-  const AbstractDistMatrix<F>& LPre,
-        AbstractDistMatrix<F>& XPre, 
-  bool checkIfSingular )
+(UnitOrNonUnit diag,
+ AbstractDistMatrix<F> const& LPre,
+ AbstractDistMatrix<F>& XPre,
+ bool checkIfSingular,
+ DeviceTag<D>)
 {
     EL_DEBUG_CSE
     const Int m = XPre.Height();
     const Int bsize = Blocksize();
     const Grid& g = LPre.Grid();
 
-    DistMatrixReadProxy<F,F,MC,MR> LProx( LPre );
-    DistMatrixReadWriteProxy<F,F,MC,MR> XProx( XPre );
+    DistMatrixReadProxy<F,F,MC,MR,ELEMENT,D> LProx( LPre );
+    DistMatrixReadWriteProxy<F,F,MC,MR,ELEMENT,D> XProx( XPre );
     auto& L = LProx.GetLocked();
     auto& X = XProx.Get();
 
-    DistMatrix<F,STAR,STAR> L11_STAR_STAR(g);
-    DistMatrix<F,MC,  STAR> L21_MC_STAR(g);
-    DistMatrix<F,STAR,MR  > X1_STAR_MR(g);
-    DistMatrix<F,STAR,VR  > X1_STAR_VR(g);
+    DistMatrix<F,STAR,STAR,ELEMENT,D> L11_STAR_STAR(g);
+    DistMatrix<F,MC,  STAR,ELEMENT,D> L21_MC_STAR(g);
+    DistMatrix<F,STAR,MR  ,ELEMENT,D> X1_STAR_MR(g);
+    DistMatrix<F,STAR,VR  ,ELEMENT,D> X1_STAR_VR(g);
 
     for( Int k=0; k<m; k+=bsize )
     {
@@ -63,33 +64,34 @@ void LLNLarge
         X1          = X1_STAR_MR; // X1[MC,MR] <- X1[* ,MR]
         L21_MC_STAR.AlignWith( X2 );
         L21_MC_STAR = L21;        // L21[MC,* ] <- L21[MC,MR]
-        
+
         // X2[MC,MR] -= L21[MC,* ] X1[* ,MR]
         LocalGemm( NORMAL, NORMAL, F(-1), L21_MC_STAR, X1_STAR_MR, F(1), X2 );
     }
 }
 
 // For medium numbers of RHS's, e.g., width(X) ~= p
-template<typename F>
+template <typename F, Device D>
 void LLNMedium
-( UnitOrNonUnit diag, 
-  const AbstractDistMatrix<F>& LPre,
-        AbstractDistMatrix<F>& XPre, 
-  bool checkIfSingular )
+(UnitOrNonUnit diag,
+ AbstractDistMatrix<F> const& LPre,
+ AbstractDistMatrix<F>& XPre,
+ bool checkIfSingular,
+ DeviceTag<D>)
 {
     EL_DEBUG_CSE
     const Int m = XPre.Height();
     const Int bsize = Blocksize();
     const Grid& g = LPre.Grid();
 
-    DistMatrixReadProxy<F,F,MC,MR> LProx( LPre );
-    DistMatrixReadWriteProxy<F,F,MC,MR> XProx( XPre );
+    DistMatrixReadProxy<F,F,MC,MR,ELEMENT,D> LProx( LPre );
+    DistMatrixReadWriteProxy<F,F,MC,MR,ELEMENT,D> XProx( XPre );
     auto& L = LProx.GetLocked();
     auto& X = XProx.Get();
 
-    DistMatrix<F,STAR,STAR> L11_STAR_STAR(g);
-    DistMatrix<F,MC,  STAR> L21_MC_STAR(g);
-    DistMatrix<F,MR,  STAR> X1Trans_MR_STAR(g);
+    DistMatrix<F,STAR,STAR,ELEMENT,D> L11_STAR_STAR(g);
+    DistMatrix<F,MC,  STAR,ELEMENT,D> L21_MC_STAR(g);
+    DistMatrix<F,MR,  STAR,ELEMENT,D> X1Trans_MR_STAR(g);
 
     for( Int k=0; k<m; k+=bsize )
     {
@@ -111,13 +113,13 @@ void LLNMedium
         // X1^T[MR,* ] := X1^T[MR,* ] L11^-T[* ,* ]
         //              = (L11^-1[* ,* ] X1[* ,MR])^T
         LocalTrsm
-        ( RIGHT, LOWER, TRANSPOSE, diag, 
+        ( RIGHT, LOWER, TRANSPOSE, diag,
           F(1), L11_STAR_STAR, X1Trans_MR_STAR, checkIfSingular );
 
         Transpose( X1Trans_MR_STAR, X1 );
         L21_MC_STAR.AlignWith( X2 );
         L21_MC_STAR = L21;                   // L21[MC,* ] <- L21[MC,MR]
-        
+
         // X2[MC,MR] -= L21[MC,* ] X1[* ,MR]
         LocalGemm
         ( NORMAL, TRANSPOSE, F(-1), L21_MC_STAR, X1Trans_MR_STAR, F(1), X2 );
@@ -125,11 +127,11 @@ void LLNMedium
 }
 
 // For small numbers of RHS's, e.g., width(X) < p
-template<typename F,Dist colDist>
+template <typename F, Dist colDist, Device D>
 void LLNSmall
-( UnitOrNonUnit diag, 
-  const DistMatrix<F,colDist,STAR>& L, 
-        DistMatrix<F,colDist,STAR>& X, bool checkIfSingular )
+( UnitOrNonUnit diag,
+  const DistMatrix<F,colDist,STAR,ELEMENT,D>& L,
+        DistMatrix<F,colDist,STAR,ELEMENT,D>& X, bool checkIfSingular )
 {
     EL_DEBUG_CSE
     EL_DEBUG_ONLY(
@@ -140,7 +142,7 @@ void LLNSmall
     const Int bsize = Blocksize();
     const Grid& g = L.Grid();
 
-    DistMatrix<F,STAR,STAR> L11_STAR_STAR(g), X1_STAR_STAR(g);
+    DistMatrix<F,STAR,STAR,ELEMENT,D> L11_STAR_STAR(g), X1_STAR_STAR(g);
 
     for( Int k=0; k<m; k+=bsize )
     {
@@ -160,7 +162,7 @@ void LLNSmall
 
         // X1[* ,* ] := (L11[* ,* ])^-1 X1[* ,* ]
         LocalTrsm
-        ( LEFT, LOWER, NORMAL, diag, 
+        ( LEFT, LOWER, NORMAL, diag,
           F(1), L11_STAR_STAR, X1_STAR_STAR, checkIfSingular );
 
         // X2[VC,* ] -= L21[VC,* ] X1[* ,* ]
