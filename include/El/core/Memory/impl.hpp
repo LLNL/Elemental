@@ -342,26 +342,26 @@ unsigned int Memory<G,D>::Mode() const
 #ifdef EL_INSTANTIATE_CORE
 # define EL_EXTERN
 #else
-# define EL_EXTERN// extern
+# define EL_EXTERN extern
 #endif
 
-#if 0
 #define PROTO(T) EL_EXTERN template class Memory<T,Device::CPU>;
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE
 #define EL_ENABLE_QUAD
+#define EL_ENABLE_HALF
 #define EL_ENABLE_BIGINT
 #define EL_ENABLE_BIGFLOAT
 #include <El/macros/Instantiate.h>
-#endif // 0
-
-EL_EXTERN template class Memory<double, Device::CPU>;
 
 // GPU instantiations
 #ifdef HYDROGEN_HAVE_GPU
 EL_EXTERN template class Memory<float, Device::GPU>;
 EL_EXTERN template class Memory<double, Device::GPU>;
-#endif
+#ifdef HYDROGEN_GPU_USE_FP16
+EL_EXTERN template class Memory<gpu_half_type, Device::GPU>;
+#endif // HYDROGEN_GPU_USE_FP16
+#endif // HYDROGEN_HAVE_GPU
 
 #undef EL_EXTERN
 
