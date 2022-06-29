@@ -122,10 +122,7 @@ void BeginRegionProfile(char const* s, Color c) noexcept
 {
 #ifdef HYDROGEN_HAVE_ROCTRACER
     if (roctxRuntimeEnabled())
-    {
-        if (roctxRangePush(s) < 0)
-            throw std::runtime_error(roctracer_error_string());
-    }
+        roctxRangePush(s);
 #endif // HYDROGEN_HAVE_ROCTRACER
 
 #ifdef HYDROGEN_HAVE_NVPROF
@@ -166,10 +163,7 @@ void EndRegionProfile(const char *) noexcept
 {
 #ifdef HYDROGEN_HAVE_ROCTRACER
     if (roctxRuntimeEnabled())
-    {
-        if (roctxRangePop() < 0)
-            throw std::runtime_error(roctracer_error_string());
-    }
+        roctxRangePop();
 #endif // HYDROGEN_HAVE_ROCTRACER
 
 #ifdef HYDROGEN_HAVE_NVPROF
