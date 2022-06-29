@@ -109,7 +109,7 @@ if (_HYDROGEN_HAVE_ROCM)
   find_dependency(rocthrust CONFIG)
 
   if (_HYDROGEN_HAVE_ROCTRACER)
-    find_dependency(roctracer MODULE COMPONENTS roctx)
+    find_dependency(Roctracer MODULE COMPONENTS roctx)
   endif ()
 
   include(HydrogenCleanupHIPTargets)
