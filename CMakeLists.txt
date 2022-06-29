@@ -101,6 +101,7 @@ if (NOT DEFINED CMAKE_POSITION_INDEPENDENT_CODE)
 endif ()
 
 # Feature-related options
+include(CMakeDependentOption)
 
 option(Hydrogen_ENABLE_ALUMINUM
   "Enable the Aluminum package for improved device-side communication."
@@ -112,6 +113,12 @@ option(Hydrogen_ENABLE_CUDA
 
 option(Hydrogen_ENABLE_ROCM
   "Search for ROCm/HIP support and enable related features if found."
+  OFF)
+
+cmake_dependent_option(Hydrogen_ENABLE_ROCTRACER
+  "Search for Roctracer and enable related features if found."
+  OFF
+  "Hydrogen_ENABLE_ROCM"
   OFF)
 
 if (Hydrogen_ENABLE_ROCM AND Hydrogen_ENABLE_CUDA)
@@ -358,6 +365,11 @@ if (Hydrogen_ENABLE_ROCM)
   find_package(rocsolver CONFIG REQUIRED)
   find_package(rocthrust CONFIG REQUIRED)
 
+  if (Hydrogen_ENABLE_ROCTRACER)
+    find_package(Roctracer MODULE COMPONENTS roctx)
+    set(HYDROGEN_HAVE_ROCTRACER ${Roctracer_FOUND})
+  endif ()
+
   include(HydrogenCleanupHIPTargets)
   h_clean_hip_targets()
 
@@ -366,11 +378,13 @@ if (Hydrogen_ENABLE_ROCM)
 
   set(H_ROCM_CXX_LIBS
     hip::host
-    hip::hipcub
     roc::rocblas
     roc::rocsolver
-    roc::rocthrust)
-
+    roc::rocthrust
+    ${Roctracer_LIBRARIES})
+  if (HYDROGEN_HAVE_CUB)
+    list(APPEND H_ROCM_CXX_LIBS hip::hipcub)
+  endif ()
   set(H_ROCM_HIP_LIBS
     hip::device)
 endif (Hydrogen_ENABLE_ROCM)

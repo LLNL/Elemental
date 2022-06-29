@@ -19,6 +19,10 @@ void DisableVTune() noexcept;
 void EnableNVProf() noexcept;
 void DisableNVProf() noexcept;
 
+// These are no-ops if roctracer is not enabled at compile time
+void EnableROCTX() noexcept;
+void DisableROCTX() noexcept;
+
 /** \brief A selection of colors to use with the profiling interface.
  *
  *  It seems unlikely that a user will ever need to access these by

@@ -40,6 +40,7 @@
 
 // ROCm stuff
 #cmakedefine HYDROGEN_HAVE_ROCM
+#cmakedefine HYDROGEN_HAVE_ROCTRACER
 
 // General GPU stuff
 #cmakedefine HYDROGEN_HAVE_CUB
