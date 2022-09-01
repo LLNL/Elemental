@@ -40,6 +40,7 @@ int ComputeDeviceId(unsigned int device_count) noexcept
     // TODO: Use HWLOC or something to pick "closest GPU"
     int local_rank = 0;
     char* env = nullptr;
+    if (!env) { env = std::getenv("FLUX_TASK_LOCAL_ID"); }
     if (!env) { env = std::getenv("SLURM_LOCALID"); }
     if (!env) { env = std::getenv("MV2_COMM_WORLD_LOCAL_RANK"); }
     if (!env) { env = std::getenv("OMPI_COMM_WORLD_LOCAL_RANK"); }
