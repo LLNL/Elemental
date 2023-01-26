@@ -11,7 +11,10 @@
 // exactly performance should fall off. The asymptotics of the Jacobi
 // method aren't as favorable as QR, but for small matrices, it should
 // have some benefit.
-#define CUSOLVER_HEEV_JACOBI_THRESHOLD 1024
+#define CUSOLVER_HEEV_JACOBI_THRESHOLD 5000
+// This is set up to graciously handle matrix sizes up to 4096, but I was
+// noticing an application was doing (2^k + 1). And if I'm going to put
+// "4097" as a magic number, I may as well just round up.
 
 namespace hydrogen
 {
