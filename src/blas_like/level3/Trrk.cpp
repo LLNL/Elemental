@@ -15,6 +15,7 @@
 #include "./Trrk/NT.hpp"
 #include "./Trrk/TN.hpp"
 #include "./Trrk/TT.hpp"
+#include "core/Element/Complex/decl.hpp"
 
 namespace El {
 
@@ -115,6 +116,14 @@ void Trrk(
         trrk::TrrkTT(uplo, orientA, orientB, alpha, A, B, C);
 }
 
+#define LOCALTRRK_PROTO_DEVICE(T,D) \
+        template void LocalTrrk(                            \
+        UpperOrLower uplo, Orientation orientA,         \
+        T alpha,                                        \
+        DistMatrix<T,STAR,MC,ELEMENT,D> const& A,        \
+        DistMatrix<T,STAR,MR,ELEMENT,D> const& B,         \
+        T beta, DistMatrix<T,MC,MR,ELEMENT,D>& C)
+
 #define PROTO(T)                                        \
     template void Trrk(                                 \
         UpperOrLower uplo,                              \
@@ -143,18 +152,13 @@ void Trrk(
         DistMatrix<T,MR,STAR> const& B,                 \
         T beta, DistMatrix<T>& C);                      \
     template void LocalTrrk(                            \
-        UpperOrLower uplo, Orientation orientA,         \
-        T alpha,                                        \
-        DistMatrix<T,STAR,MC> const& A,                 \
-        DistMatrix<T,STAR,MR> const& B,                 \
-        T beta, DistMatrix<T>& C);                      \
-    template void LocalTrrk(                            \
         UpperOrLower uplo,                              \
         Orientation orientA, Orientation orientB,       \
         T alpha,                                        \
         DistMatrix<T,STAR,MC  > const& A,               \
         DistMatrix<T,MR,  STAR> const& B,               \
-        T beta, DistMatrix<T>& C);
+        T beta, DistMatrix<T>& C);                      \
+    LOCALTRRK_PROTO_DEVICE(T, Device::CPU);
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE
@@ -163,5 +167,14 @@ void Trrk(
 #define EL_ENABLE_BIGFLOAT
 #define EL_ENABLE_HALF
 #include <El/macros/Instantiate.h>
+
+#ifdef HYDROGEN_HAVE_GPU
+#define LOCALTRRK_PROTO(T)                      \
+    LOCALTRRK_PROTO_DEVICE(T, Device::GPU)
+LOCALTRRK_PROTO(float);
+LOCALTRRK_PROTO(double);
+LOCALTRRK_PROTO(El::Complex<float>);
+LOCALTRRK_PROTO(El::Complex<double>);
+#endif // HYDROGEN_HAVE_GPU
 
 } // namespace El

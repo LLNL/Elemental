@@ -2,8 +2,8 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 
@@ -66,9 +66,9 @@ void LocalAccumulateRL
 
         auto B1Trans_MR_STAR = BTrans_MR_STAR( ind1, ALL );
 
-        auto Z1Trans_MC_STAR = ZTrans_MC_STAR( ind1, ALL ); 
+        auto Z1Trans_MC_STAR = ZTrans_MC_STAR( ind1, ALL );
         auto Z2Trans_MC_STAR = ZTrans_MC_STAR( ind2, ALL );
-   
+
         auto Z1Trans_MR_STAR = ZTrans_MR_STAR( ind1, ALL );
 
         D11.AlignWith( A11 );
@@ -143,14 +143,14 @@ void RLA
         Zero( Z1Trans_MC_STAR );
         Zero( Z1Trans_MR_STAR );
         LocalAccumulateRL
-        ( orientation, alpha, A, B1_STAR_MC, B1Trans_MR_STAR, 
+        ( orientation, alpha, A, B1_STAR_MC, B1Trans_MR_STAR,
           Z1Trans_MC_STAR, Z1Trans_MR_STAR );
 
         Contract( Z1Trans_MC_STAR, Z1Trans );
         Z1Trans_MR_MC = Z1Trans;
         AxpyContract( T(1), Z1Trans_MR_STAR, Z1Trans_MR_MC );
         Transpose( Z1Trans_MR_MC.LockedMatrix(), Z1Local, conjugate );
-        C1.Matrix() += Z1Local;
+        Axpy( El::To<T>(1), Z1Local, C1.Matrix() );
     }
 }
 

@@ -35,17 +35,15 @@ template<typename T,Dist U,Dist V>
 void Translate
 ( const DistMatrix<T,U,V,BLOCK>& A, DistMatrix<T,U,V,BLOCK>& B );
 
-template<typename T,Device D1,Device D2>
+template<typename T,Device D>
 void TranslateBetweenGrids
-( const DistMatrix<T,MC,MR,ELEMENT,D1>& A, DistMatrix<T,MC,MR,ELEMENT,D2>& B );
-template<typename T,Device D1,Device D2>
+( const DistMatrix<T,CIRC,CIRC,ELEMENT,D>& A, DistMatrix<T,CIRC,CIRC,ELEMENT,D>& B );
+template<typename T,Device D>
 void TranslateBetweenGrids
-( const DistMatrix<T,STAR,VC,ELEMENT,D1>& A, DistMatrix<T,STAR,VC,ELEMENT,D2>& B );
-
-template<typename T,Device D1,Device D2>
+( const DistMatrix<T,MC,MR,ELEMENT,D>& A, DistMatrix<T,MC,MR,ELEMENT,D>& B );
+template<typename T,Device D>
 void TranslateBetweenGrids
-( DistMatrix<T,STAR,STAR,ELEMENT,D1> const& A,
-  DistMatrix<T,STAR,STAR,ELEMENT,D2>& B );
+( const DistMatrix<T,STAR,VC,ELEMENT,D>& A, DistMatrix<T,STAR,VC,ELEMENT,D>& B );
 
 template<typename T, Device D1, Device D2>
 void TranslateBetweenGridsBroadcastBasic
@@ -188,20 +186,20 @@ void TranslateBetweenGridsAsync
 (DistMatrix<T,STAR,VC,ELEMENT,D1> const& A,
   DistMatrix<T,STAR,VC,ELEMENT,D2>& B);
 
-template<typename T, Device D1, Device D2> 
-void TranslateBetweenGridsSliceConcatAlongFirstDim 
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsSliceConcatAlongFirstDim
 (DistMatrix<T,STAR,VC,ELEMENT,D1> const& A,
-  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, 
-  int splitDim,  
-  mpi::Comm const& gatherComm, 
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector,
+  int splitDim,
+  mpi::Comm const& gatherComm,
   SyncInfo<D1> & syncGeneral);
 
 template<typename T, Device D1, Device D2>
 void TranslateBetweenConatSliceFirstChannel
 (DistMatrix<T,STAR,VC,ELEMENT,D1> & A,
-  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, 
-  int splitDim,  
-  mpi::Comm const& gatherComm, 
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector,
+  int splitDim,
+  mpi::Comm const& gatherComm,
   SyncInfo<D1> & syncGeneral);
 
 // The fallback case that simply throws an exception

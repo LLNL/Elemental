@@ -1005,6 +1005,8 @@ void Trsm(
     T* B, SizeT ldb,
     SyncInfo<Device::GPU> const& syncinfo)
 {
+    if (m == 0UL || n == 0UL)
+        return;
     details::TrsmImpl(side, uplo, trans, diag, m, n,
                       alpha, A, lda, B, ldb, syncinfo);
 }
@@ -1070,6 +1072,7 @@ namespace gpu_lapack
 {
 namespace details
 {
+
 // These might be unique.
 using gpu_lapack_impl::ToSizeT;
 using gpu_lapack_impl::GetDenseLibraryHandle;
@@ -1083,18 +1086,82 @@ using gpu_blas_impl::ToNativeFillMode;
 using gpu_blas_impl::ToNativeSideMode;
 using gpu_blas_impl::ToNativeTransposeMode;
 
-template <typename T, typename SizeT, typename InfoT,
+template <typename T,
+          typename SizeT,
+          typename = EnableWhen<IsSupportedType<T, LAPACK_Op::HEEV>>>
+void HermitianEigImpl(
+    FillMode uplo,
+    SizeT n,
+    T* A,
+    SizeT lda,
+    TmpBase<T>* W,
+    SyncInfo<Device::GPU> const& si)
+{
+    using NTP = MakePointer<NativeType<T>>;
+    using RealNTP = MakePointer<NativeType<TmpBase<T>>>;
+
+    auto workspace_size = gpu_lapack_impl::GetHeevWorkspaceSize(
+        GetDenseLibraryHandle(),
+        ToNativeFillMode(uplo),
+        ToSizeT(n),
+        reinterpret_cast<NTP>(A),
+        ToSizeT(lda),
+        reinterpret_cast<RealNTP>(W));
+
+    SyncManager mgr(GetDenseLibraryHandle(), si);
+    simple_buffer<T, Device::GPU> workspace(workspace_size, si);
+    simple_buffer<gpu_lapack_impl::InfoT, Device::GPU> info(1, si);
+
+    // NOTE: This excludes the "jobz" parameter -- we ALWAYS compute
+    // the eigenvalues for now.
+    gpu_lapack_impl::Heev(
+        GetDenseLibraryHandle(),
+        ToNativeFillMode(uplo),
+        ToSizeT(n),
+        reinterpret_cast<NTP>(A),
+        ToSizeT(lda),
+        reinterpret_cast<RealNTP>(W),
+        reinterpret_cast<NTP>(workspace.data()),
+        workspace_size,
+        info.data());
+
+#ifndef EL_RELEASE
+    gpu_lapack_impl::InfoT host_info;
+    gpu::Copy1DToHost(info.data(), &host_info, 1, si);
+    Synchronize(si);
+    if (host_info > gpu_lapack_impl::InfoT(0))
+        throw std::runtime_error("HermitianEigImpl: Solver failed to converge.");
+    else if (host_info < gpu_lapack_impl::InfoT(0))
+        throw std::runtime_error("HermitianEigImpl: A parameter is bad.");
+#endif // EL_RELEASE
+}
+
+template <typename T, typename SizeT,
+          typename=EnableUnless<IsSupportedType<T,LAPACK_Op::HEEV>>,
+          typename=void>
+void HermitianEigImpl(
+    FillMode,
+    SizeT,
+    T*,
+    SizeT,
+    TmpBase<T>*,
+    SyncInfo<Device::GPU> const&)
+{
+    std::ostringstream oss;
+    oss << "No valid implementation of HermitianEig for T="
+        << TypeTraits<T>::Name();
+    throw std::logic_error(oss.str());
+}
+
+template <typename T, typename SizeT,
           typename=EnableWhen<IsSupportedType<T,LAPACK_Op::POTRF>>>
 void CholeskyFactorizeImpl(FillMode uplo,
                            SizeT n,
                            T* A, SizeT lda,
                            T* workspace, SizeT workspace_size,
-                           InfoT* info,
+                           gpu_lapack_impl::InfoT* info,
                            SyncInfo<Device::GPU> const& si)
 {
-    static_assert(IsSame<InfoT, gpu_lapack_impl::InfoT>::value,
-                  "Deduced InfoT must match gpu_lapack_impl::InfoT.");
-
     using NTP = MakePointer<NativeType<T>>;
 
     SyncManager mgr(GetDenseLibraryHandle(), si);
@@ -1193,6 +1260,18 @@ void CholeskyFactorizeImpl(FillMode const,
     throw std::logic_error(oss.str());
 }
 }// namespace details
+
+template <typename T, typename SizeT>
+void HermitianEig(
+    FillMode uplo,
+    SizeT n,
+    T* A,
+    SizeT lda,
+    TmpBase<T>* W,
+    SyncInfo<Device::GPU> const& si)
+{
+    details::HermitianEigImpl(uplo, n, A, lda, W, si);
+}
 
 template <typename T, typename SizeT>
 void CholeskyFactorize(FillMode uplo,

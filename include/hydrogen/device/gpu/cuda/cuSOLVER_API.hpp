@@ -22,6 +22,26 @@ using DevicePtr = T*;
 
 using cusolver_int = int;
 
+template <typename T>
+struct RealTypeT
+{
+    using type = T;
+};
+
+template <>
+struct RealTypeT<cuComplex>
+    : RealTypeT<float>
+{
+};
+
+template <>
+struct RealTypeT<cuDoubleComplex>
+    : RealTypeT<double>
+{
+};
+
+template <typename T> using RealType = typename RealTypeT<T>::type;
+
 // Cholesky factorization
 #define ADD_POTRF_DECL(ScalarType)                      \
     cusolver_int GetPotrfWorkspaceSize(                 \
@@ -38,10 +58,33 @@ using cusolver_int = int;
         cusolver_int workspace_size,                    \
         DevicePtr<cusolver_int> devinfo)
 
-ADD_POTRF_DECL(float);
-ADD_POTRF_DECL(double);
-ADD_POTRF_DECL(cuComplex);
-ADD_POTRF_DECL(cuDoubleComplex);
+#define ADD_HEEV_DECL(ScalarType)                       \
+    cusolver_int GetHeevWorkspaceSize(                  \
+        cusolverDnHandle_t handle,                      \
+        cublasFillMode_t uplo,                          \
+        cusolver_int n,                                 \
+        DeviceArray<ScalarType> A,                      \
+        cusolver_int lda,                               \
+        DeviceArray<RealType<ScalarType>> W);           \
+    void Heev(                                          \
+        cusolverDnHandle_t handle,                      \
+        cublasFillMode_t uplo,                          \
+        cusolver_int n,                                 \
+        DeviceArray<ScalarType> A,                      \
+        cusolver_int lda,                               \
+        DeviceArray<RealType<ScalarType>> W,            \
+        DeviceArray<ScalarType> workspace,              \
+        cusolver_int workspace_size,                    \
+        DevicePtr<cusolver_int> devinfo)
+
+#define ADD_CUSOLVER_DECLS(ScalarType)          \
+    ADD_POTRF_DECL(ScalarType);                 \
+    ADD_HEEV_DECL(ScalarType)
+
+ADD_CUSOLVER_DECLS(float);
+ADD_CUSOLVER_DECLS(double);
+ADD_CUSOLVER_DECLS(cuComplex);
+ADD_CUSOLVER_DECLS(cuDoubleComplex);
 
 }// namespace cusolver
 }// namespace hydrogen

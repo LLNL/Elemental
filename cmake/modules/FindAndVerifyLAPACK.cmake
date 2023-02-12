@@ -171,6 +171,10 @@ else ()
   set(${UPPER_PROJECT_NAME}_HAVE_LAPACK)
 endif ()
 
+if (NOT ${UPPER_PROJECT_NAME}_HAVE_LAPACK)
+  message(FATAL_ERROR "LAPACK support is currently required.")
+endif ()
+
 # Check a few MKL features
 check_function_exists(mkl_dcsrmv ${UPPER_PROJECT_NAME}_HAVE_MKL)
 if (${UPPER_PROJECT_NAME}_HAVE_MKL)

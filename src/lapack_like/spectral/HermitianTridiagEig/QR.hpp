@@ -548,6 +548,8 @@ QRAlg
     return qr::Helper( mainDiag, subDiag, Q, ctrlMod );
 }
 
+#if 0 // TOM
+
 template<typename Real,typename=EnableIf<IsReal<Real>>>
 herm_tridiag_eig::QRInfo
 QRAlg
@@ -590,6 +592,8 @@ QRAlg
     }
     return info;
 }
+
+#endif // 0 TOM
 
 template<typename Real>
 herm_tridiag_eig::QRInfo
@@ -644,6 +648,8 @@ QRAlg
         return info;
     }
 }
+
+#if 0 // TOM
 
 template<typename Real>
 herm_tridiag_eig::QRInfo
@@ -734,6 +740,8 @@ QRAlg
         return info;
     }
 }
+
+#endif // 0 TOM
 
 } // namespace herm_tridiag_eig
 } // namespace El

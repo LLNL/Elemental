@@ -12,7 +12,7 @@
 namespace El {
 
 template <typename T, Device D>
-void Broadcast_impl( Matrix<T,D>& A, mpi::Comm const& comm, int rank )
+void Broadcast( Matrix<T,D>& A, mpi::Comm const& comm, int rank )
 {
     EL_DEBUG_CSE
     const int commSize = mpi::Size( comm );
@@ -51,18 +51,18 @@ void Broadcast_impl( Matrix<T,D>& A, mpi::Comm const& comm, int rank )
     }
 }
 
-template<typename T>
+template <typename T>
 void Broadcast( AbstractMatrix<T>& A, mpi::Comm const& comm, int rank )
 {
     switch(A.GetDevice())
     {
     case Device::CPU:
-        Broadcast_impl(static_cast<Matrix<T,Device::CPU>&>(A),
+        Broadcast(static_cast<Matrix<T,Device::CPU>&>(A),
                        std::move(comm), rank);
         break;
 #ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
-        Broadcast_impl(static_cast<Matrix<T,Device::GPU>&>(A),
+        Broadcast(static_cast<Matrix<T,Device::GPU>&>(A),
                        std::move(comm), rank);
         break;
 #endif // HYROGEN_HAVE_GPU

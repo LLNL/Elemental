@@ -1,5 +1,6 @@
 #include <array>
 #include <atomic>
+#include <stdexcept>
 
 #include "El/hydrogen_config.h"
 #include "El/core/Profiling.hpp"
@@ -10,6 +11,10 @@
 #include "nvToolsExtCudaRt.h"
 #include "cuda_runtime.h"
 #endif // HYDROGEN_HAVE_NVPROF
+
+#ifdef HYDROGEN_HAVE_ROCTRACER
+#include "roctx.h"
+#endif
 
 #ifdef HYDROGEN_HAVE_VTUNE
 #include <ittnotify.h>
@@ -56,6 +61,13 @@ bool nvprof_runtime_enabled = true;
 bool NVProfRuntimeEnabled() noexcept { return nvprof_runtime_enabled; }
 #endif
 
+// Some variables for roctx
+#ifdef HYDROGEN_HAVE_ROCTRACER
+bool roctx_runtime_enabled = true;
+
+bool roctxRuntimeEnabled() noexcept { return roctx_runtime_enabled; }
+#endif
+
 }// namespace <anon>
 
 void EnableVTune() noexcept
@@ -72,6 +84,13 @@ void EnableNVProf() noexcept
 #endif // HYDROGEN_HAVE_NVPROF
 }
 
+void EnableROCTX() noexcept
+{
+#ifdef HYDROGEN_HAVE_ROCTRACER
+    roctx_runtime_enabled = true;
+#endif // HYDROGEN_HAVE_ROCTRACER
+}
+
 void DisableVTune() noexcept
 {
 #ifdef HYDROGEN_HAVE_VTUNE
@@ -86,6 +105,13 @@ void DisableNVProf() noexcept
 #endif // HYDROGEN_HAVE_NVPROF
 }
 
+void DisableROCTX() noexcept
+{
+#ifdef HYDROGEN_HAVE_ROCTRACER
+    roctx_runtime_enabled = false;
+#endif // HYDROGEN_HAVE_ROCTRACER
+}
+
 Color GetNextProfilingColor() noexcept
 {
     auto id = current_color.fetch_add(1, std::memory_order_relaxed);
@@ -94,6 +120,11 @@ Color GetNextProfilingColor() noexcept
 
 void BeginRegionProfile(char const* s, Color c) noexcept
 {
+#ifdef HYDROGEN_HAVE_ROCTRACER
+    if (roctxRuntimeEnabled())
+        roctxRangePush(s);
+#endif // HYDROGEN_HAVE_ROCTRACER
+
 #ifdef HYDROGEN_HAVE_NVPROF
     if (NVProfRuntimeEnabled())
     {
@@ -130,6 +161,11 @@ void BeginRegionProfile(char const* s, Color c) noexcept
 
 void EndRegionProfile(const char *) noexcept
 {
+#ifdef HYDROGEN_HAVE_ROCTRACER
+    if (roctxRuntimeEnabled())
+        roctxRangePop();
+#endif // HYDROGEN_HAVE_ROCTRACER
+
 #ifdef HYDROGEN_HAVE_NVPROF
     if (NVProfRuntimeEnabled())
         nvtxRangePop();

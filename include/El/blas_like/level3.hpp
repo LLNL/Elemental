@@ -417,12 +417,12 @@ void Trsm(
     bool checkIfSingular=false,
     TrsmAlgorithm alg=TRSM_DEFAULT);
 
-template<typename F>
+template<typename F, Device D>
 void LocalTrsm
 ( LeftOrRight side, UpperOrLower uplo,
   Orientation orientation, UnitOrNonUnit diag,
   F alpha,
-  const DistMatrix<F,STAR,STAR>& A,
+  const DistMatrix<F,STAR,STAR,ELEMENT,D>& A,
         AbstractDistMatrix<F>& X,
   bool checkIfSingular=false );
 
@@ -523,13 +523,15 @@ void LocalTrrk
   T alpha, const DistMatrix<T,MC,STAR>& A,
            const DistMatrix<T,MR,STAR>& B,
   T beta,        DistMatrix<T>& C );
-template<typename T>
+template<typename T,Device D>
 void LocalTrrk
 ( UpperOrLower uplo,
   Orientation orientA,
-  T alpha, const DistMatrix<T,STAR,MC>& A,
-           const DistMatrix<T,STAR,MR>& B,
-  T beta,        DistMatrix<T,MC,  MR>& C );
+  T alpha,
+  DistMatrix<T,STAR,MC,ELEMENT,D>const & A,
+  DistMatrix<T,STAR,MR,ELEMENT,D> const& B,
+  T beta,
+  DistMatrix<T,MC,  MR,ELEMENT,D>& C );
 template<typename T>
 void LocalTrrk
 ( UpperOrLower uplo,

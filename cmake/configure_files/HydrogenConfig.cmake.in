@@ -1,6 +1,8 @@
 # This will create the H::hydrogen IMPORTED target. It will also
 # export many useful variables that one may want.
 
+include(CMakeFindDependencyMacro)
+include(CheckCompilerFlag)
 include("${CMAKE_CURRENT_LIST_DIR}/HydrogenConfigVersion.cmake")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
@@ -12,6 +14,12 @@ set(HYDROGEN_VERSION ${PACKAGE_VERSION})
 set(HYDROGEN_CXX_COMPILER "@CMAKE_CXX_COMPILER@")
 set(HYDROGEN_CXX_FLAGS "@CMAKE_CXX_FLAGS@")
 set(HYDROGEN_MPI_CXX_COMPILER "@MPI_CXX_COMPILER@")
+
+# FIXME (trb 01/08/2022): The FindAndVerify* modules may not be
+# suitable for dealing with exports. We should consider refactoring
+# this to be consistent with CMake's ideology re: transitive
+# dependency resolution. However, this is separate from the
+# CUDA/ROCm-related issues I'm handling at the moment.
 
 # Note: Setting things in the cache doesn't change anything if the
 # cache variable is already set.
@@ -37,32 +45,31 @@ set(_HYDROGEN_HAVE_AL_MPI_CUDA @HYDROGEN_HAVE_AL_MPI_CUDA@)
 set(_HYDROGEN_HAVE_AL_HOST_XFER @HYDROGEN_HAVE_AL_HOST_XFER@)
 if (_HYDROGEN_HAVE_ALUMINUM)
   set(_HYDROGEN_MIN_AL_VERSION @ALUMINUM_VERSION@)
-  if (NOT Aluminum_FOUND)
-    find_package(Aluminum ${_HYDROGEN_MIN_AL_VERSION} NO_MODULE QUIET
-      HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
-      $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
-      PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
-      NO_DEFAULT_PATH)
-    if (NOT Aluminum_FOUND)
-      set(Aluminum_DIR "@Aluminum_DIR@")
-      find_package(Aluminum ${_HYDROGEN_MIN_AL_VERSION} NO_MODULE REQUIRED)
-    endif ()
-  endif ()
+  find_dependency(Aluminum "${HYDROGEN_MIN_AL_VERSION}")
 
+  # This makes the assumption that there are no inter-backend
+  # dependencies among the "device backends" (i.e., any backend is
+  # allowed to depend on MPI, which is always available, but no
+  # backend should depend on any of the other backends). This checks
+  # that AT LEAST the backend set available when building Hydrogen is
+  # available now.
   if (_HYDROGEN_HAVE_NCCL2 AND NOT AL_HAS_NCCL)
-    message(FATAL_ERROR
+    set(Hydrogen_NOT_FOUND_MESSAGE
       "Hydrogen expects NCCL2 support "
-      "but Aluminum does not have NCCL2 support.")
+      "but found Aluminum does not have NCCL2 support.")
+    set(Hydrogen_FOUND FALSE)
   endif ()
   if (_HYDROGEN_HAVE_AL_HOST_XFER AND NOT AL_HAS_HOST_TRANSFER)
-    message(FATAL_ERROR
+    set(Hydrogen_NOT_FOUND_MESSAGE
       "Hydrogen expects HostTransfer support "
       "but Aluminum does not have HostTransfer support.")
+    set(Hydrogen_FOUND FALSE)
   endif ()
   if (_HYDROGEN_HAVE_AL_MPI_CUDA AND NOT AL_HAS_MPI_CUDA)
-    message(FATAL_ERROR
+    set(Hydrogen_NOT_FOUND_MESSAGE
       "Hydrogen expects MPI-CUDA support "
       "but Aluminum does not have MPI-CUDA support.")
+    set(Hydrogen_FOUND FALSE)
   endif ()
 endif (_HYDROGEN_HAVE_ALUMINUM)
 
@@ -70,117 +77,50 @@ endif (_HYDROGEN_HAVE_ALUMINUM)
 set(_HYDROGEN_HAVE_CUDA @HYDROGEN_HAVE_CUDA@)
 set(_HYDROGEN_HAVE_CUB @HYDROGEN_HAVE_CUB@)
 if (_HYDROGEN_HAVE_CUDA)
-  find_package(CUDA REQUIRED)
-  find_package(NVML)
-  if (NOT NVML_FOUND)
-    set(NVML_LIBRARY @NVML_LIBRARY@)
-    set(NVML_INCLUDE_PATH @NVML_INCLUDA_PATH@)
-    find_package(NVML REQUIRED)
+  set(_HYDROGEN_EXTERNAL_CUB @H_EXTERNAL_CUB@)
+  set(_HYDROGEN_EXTERNAL_NVTX @H_EXTERNAL_NVTX@)
+
+  find_dependency(CUDAToolkit)
+
+  if (_HYDROGEN_EXTERNAL_CUB)
+    find_dependency(CUB MODULE)
   endif ()
 
-  if (_HYDROGEN_HAVE_CUB)
-    find_package(CUB QUIET)
-    if (NOT CUB_FOUND)
-      set(CUB_INCLUDE_PATH @CUB_INCLUDE_PATH@)
-      find_package(CUB REQUIRED)
-    endif ()
+  if (_HYDROGEN_EXTERNAL_NVTX)
+    find_dependency(NVTX MODULE)
   endif ()
-
-  if (NOT TARGET cuda::toolkit)
-    add_library(cuda::toolkit INTERFACE IMPORTED)
-  endif ()
-
-  foreach (lib IN LISTS CUDA_CUBLAS_LIBRARIES CUDA_LIBRARIES
-      CUDA_CUDA_LIBRARY CUB_LIBRARIES NVML_LIBRARIES
-      CUDA_cusolver_LIBRARY)
-
-    if (lib)
-      list(APPEND _CUDA_TOOLKIT_LIBS ${lib})
-    endif ()
-
-  endforeach ()
-
-  set_property(TARGET cuda::toolkit PROPERTY
-    INTERFACE_LINK_LIBRARIES "${_CUDA_TOOLKIT_LIBS}")
-
-  set_property(TARGET cuda::toolkit PROPERTY
-    INTERFACE_INCLUDE_DIRECTORIES "${CUDA_INCLUDE_DIRS}")
-
-  set_property(TARGET cuda::toolkit PROPERTY
-    INTERFACE_COMPILE_OPTIONS
-    $<$<COMPILE_LANGUAGE:CUDA>:-arch=sm_60>
-    $<$<COMPILE_LANGUAGE:CUDA>:--expt-extended-lambda>)
-
 endif ()
 
 set(_HYDROGEN_HAVE_ROCM @HYDROGEN_HAVE_ROCM@)
-set(_HYDROGEN_BUILD_ROCM_PATH @_INTERNAL_ROCM_PREFIX@)
+set(_HYDROGEN_HAVE_ROCTRACER @HYDROGEN_HAVE_ROCTRACER@)
 if (_HYDROGEN_HAVE_ROCM)
-  # Prefer explicit cache variables, then env variables.
-  if (EXISTS _HYDROGEN_BUILD_ROCM_PATH)
-    set(_INTERNAL_ROCM_PREFIX ${_HYDROGEN_BUILD_ROCM_PATH})
-  elseif (ROCM_PATH)
-    set(_INTERNAL_ROCM_PREFIX ${ROCM_PATH})
-  elseif (DEFINED ENV{ROCM_PATH})
-    set(_INTERNAL_ROCM_PREFIX $ENV{ROCM_PATH})
-  else ()
-    # I don't have a better idea here.
-    find_program(SOME_ROCM_PROGRAM
-      NAMES rocm-smi rocminfo rocprof
-      DOC "A program used to attempt to deduce the ROCm path.")
-    mark_as_advanced(SOME_ROCM_PROGRAM)
-    if (SOME_ROCM_PROGRAM)
-      get_filename_component(ROCM_PROGRAM_BIN_DIR
-        "${SOME_ROCM_PROGRAM}"
-        DIRECTORY)
-      get_filename_component(_INTERNAL_ROCM_PREFIX
-        "${ROCM_PROGRAM_BIN_DIR}"
-        DIRECTORY)
-    else ()
-      # Ok, at this point, there's nothing better to be done.
-      set(_INTERNAL_ROCM_PREFIX "/opt/rocm")
-    endif ()
-  endif ()
-  message(STATUS
-    "Searching for HIP/ROCm infrastructure: ${_INTERNAL_ROCM_PREFIX}")
-  set(CMAKE_MODULE_PATH
-    "${_INTERNAL_ROCM_PREFIX}/hip/cmake"
-    ${CMAKE_MODULE_PATH})
-  find_package(HIP REQUIRED)
+
+  find_dependency(hip CONFIG)
 
   if (_HYDROGEN_HAVE_CUB)
-    set(CMAKE_PREFIX_PATH
-      "${_INTERNAL_ROCM_PREFIX}/hip"
-      ${CMAKE_PREFIX_PATH})
-
-    # This is finnicky; the HIP we found first is just CMakery. Now we
-    # need to pretend we haven't found it, so that we can find the HIP
-    # runtime.
-    set(HIP_FOUND FALSE)
-    find_package(HIP CONFIG REQUIRED)
-
-    # It looks like hipCUB has added "find_dependency(rocPRIM)", so
-    # hopefully this will just work now.
-    find_package(hipCUB REQUIRED)
+    find_dependency(hipcub)
     set(HYDROGEN_HAVE_CUB TRUE)
   else ()
     set(HYDROGEN_HAVE_CUB FALSE)
   endif ()
 
-  if (HIP_FOUND)
-    find_package(rocblas CONFIG REQUIRED)
-    find_package(rocsolver CONFIG REQUIRED)
-    find_package(rocthrust CONFIG REQUIRED)
-    set(HYDROGEN_HAVE_ROCM TRUE)
-    message(STATUS "Found ROCm/HIP toolchain. Using HIP/ROCm.")
-  else ()
-    message(FATAL_ERROR "ROCm requested but not found.")
+  find_dependency(rocblas CONFIG)
+  find_dependency(rocsolver CONFIG)
+  find_dependency(rocthrust CONFIG)
+
+  if (_HYDROGEN_HAVE_ROCTRACER)
+    find_dependency(Roctracer MODULE COMPONENTS roctx)
   endif ()
+
+  include(HydrogenCleanupHIPTargets)
+  h_clean_hip_targets()
+
+  set(HYDROGEN_HAVE_ROCM TRUE)
 endif (_HYDROGEN_HAVE_ROCM)
 
 set(HYDROGEN_HAVE_HALF @HYDROGEN_HAVE_HALF@)
 if (HYDROGEN_HAVE_HALF)
-  find_package(HALF REQUIRED)
+  find_dependency(HALF)
 endif ()
 
 if (_HYDROGEN_HAVE_CUDA)

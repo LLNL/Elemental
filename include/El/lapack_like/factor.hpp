@@ -23,8 +23,8 @@ void Cholesky( UpperOrLower uplo, AbstractMatrix<Field>& A );
 template<typename Field>
 void Cholesky
 ( UpperOrLower uplo, AbstractDistMatrix<Field>& A, bool scalapack=false );
-template<typename Field>
-void Cholesky( UpperOrLower uplo, DistMatrix<Field,STAR,STAR>& A );
+template<typename Field, Device D>
+void Cholesky( UpperOrLower uplo, DistMatrix<Field,STAR,STAR,ELEMENT,D>& A );
 
 template<typename Field>
 void ReverseCholesky( UpperOrLower uplo, Matrix<Field>& A );

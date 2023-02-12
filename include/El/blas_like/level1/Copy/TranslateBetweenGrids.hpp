@@ -16,228 +16,257 @@ namespace copy
 {
 
 template<typename T,Dist U,Dist V,Device D1,Device D2>
-void TranslateBetweenGrids
-(DistMatrix<T,U,V,ELEMENT,D1> const& A,
+void TranslateBetweenGrids(
+  DistMatrix<T,U,V,ELEMENT,D1> const& A,
   DistMatrix<T,U,V,ELEMENT,D2>& B)
 {
     EL_DEBUG_CSE
-
-
-    if (D1 != D2)
-        LogicError("TranslateBetweenGrids: ",
-                   "Mixed-device implementation not implemented.");
-
-    GeneralPurpose(A, B);
+    DistMatrix<T,CIRC,CIRC,ELEMENT,D2> ACirc(A.Grid(), A.Root()), BCirc(B.Grid(), B.Root());
+    ACirc.Resize(A.Height(), A.Width());
+    BCirc.Resize(A.Height(), A.Width());
+    B.Resize(A.Height(), A.Width());
+    if (A.Participating()) {
+      El::Copy(A, ACirc);
+    }
+    TranslateBetweenGrids(ACirc, BCirc);
+    if (B.Participating()) {
+      El::Copy(BCirc, B);
+    }
 }
 
-// TODO(poulson): Compare against copy::GeneralPurpose
-// FIXME (trb 03/06/18) -- Need to do the GPU impl
-template<typename T, Device D1, Device D2>
-void TranslateBetweenGrids
-(DistMatrix<T,MC,MR,ELEMENT,D1> const& A,
-  DistMatrix<T,MC,MR,ELEMENT,D2>& B)
+template<typename T, Device D>
+void TranslateBetweenGrids(
+  DistMatrix<T,CIRC,CIRC,ELEMENT,D> const& A,
+  DistMatrix<T,CIRC,CIRC,ELEMENT,D>& B)
 {
-    EL_DEBUG_CSE
 
+  // Matrix dimensions
+  const Int m = A.Height();
+  const Int n = A.Width();
+  B.Resize(m, n);
+  if (m <= 0 || n <= 0) {
+    return;
+  }
 
-    const Int m = A.Height();
-    const Int n = A.Width();
-    const Int mLocA = A.LocalHeight();
-    const Int nLocA = A.LocalWidth();
-    B.Resize(m, n);
-    mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
+  const bool amRootA = A.IsLocalCol(0);
+  const bool amRootB = B.IsLocalCol(0);
+  mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
+  if (amRootA && amRootB) {
+    El::Copy(A.LockedMatrix(), B.Matrix());
+  }
+  else if (amRootA) {
+    const Int recvViewingRank = B.Grid().VCToViewing(B.Root());
+    El::Send(A.LockedMatrix(), viewingCommB, recvViewingRank);
+  }
+  else if (amRootB) {
     mpi::Group owningGroupA = A.Grid().OwningGroup();
-
-    // Just need to ensure that each viewing comm contains the other team's
-    // owning comm. Congruence is too strong.
-
-    // Compute the number of process rows and columns that each process
-    // needs to send to.
-    const Int colStride = B.ColStride();
-    const Int rowStride = B.RowStride();
-    const Int colShiftB = B.ColShift();
-    const Int rowShiftB = B.RowShift();
-    const Int colRank = B.ColRank();
-    const Int rowRank = B.RowRank();
-    const Int colRankA = A.ColRank();
-    const Int rowRankA = A.RowRank();
-    const Int colStrideA = A.ColStride();
-    const Int rowStrideA = A.RowStride();
-    const Int colGCD = GCD(colStride, colStrideA);
-    const Int rowGCD = GCD(rowStride, rowStrideA);
-    const Int colLCM = colStride*colStrideA / colGCD;
-    const Int rowLCM = rowStride*rowStrideA / rowGCD;
-    const Int numColSends = colStride / colGCD;
-    const Int numRowSends = rowStride / rowGCD;
-
-    const Int colAlignA = A.ColAlign();
-    const Int rowAlignA = A.RowAlign();
-    const Int colAlignB = B.ColAlign();
-    const Int rowAlignB = B.RowAlign();
-
-    const bool inBGrid = B.Participating();
-    const bool inAGrid = A.Participating();
-
-    if(!inBGrid && !inAGrid)
-        return;
-
-    const Int maxSendSize =
-      (m/(colStrideA*numColSends)+1) * (n/(rowStrideA*numRowSends)+1);
-
-    // Translate the ranks from A's VC communicator to B's viewing so that
-    // we can match send/recv communicators. Since A's VC communicator is not
-    // necessarily defined on every process, we instead work with A's owning
-    // group and account for row-major ordering if necessary.
-    const int sizeA = A.Grid().Size();
-    vector<int> rankMap(sizeA), ranks(sizeA);
-    if(A.Grid().Order() == COLUMN_MAJOR)
-    {
-        for(int j=0; j<sizeA; ++j)
-            ranks[j] = j;
+    const Int sendViewingRank = mpi::Translate(
+      owningGroupA,
+      A.Root(),
+      viewingCommB);
+    if (sendViewingRank < 0 || sendViewingRank >= viewingCommB.Size()) {
+      LogicError(
+        "TranslateBetweenGrids: Owning group for matrix A "
+        "is not a subset of viewing communicator for matrix B");
     }
-    else
-    {
-        // The (i,j) = i + j*colStrideA rank in the column-major ordering is
-        // equal to the j + i*rowStrideA rank in a row-major ordering.
-        // Since we desire rankMap[i+j*colStrideA] to correspond to process
-        // (i,j) in A's grid's rank in this viewing group, ranks[i+j*colStrideA]
-        // should correspond to process (i,j) in A's owning group. Since the
-        // owning group is ordered row-major in this case, its rank is
-        // j+i*rowStrideA. Note that setting
-        // ranks[j+i*rowStrideA] = i+j*colStrideA is *NOT* valid.
-        for(int i=0; i<colStrideA; ++i)
-            for(int j=0; j<rowStrideA; ++j)
-                ranks[i+j*colStrideA] = j+i*rowStrideA;
-    }
-    mpi::Translate(
-        owningGroupA, sizeA, ranks.data(), viewingCommB, rankMap.data());
+    El::Recv(B.Matrix(), viewingCommB, sendViewingRank);
+  }
 
-    // Have each member of A's grid individually send to all numRow x numCol
-    // processes in order, while the members of this grid receive from all
-    // necessary processes at each step.
-    Int requiredMemory = 0;
-    if(inAGrid)
-        requiredMemory += maxSendSize;
-    if(inBGrid)
-        requiredMemory += maxSendSize;
-
-    SyncInfo<D1> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
-    SyncInfo<D2> syncInfoB = SyncInfoFromMatrix(B.LockedMatrix());
-
-    simple_buffer<T,D1> send_buf(inAGrid ? maxSendSize : 0, syncInfoA);
-    simple_buffer<T,D2> recv_buf(inBGrid ? maxSendSize : 0, syncInfoB);
-
-    T* sendBuf = send_buf.data();
-    T* recvBuf = recv_buf.data();
-
-    Int recvRow = 0; // avoid compiler warnings...
-    if(inAGrid)
-        recvRow = Mod(Mod(colRankA-colAlignA,colStrideA)+colAlignB,colStride);
-    for(Int colSend=0; colSend<numColSends; ++colSend)
-    {
-        Int recvCol = 0; // avoid compiler warnings...
-        if(inAGrid)
-            recvCol=Mod(Mod(rowRankA-rowAlignA,rowStrideA)+rowAlignB,rowStride);
-        for(Int rowSend=0; rowSend<numRowSends; ++rowSend)
-        {
-            mpi::Request<T> sendRequest;
-            // Fire off this round of non-blocking sends
-            if(inAGrid)
-            {
-                // Pack the data
-                Int sendHeight = Length(mLocA,colSend,numColSends);
-                Int sendWidth = Length(nLocA,rowSend,numRowSends);
-
-                copy::util::InterleaveMatrix(
-                    sendHeight, sendWidth,
-                    A.LockedBuffer(colSend,rowSend),
-                    numColSends, numRowSends*A.LDim(),
-                    sendBuf, 1, sendHeight, syncInfoA);
-
-                Synchronize(syncInfoA);
-
-                // Send data
-                const Int recvVCRank = recvRow + recvCol*colStride;
-                const Int recvViewingRank = B.Grid().VCToViewing(recvVCRank);
-                mpi::ISend
-                (sendBuf, sendHeight*sendWidth, recvViewingRank,
-                  viewingCommB, sendRequest);
-            }
-            // Perform this round of recv's
-            if(inBGrid)
-            {
-                const Int sendColOffset = colAlignA;
-                const Int recvColOffset =
-                  Mod(colSend*colStrideA+colAlignB,colStride);
-                const Int sendRowOffset = rowAlignA;
-                const Int recvRowOffset =
-                  Mod(rowSend*rowStrideA+rowAlignB,rowStride);
-
-                const Int colShift = Mod(colRank-recvColOffset, colStride);
-                const Int rowShift = Mod(rowRank-recvRowOffset, rowStride);
-
-                const Int firstSendRow = Mod(colShift+sendColOffset,colStrideA);
-                const Int firstSendCol = Mod(rowShift+sendRowOffset,rowStrideA);
-
-                const Int numColRecvs = Length(colStrideA,colShift,colStride);
-                const Int numRowRecvs = Length(rowStrideA,rowShift,rowStride);
-
-                // Recv data
-                // For now, simply receive sequentially. Until we switch to
-                // nonblocking recv's, we won't be using much of the
-                // recvBuf
-                Int sendRow = firstSendRow;
-                for(Int colRecv=0; colRecv<numColRecvs; ++colRecv)
-                {
-                    const Int sendColShift =
-                      Shift(sendRow, colAlignA, colStrideA) +
-                      colSend*colStrideA;
-                    const Int sendHeight = Length(m, sendColShift, colLCM);
-                    const Int localColOffset =
-                      (sendColShift-colShiftB) / colStride;
-
-                    Int sendCol = firstSendCol;
-                    for(Int rowRecv=0; rowRecv<numRowRecvs; ++rowRecv)
-                    {
-                        const Int sendRowShift =
-                          Shift(sendCol, rowAlignA, rowStrideA) +
-                          rowSend*rowStrideA;
-                        const Int sendWidth = Length(n, sendRowShift, rowLCM);
-                        const Int localRowOffset =
-                          (sendRowShift-rowShiftB) / rowStride;
-
-                        const Int sendVCRank = sendRow+sendCol*colStrideA;
-                        mpi::Recv(
-                            recvBuf, sendHeight*sendWidth, rankMap[sendVCRank],
-                            viewingCommB, syncInfoB);
-
-                        // Unpack the data
-                        copy::util::InterleaveMatrix(
-                            sendHeight, sendWidth,
-                            recvBuf, 1, sendHeight,
-                            B.Buffer(localColOffset,localRowOffset),
-                            colLCM/colStride, (rowLCM/rowStride)*B.LDim(),
-                            syncInfoB);
-
-                        // Set up the next send col
-                        sendCol = Mod(sendCol+rowStride,rowStrideA);
-                    }
-                    // Set up the next send row
-                    sendRow = Mod(sendRow+colStride,colStrideA);
-                }
-            }
-            // Ensure that this round of non-blocking sends completes
-            if(inAGrid)
-            {
-                mpi::Wait(sendRequest);
-                recvCol = Mod(recvCol+rowStrideA,rowStride);
-            }
-        }
-        if(inAGrid)
-            recvRow = Mod(recvRow+colStrideA,colStride);
-    }
 }
 
+template<typename T, Device D>
+void TranslateBetweenGrids(
+  DistMatrix<T,MC,MR,ELEMENT,D> const& A,
+  DistMatrix<T,MC,MR,ELEMENT,D>& B)
+{
+  EL_DEBUG_CSE;
+
+  // See TranslateBetweenGrids implementation for [STAR,VC] matrices
+  // for a description of the algorithm. The [MC,MR] matrix
+  // implementation is similar, except it is 2D.
+
+  // Matrix dimensions
+  const Int m = A.Height();
+  const Int n = A.Width();
+  B.Resize(m, n);
+  const Int mLocA = A.LocalHeight();
+  const Int nLocA = A.LocalWidth();
+  const Int mLocB = B.LocalHeight();
+  const Int nLocB = B.LocalWidth();
+
+  // Return immediately if there is no local data
+  const bool inAGrid = A.Participating();
+  const bool inBGrid = B.Participating();
+  if (!inAGrid && !inBGrid) {
+    return;
+  }
+
+  // Compute the number of messages to send/recv
+  const Int colStrideA = A.ColStride();
+  const Int rowStrideA = A.RowStride();
+  const Int colStrideB = B.ColStride();
+  const Int rowStrideB = B.RowStride();
+  const Int colStrideGCD = GCD(colStrideA, colStrideB);
+  const Int rowStrideGCD = GCD(rowStrideA, rowStrideB);
+  const Int numColSends = Min(colStrideB/colStrideGCD, mLocA);
+  const Int numRowSends = Min(rowStrideB/rowStrideGCD, nLocA);
+  const Int numColRecvs = Min(colStrideA/colStrideGCD, mLocB);
+  const Int numRowRecvs = Min(rowStrideA/rowStrideGCD, nLocB);
+
+  // Synchronize compute streams
+  SyncInfo<D> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
+  SyncInfo<D> syncInfoB = SyncInfoFromMatrix(B.Matrix());
+  auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
+  const SyncInfo<D>& syncInfo = syncHelper;
+
+  // Translate the ranks from A's VC communicator to B's viewing so
+  // that we can match send/recv communicators. Since A's VC
+  // communicator is not necessarily defined on every process, we
+  // instead work with A's owning group.
+  mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
+  mpi::Group owningGroupA = A.Grid().OwningGroup();
+  const int sizeA = A.Grid().Size();
+  vector<int> viewingRanksA(sizeA), owningRanksA(sizeA);
+  if(A.Grid().Order() == COLUMN_MAJOR) {
+    std::iota(owningRanksA.begin(), owningRanksA.end(), 0);
+  }
+  else {
+    // The (i,j) = i + j*colStrideA rank in the column-major ordering is
+    // equal to the j + i*rowStrideA rank in a row-major ordering.
+    // Since we desire rankMap[i+j*colStrideA] to correspond to process
+    // (i,j) in A's grid's rank in this viewing group, ranks[i+j*colStrideA]
+    // should correspond to process (i,j) in A's owning group. Since the
+    // owning group is ordered row-major in this case, its rank is
+    // j+i*rowStrideA. Note that setting
+    // ranks[j+i*rowStrideA] = i+j*colStrideA is *NOT* valid.
+    for (int i=0; i<colStrideA; ++i) {
+      for (int j=0; j<rowStrideA; ++j) {
+        owningRanksA[i+j*colStrideA] = j+i*rowStrideA;
+      }
+    }
+  }
+  mpi::Translate(
+    owningGroupA, sizeA, owningRanksA.data(),
+    viewingCommB, viewingRanksA.data());
+  const Int colRankA = A.ColRank();
+  const Int rowRankA = A.RowRank();
+  const Int colRankB = B.ColRank();
+  const Int rowRankB = B.RowRank();
+  const Int viewingRank = viewingCommB.Rank();
+  if (viewingRank < 0 || viewingRank >= viewingCommB.Size()) {
+    LogicError(
+      "TranslateBetweenGrids: Owning group for matrix A "
+      "is not a subset of viewing communicator for matrix B");
+  }
+
+  // Workspace buffer to pack/unpack data
+  Int messageBufSize = 0;
+  if (inAGrid && numColSends > 0 && numRowSends > 0) {
+    messageBufSize = Max(
+      MaxLength(mLocA,numColSends)*MaxLength(nLocA,numRowSends),
+      messageBufSize);
+  }
+  if (inBGrid && numColRecvs > 0 && numRowRecvs > 0) {
+    messageBufSize = Max(
+      MaxLength(mLocB,numColRecvs)*MaxLength(nLocB,numRowRecvs),
+      messageBufSize);
+  }
+  simple_buffer<T,D> messageBuf(messageBufSize, syncInfo);
+
+  // Figure out which ranks to send/recv messages
+  std::map<Int,std::pair<Int,Int>> messageColRanks, messageRowRanks;
+  for (Int iLocA=0; iLocA<numColSends; ++iLocA) {
+    const Int i = A.GlobalRow(iLocA);
+    const Int recvColRank = B.RowOwner(i);
+    messageColRanks[i] = std::pair<Int,Int>(colRankA, recvColRank);
+  }
+  for (Int jLocA=0; jLocA<numRowSends; ++jLocA) {
+    const Int j = A.GlobalCol(jLocA);
+    const Int recvRowRank = B.ColOwner(j);
+    messageRowRanks[j] = std::pair<Int,Int>(rowRankA, recvRowRank);
+  }
+  for (Int iLocB=0; iLocB<numColRecvs; ++iLocB) {
+    const Int i = B.GlobalRow(iLocB);
+    const Int sendColRank = A.RowOwner(i);
+    messageColRanks[i] = std::pair<Int,Int>(sendColRank, colRankB);
+  }
+  for (Int jLocB=0; jLocB<numRowRecvs; ++jLocB) {
+    const Int j = B.GlobalCol(jLocB);
+    const Int sendRowRank = A.ColOwner(j);
+    messageRowRanks[j] = std::pair<Int,Int>(sendRowRank, rowRankB);
+  }
+
+  // Send/recv messages
+  for (auto const& rowInfo : messageRowRanks) {
+    for (auto const& colInfo : messageColRanks) {
+      const Int i = colInfo.first;
+      const Int j = rowInfo.first;
+      const Int sendColRank = colInfo.second.first;
+      const Int sendRowRank = rowInfo.second.first;
+      const Int recvColRank = colInfo.second.second;
+      const Int recvRowRank = rowInfo.second.second;
+
+      // Figure out source and target ranks
+      const Int sendVCRank = sendColRank + sendRowRank*colStrideA;
+      const Int recvVCRank = recvColRank + recvRowRank*colStrideB;
+      const Int sendViewingRank = viewingRanksA[sendVCRank];
+      const Int recvViewingRank = B.Grid().VCToViewing(recvVCRank);
+
+      // Figure out message size and offset
+      Int iLocA = -1;
+      Int jLocA = -1;
+      Int iLocB = -1;
+      Int jLocB = -1;
+      Int messageHeight = 0;
+      Int messageWidth = 0;
+      if (viewingRank == sendViewingRank) {
+        iLocA = A.LocalRow(i);
+        jLocA = A.LocalCol(j);
+        messageHeight = Length(mLocA, iLocA, numColSends);
+        messageWidth = Length(nLocA, jLocA, numRowSends);
+      }
+      if (viewingRank == recvViewingRank) {
+        iLocB = B.LocalRow(i);
+        jLocB = B.LocalCol(j);
+        messageHeight = Length(mLocB, iLocB, numColRecvs);
+        messageWidth = Length(nLocB, jLocB, numRowRecvs);
+      }
+
+      if (viewingRank == sendViewingRank && viewingRank == recvViewingRank) {
+        // Copy data locally
+        copy::util::InterleaveMatrix(
+          messageHeight, messageWidth,
+          A.LockedBuffer(iLocA,jLocA), numColSends, numRowSends*A.LDim(),
+          B.Buffer(iLocB,jLocB), numColRecvs, numRowRecvs*B.LDim(),
+          syncInfo);
+      }
+      else if (viewingRank == sendViewingRank) {
+        // Send data to other rank
+        copy::util::InterleaveMatrix(
+          messageHeight, messageWidth,
+          A.LockedBuffer(iLocA,jLocA), numColSends, numRowSends*A.LDim(),
+          messageBuf.data(), 1, messageHeight,
+          syncInfo);
+        mpi::Send(
+          messageBuf.data(), messageHeight*messageWidth,
+          recvViewingRank, viewingCommB, syncInfo);
+      }
+      else if (viewingRank == recvViewingRank) {
+        // Receive data from other rank
+        mpi::Recv(
+          messageBuf.data(), messageHeight*messageWidth,
+          sendViewingRank, viewingCommB, syncInfo);
+        copy::util::InterleaveMatrix(
+          messageHeight, messageWidth,
+          messageBuf.data(), 1, messageHeight,
+          B.Buffer(iLocB,jLocB), numColRecvs, numRowRecvs*B.LDim(),
+          syncInfo);
+      }
+
+    }
+  }
+
+}
 
 template<typename T, Device D1, Device D2>
 void TranslateBetweenGridsAllreduceBasic
@@ -949,14 +978,10 @@ void TranslateBetweenGridsScatterOptComm
     for(Int localDataRankA = 0; localDataRankA < int(rowLCM/sizeB); localDataRankA++)
     {
 
-        MPI_Scatter((void *)sendBuf, sendCounts, mpi::TypeMap<T>(), (void *)recvTransposedMatrix.Buffer(), sendCounts, mpi::TypeMap<T>(), localDataRankA, ScatterComm.GetMPIComm());
-
-         // mpi::Scatter(sendBuf, sendCounts, recvTransposedMatrix.Buffer(), sendCounts, localDataRankA, ScatterComm,
-         //        syncGeneral);
-
-        Synchronize(syncGeneral);
-
-
+        mpi::Scatter(
+          sendBuf, sendCounts,
+          recvTransposedMatrix.Buffer(), sendCounts,
+          localDataRankA, ScatterComm, syncGeneral);
 
         for(Int childLayerSubGrid = 0; childLayerSubGrid < numMatricesInSubGrid; ++childLayerSubGrid)
         {
@@ -1194,14 +1219,9 @@ void TranslateBetweenGridsScatterCommParentSmall
         metaData[3] = 0;
     }
 
-
-
     const std::vector<Int> sendMetaData (metaData,metaData + 4 );
 
-
-    SyncInfo<D1> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
     Synchronize(syncGeneral);
-
 
     mpi::AllReduce( sendMetaData.data(), recvMetaData, 4, mpi::MAX, viewingCommA,syncGeneralMetaData);
     Synchronize(syncGeneralMetaData);
@@ -1860,14 +1880,8 @@ void TranslateBetweenGridsSliceBroadcastCommSameSizeSubGrids
 
         }
     }
-    const Int indexB = indexBVec[0];
 
     Matrix<T,D2> conversionMatrix(mLocA,nLocA), transposedMatrix(int((mLocA*nLocA)/splitDim),splitDim), tempMatrix((mLocA/splitDim) * nLocA, splitDim/numChildLayers);
-
-
-
-
-
 
     if(inAGrid)
     {
@@ -1876,9 +1890,6 @@ void TranslateBetweenGridsSliceBroadcastCommSameSizeSubGrids
         conversionMatrix.Resize(splitDim, int((mLocA*nLocA)/splitDim));
 
         Transpose(conversionMatrix,transposedMatrix);
-
-
-
     }
 
 
@@ -2009,12 +2020,6 @@ void TranslateBetweenGridsSliceConcatAlongFirstDim
     DistMatrix<T,STAR,VC,ELEMENT,D2>* B = dynamic_cast<DistMatrix<T,STAR,VC,ELEMENT,D2>*>( &(*B_Vector[indexB]));
     Matrix<T,D2>  transposedMatrix(int((mLocA*nLocA)/splitDim),splitDim), recvTransposedMatrix(nLocA, mLocA*gatherCommSize), sendTransposedMatrix(nLocA,mLocA);
 
-    SyncInfo<D1> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
-
-
-
-
-
     Transpose(A.LockedMatrix(),sendTransposedMatrix);
 
     const Int sizeB = B->Grid().VCSize();
@@ -2064,8 +2069,9 @@ void TranslateBetweenGridsSliceConcatAlongFirstDim
         Matrix<T,D2>  tempMatrix( (mLocA)/numChildLayers, nLocA);
         Transpose(conversionMatrixVector[childLayerSubGrid], tempMatrix);
 
-        std::printf("Temp matrix Height %d width %d\n", tempMatrix.Height(), tempMatrix.Width());
-
+        std::cout << "Temp matrix Height " << tempMatrix.Height()
+                  << " width " << tempMatrix.Width()
+                  << std::endl;
 
         copy::util::InterleaveMatrix(
             // childLayerSplitHeight * nLocA, (mLocA/splitDim)*gatherCommSize,
@@ -2076,9 +2082,6 @@ void TranslateBetweenGridsSliceConcatAlongFirstDim
             syncGeneral);
 
         // Copy(tempMatrix,dynamic_cast<DistMatrix<T,STAR,VC,ELEMENT,D2>*>( &(*B_Vector[indexBVec[childLayerSubGrid]]))->Matrix());
-
-        std::printf("Here here\n");
-
 
     }
 
@@ -3152,7 +3155,7 @@ void TranslateBetweenGridsBroadcastOptComm
 
     Synchronize(syncGeneral);
 
-    if(sizeA != sizeB*B_Vector.size())
+    if(static_cast<size_t>(sizeA) != sizeB*B_Vector.size())
     {
         mpi::AllReduce( sendMetaData.data(), recvMetaData, 4, mpi::MAX, viewingCommA,syncGeneralMetaData);
         Synchronize(syncGeneralMetaData);
@@ -3168,29 +3171,19 @@ void TranslateBetweenGridsBroadcastOptComm
         B_Vector[i]->Resize(m,n);
     }
 
-
-
-
-
-
     // Parent Subgrid Size: 4 Child Subgrid Size: 3
     // Parent 0 1 2 3 0 1 2 3 0 1 2 3
     // Child  0 1 2 0 1 2 0 1 2 0 1 2
 
-
     std::vector<int> index_to_put(sizeA,-1);
-
 
     for(Int i = 0; i < int(rowLCM/sizeB); ++i)
     {
         index_to_put[i] = i;
     }
 
-
     SyncInfo<D1> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
     SyncInfo<D2> syncInfoB = SyncInfoFromMatrix(B->LockedMatrix());
-
-
 
     // const bool inAGrid = A.Participating();
     const bool inBGrid = indexB >=0 ? true:false;
@@ -3336,7 +3329,7 @@ void TranslateBetweenGridsBroadcastBasic
 
 
 
-    if(sizeA != sizeB*B_Vector.size())
+    if(static_cast<size_t>(sizeA) != sizeB*B_Vector.size())
     {
         mpi::AllReduce( sendMetaData.data(), recvMetaData, 4, mpi::MAX, viewingCommA,syncGeneralMetaData);
         Synchronize(syncGeneralMetaData);
@@ -3712,15 +3705,6 @@ void TranslateBetweenGridsAsync
     mpi::Translate(
         owningGroupA, sizeA, ranks.data(), viewingCommB, rankMap.data());
 
-    Int requiredMemory = 0;
-    if(inAGrid)
-        requiredMemory += maxSendSize;
-    if(inBGrid)
-        requiredMemory += maxSendSize;
-
-
-
-
     std::vector<simple_buffer<T,D1>> sendBufVector(numRowSends);
 
     for(Int i=0; i<numRowSends; ++i)
@@ -3864,337 +3848,164 @@ void TranslateBetweenGridsAsync
 
 }
 
-
-template<typename T, Device D1, Device D2>
-void TranslateBetweenGrids
-(DistMatrix<T,STAR,VC,ELEMENT,D1> const& A,
-  DistMatrix<T,STAR,VC,ELEMENT,D2>& B)
+template<typename T, Device D>
+void TranslateBetweenGrids(
+  DistMatrix<T,STAR,VC,ELEMENT,D> const& A,
+  DistMatrix<T,STAR,VC,ELEMENT,D>& B)
 {
-    EL_DEBUG_CSE;
-    Int m = A.Height();
-    Int n = A.Width();
-    const Int mLocA = A.LocalHeight();
-    const Int nLocA = A.LocalWidth();
+  EL_DEBUG_CSE;
 
+  /* Overview
 
-    mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
-    mpi::Group owningGroupA = A.Grid().OwningGroup();
+     Since we are using blocking communication, some care is required
+     to avoid deadlocks. Let's start with a naive algorithm for
+     [STAR,VC] matrices and optimize it in steps:
 
-    // Just need to ensure that each viewing comm contains the other team's
-    // owning comm. Congruence is too strong.
+     1. Given an m x n matrix, iterate over the n global columns on
+     every rank. If a rank owns the column in both A and B, just copy
+     it locally. If it owns it only in A, perform a send. If it owns
+     it only in B, perform a recv.
 
-    // Compute the number of process rows and columns that each process
-    // needs to send to.
+     2. Instead of iterating through all of the global columns on
+     every rank, just iterate through the local columns. Go through
+     the local columns in A and in B to figure out where to send/recv,
+     sort by the global column indices, and then perform the
+     sends/recvs. The resulting communication is identical to 1.
 
-    const Int colRankA = A.ColRank();
-    const Int rowRankA = A.RowRank();
-    Int colStrideA = A.ColStride();
-    Int rowStrideA = A.RowStride();
-    Int colAlignA = A.ColAlign();
-    Int rowAlignA = A.RowAlign();
-    SyncInfo<D1> syncGeneral = SyncInfo<D1>();
+     3. Consolidate columns with the same source and target ranks, so
+     we only have to send a single message. These columns have a
+     regular stride (left as an exercise to the reader), so it is
+     straightforward to pack them from A into a temporary buffer,
+     communicate, and unpack to B. We use the same communication order
+     as 1 and 2, but only with the first columns for each
+     source/target rank pair.
 
+  */
 
-    const bool inAGrid = A.Participating();
+  // Matrix dimensions
+  const Int m = A.Height();
+  const Int n = A.Width();
+  B.Resize(m, n);
+  const Int nLocA = A.LocalWidth();
+  const Int nLocB = B.LocalWidth();
 
+  // Return immediately if there is no local data
+  const bool inAGrid = A.Participating();
+  const bool inBGrid = B.Participating();
+  if (!inAGrid && !inBGrid) {
+    return;
+  }
 
-    Int recvMetaData[6];
+  // Compute the number of messages to send/recv
+  const Int strideA = A.RowStride();
+  const Int strideB = B.RowStride();
+  const Int strideGCD = GCD(strideA, strideB);
+  const Int numSends = Min(strideB/strideGCD, nLocA);
+  const Int numRecvs = Min(strideA/strideGCD, nLocB);
 
-    Int metaData[6];
-    if(inAGrid)
-    {
+  // Synchronize compute streams
+  SyncInfo<D> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
+  SyncInfo<D> syncInfoB = SyncInfoFromMatrix(B.Matrix());
+  auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
+  const SyncInfo<D>& syncInfo = syncHelper;
 
-        metaData[0] = m;
-        metaData[1] = n;
-        metaData[2] = colStrideA;
-        metaData[3] = rowStrideA;
-        metaData[4] = colAlignA;
-        metaData[5] = rowAlignA;
+  // Translate the ranks from A's VC communicator to B's viewing so
+  // that we can match send/recv communicators. Since A's VC
+  // communicator is not necessarily defined on every process, we
+  // instead work with A's owning group.
+  mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
+  mpi::Group owningGroupA = A.Grid().OwningGroup();
+  const int sizeA = A.Grid().Size();
+  vector<int> viewingRanksA(sizeA), owningRanksA(sizeA);
+  std::iota(owningRanksA.begin(), owningRanksA.end(), 0);
+  mpi::Translate(
+    owningGroupA, sizeA, owningRanksA.data(),
+    viewingCommB, viewingRanksA.data());
+  const Int viewingRank = viewingCommB.Rank();
+  if (viewingRank < 0 || viewingRank >= viewingCommB.Size()) {
+    LogicError(
+      "TranslateBetweenGrids: Owning group for matrix A "
+      "is not a subset of viewing communicator for matrix B");
+  }
 
+  // Workspace buffer to pack/unpack data
+  Int messageBufSize = 0;
+  if (inAGrid && numSends > 0) {
+    messageBufSize = Max(m*MaxLength(nLocA,numSends), messageBufSize);
+  }
+  if (inBGrid && numRecvs > 0) {
+    messageBufSize = Max(m*MaxLength(nLocB,numRecvs), messageBufSize);
+  }
+  simple_buffer<T,D> messageBuf(messageBufSize, syncInfo);
 
+  // Figure out which ranks to send/recv messages
+  std::map<Int,std::pair<Int,Int>> messageRanks;
+  for (Int jLocA=0; jLocA<numSends; ++jLocA) {
+    const Int j = A.GlobalCol(jLocA);
+    const Int recvVCRank = B.ColOwner(j);
+    const Int recvViewingRank = B.Grid().VCToViewing(recvVCRank);
+    messageRanks[j] = std::pair<Int,Int>(viewingRank, recvViewingRank);
+  }
+  for (Int jLocB=0; jLocB<numRecvs; ++jLocB) {
+    const Int j = B.GlobalCol(jLocB);
+    const Int sendVCRank = A.ColOwner(j);
+    const Int sendViewingRank = viewingRanksA[sendVCRank];
+    messageRanks[j] = std::pair<Int,Int>(sendViewingRank, viewingRank);
+  }
+
+  // Send/recv messages
+  for (auto const& message : messageRanks) {
+    const Int j = message.first;
+    const Int sendViewingRank = message.second.first;
+    const Int recvViewingRank = message.second.second;
+
+    // Figure out message size
+    Int jLocA = -1;
+    Int jLocB = -1;
+    Int messageWidth = 0;
+    if (viewingRank == sendViewingRank) {
+      jLocA = A.LocalCol(j);
+      messageWidth = Length(nLocA, jLocA, numSends);
     }
-    else
-    {
-        metaData[0] = 0;
-        metaData[1] = 0;
-        metaData[2] = 0;
-        metaData[3] = 0;
-        metaData[4] = 0;
-        metaData[5] = 0;
-    }
-
-    const std::vector<Int> sendMetaData (metaData,metaData + 6 );
-
-
-    SyncInfo<D1> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
-    Synchronize(syncGeneral);
-
-
-    mpi::AllReduce( sendMetaData.data(), recvMetaData, 6, mpi::MAX, viewingCommB,syncGeneral);
-    Synchronize(syncGeneral);
-
-    m = recvMetaData[0];
-    n = recvMetaData[1];
-    colStrideA = recvMetaData[2];
-    rowStrideA = recvMetaData[3];
-    colAlignA = recvMetaData[4];
-    rowAlignA = recvMetaData[5];
-
-    B.Resize(m, n);
-    const Int colStrideB = B.ColStride();
-    const Int rowStrideB = B.RowStride();
-    const Int colShiftB = B.ColShift();
-    const Int rowShiftB = B.RowShift();
-    const Int colRankB = B.ColRank();
-    const Int rowRankB = B.RowRank();
-    const Int colAlignB = B.ColAlign();
-    const Int rowAlignB = B.RowAlign();
-    const bool inBGrid = B.Participating();
-
-
-    SyncInfo<D2> syncInfoB = SyncInfoFromMatrix(B.LockedMatrix());
-
-    const Int rowGCD = GCD(rowStrideB, rowStrideA);
-    const Int rowLCM = rowStrideB*rowStrideA / rowGCD;
-    const Int numRowSends = rowLCM / rowStrideA ;
-    const Int numRowRecvs = rowLCM / rowStrideB;
-    const Int myRankViewing = mpi::Rank(viewingCommB);
-
-    const Int rankBRecv = Mod(B.Grid().VCRank(), rowStrideA);
-
-
-
-    //Setup for receiving data in B
-    const Int sendColOffset = colAlignA;
-    const Int recvColOffset =
-      Mod(colAlignB,colStrideB);
-    const Int sendRowOffset = rowAlignA;
-    const Int recvRowOffset =
-      Mod(0*rowStrideA+rowAlignB,rowStrideB);
-
-    const Int colShift = Mod(colRankB-recvColOffset, colStrideB);
-    const Int rowShift = Mod(rowRankB-recvRowOffset, rowStrideB);
-
-
-    const Int numInB = B.Grid().Rank();
-
-    const Int firstSendRow = Mod(colShift+sendColOffset,colStrideA);
-    const Int firstSendCol = Mod(rowShift+sendRowOffset,rowStrideA);
-
-    const Int numColRecvs = Length(colStrideA,colShift,colStrideB);
-    Int sendCol = firstSendCol;
-
-
-    // Recv data
-    // For now, simply receive sequentially. Until we switch to
-    // nonblocking recv's, we won't be using much of the
-    // recvBuf
-    Int sendRow = firstSendRow;
-
-    if(!inBGrid && !inAGrid)
-        return;
-
-    const Int maxSendSize =
-      (n/(rowStrideA*numRowSends)+1) * (m);
-
-
-    // Translate the ranks from A's VC communicator to B's viewing so that
-    // we can match send/recv communicators. Since A's VC communicator is not
-    // necessarily defined on every process, we instead work with A's owning
-    // group and account for row-major ordering if necessary.
-    const int sizeA = A.Grid().Size();
-    vector<int> rankMap(sizeA), ranks(sizeA);
-    if(A.Grid().Order() == COLUMN_MAJOR)
-    {
-        for(int j=0; j<sizeA; ++j)
-            ranks[j] = j;
-    }
-    else
-    {
-        // The (i,j) = i + j*colStrideA rank in the column-major ordering is
-        // equal to the j + i*rowStrideA rank in a row-major ordering.
-        // Since we desire rankMap[i+j*colStrideA] to correspond to process
-        // (i,j) in A's grid's rank in this viewing group, ranks[i+j*colStrideA]
-        // should correspond to process (i,j) in A's owning group. Since the
-        // owning group is ordered row-major in this case, its rank is
-        // j+i*rowStrideA. Note that setting
-        // ranks[j+i*rowStrideA] = i+j*colStrideA is *NOT* valid.
-        for(int i=0; i<colStrideA; ++i)
-            for(int j=0; j<rowStrideA; ++j)
-                ranks[i+j*colStrideA] = j+i*rowStrideA;
-    }
-    mpi::Translate(
-        owningGroupA, sizeA, ranks.data(), viewingCommB, rankMap.data());
-
-    Int requiredMemory = 0;
-    if(inAGrid)
-        requiredMemory += maxSendSize;
-    if(inBGrid)
-        requiredMemory += maxSendSize;
-
-    simple_buffer<T,D1> send_buf(inAGrid ? maxSendSize : 0, syncInfoA);
-    simple_buffer<T,D2> recv_buf(inBGrid ? maxSendSize : 0, syncInfoB);
-
-    T* sendBuf = send_buf.data();
-    T* recvBuf = recv_buf.data();
-
-    Int recvRow = 0;
-
-    //Ranks of processes to send data.
-    //Key: Process rank
-    //value: column offset
-    std::map<Int,Int> sendProcessRanks;
-    std::map<Int,Int> recvProcessRanks;
-    for (Int rowSend = 0; rowSend < numRowSends; rowSend++)
-    {
-        const Int recvVCRank = Mod(A.Grid().Rank() + rowSend*rowStrideA, rowStrideB);
-        const Int recvViewingRank = B.Grid().VCToViewing(recvVCRank);
-        sendProcessRanks.insert(std::pair<Int, Int >(recvViewingRank,rowSend));
-
+    if (viewingRank == recvViewingRank) {
+      jLocB = B.LocalCol(j);
+      messageWidth = Length(nLocB, jLocB, numRecvs);
     }
 
-     sendRow = 0;
-
-    for (Int rowRecv = 0; rowRecv < numRowRecvs; rowRecv++)
-    {
-        const Int sendVCRank = Mod((sendRow + rankBRecv),rowStrideA);
-        recvProcessRanks.insert(std::pair<Int, Int >(rankMap[sendVCRank],rowRecv));
-        sendRow = Mod(sendRow+rowStrideB,rowStrideA);
+    if (viewingRank == sendViewingRank && viewingRank == recvViewingRank) {
+      // Copy data locally
+      copy::util::InterleaveMatrix(
+        m, messageWidth,
+        A.LockedBuffer(0,jLocA), 1, numSends*A.LDim(),
+        B.Buffer(0,jLocB), 1, numRecvs*B.LDim(),
+        syncInfo);
+    }
+    else if (viewingRank == sendViewingRank) {
+      // Send data to other rank
+      copy::util::InterleaveMatrix(
+        m, messageWidth,
+        A.LockedBuffer(0,jLocA), 1, numSends*A.LDim(),
+        messageBuf.data(), 1, m,
+        syncInfo);
+      mpi::Send(
+        messageBuf.data(), m*messageWidth,
+        recvViewingRank, viewingCommB, syncInfo);
+    }
+    else if (viewingRank == recvViewingRank) {
+      // Receive data from other rank
+      mpi::Recv(
+        messageBuf.data(), m*messageWidth,
+        sendViewingRank, viewingCommB, syncInfo);
+      copy::util::InterleaveMatrix(
+        m, messageWidth,
+        messageBuf.data(), 1, m,
+        B.Buffer(0,jLocB), 1, numRecvs*B.LDim(),
+        syncInfo);
     }
 
-    //Checking if process are in both A and B grids
-    for (Int rowSend = 0; rowSend < numRowSends; rowSend++)
-    {
-        const Int recvVCRank = Mod(A.Grid().Rank() + rowSend*rowStrideA, rowStrideB);
-        const Int recvViewingRank = B.Grid().VCToViewing(recvVCRank);
-
-        if(recvViewingRank==myRankViewing)
-        {
-            Int sendWidth = Length(nLocA,rowSend,numRowSends);
-
-            Int rowRecv = 0;
-
-            for(rowRecv = 0; rowRecv<numRowRecvs; ++rowRecv)
-            {
-                const Int sendVCRank = Mod((sendRow + rankBRecv),rowStrideA);
-                sendRow = Mod(sendRow+rowStrideB,rowStrideA);
-                if(rankMap[sendVCRank]==myRankViewing) break;
-            }
-
-
-
-            const Int recvWidth = ((rowRecv*rowStrideB + numInB)>= Mod(n,rowLCM)) ?
-                                        floor(n/rowLCM) : floor(n/rowLCM)+1;
-
-            copy::util::InterleaveMatrix(
-                mLocA, sendWidth,
-                A.LockedBuffer(0,rowSend),
-                1, numRowSends*A.LDim(),
-                B.Buffer(0,rowRecv),
-                1, (numRowRecvs)*B.LDim(),
-                syncInfoB);
-            Synchronize(syncInfoA);
-            Synchronize(syncInfoB);
-
-        }
-
-    }
-
-    std::map<Int, Int>::iterator sendRankItr, recvRankItr;
-    sendRankItr = sendProcessRanks.begin();
-    recvRankItr = recvProcessRanks.begin();
-    for(Int numOp=0; numOp<numRowRecvs+numRowSends; numOp++)
-    {
-        if(recvRankItr!= recvProcessRanks.end())
-        {
-            if( recvRankItr->first < myRankViewing ||
-                (sendRankItr==sendProcessRanks.end() && recvRankItr->first > myRankViewing))
-            {
-                //Post recv operation
-
-                if(inBGrid){
-                    const Int sendWidth = ((recvRankItr->second*rowStrideB + numInB)>= Mod(n,rowLCM)) ?
-                                            floor(n/rowLCM) : floor(n/rowLCM)+1;
-
-
-                    mpi::Recv(
-                        recvBuf, m*sendWidth, recvRankItr->first,
-                        viewingCommB, syncInfoB);
-
-                    // Unpack the data
-                    copy::util::InterleaveMatrix(
-                        m, sendWidth,
-                        recvBuf, 1, m,
-                        B.Buffer(0,recvRankItr->second),
-                        1, (numRowRecvs)*B.LDim(),
-                        syncInfoB);
-
-
-
-                }
-                recvRankItr++;
-
-
-            }
-            else if (recvRankItr->first != myRankViewing && sendRankItr!=sendProcessRanks.end())
-            {
-                //Post send operation if not done already
-
-                //Pack Data
-                if(sendRankItr->first!=myRankViewing && inAGrid)
-                {
-
-                    Int sendWidth = Length(nLocA,sendRankItr->second,numRowSends);
-                    copy::util::InterleaveMatrix(
-                            mLocA, sendWidth,
-                            A.LockedBuffer(0,sendRankItr->second),
-                            1, numRowSends*A.LDim(),
-                            sendBuf, 1, mLocA, syncInfoA);
-
-
-                    mpi::Send
-                    (sendBuf, mLocA*sendWidth, sendRankItr->first,
-                      viewingCommB,syncInfoA);
-
-                }
-                sendRankItr++;
-
-            }
-            else
-            {
-                recvRankItr++;
-            }
-        }//only send operations are left
-        else
-        {
-            //Post send operation if not done already
-
-            //Pack Data
-            if(sendRankItr->first!=myRankViewing && inAGrid)
-            {
-
-                Int sendWidth = Length(nLocA,sendRankItr->second,numRowSends);
-                //std::printf("sendWidth from send %d\n", sendWidth);
-                copy::util::InterleaveMatrix(
-                        mLocA, sendWidth,
-                        A.LockedBuffer(0,sendRankItr->second),
-                        1, numRowSends*A.LDim(),
-                        sendBuf, 1, mLocA, syncInfoA);
-
-
-
-                mpi::Send
-                (sendBuf, mLocA*sendWidth, sendRankItr->first,
-                  viewingCommB,syncInfoA);
-
-            }
-            sendRankItr++;
-
-        }
-    }
+  }
 
 }
-
 
 template void TranslateBetweenGridsAsync<double, Device::CPU, Device::CPU>(
     DistMatrix<double, STAR, VC, ELEMENT, Device::CPU> const&,
@@ -4203,149 +4014,7 @@ template void TranslateBetweenGridsAsync<double, Device::CPU, Device::CPU>(
 template void TranslateBetweenGridsAsync<double, Device::GPU,Device::GPU> (DistMatrix<double,STAR,VC,ELEMENT,Device::GPU> const& ,DistMatrix<double,STAR,VC,ELEMENT,Device::GPU>& );
 #endif // HYDROGEN_HAVE_GPU
 
-template<typename T, Device D1, Device D2>
-void TranslateBetweenGrids
-(const DistMatrix<T,STAR,STAR,ELEMENT,D1>& A,
-  DistMatrix<T,STAR,STAR,ELEMENT,D2>& B)
-{
-    EL_DEBUG_CSE;
-    const Int height = A.Height();
-    const Int width = A.Width();
-    B.Resize(height, width);
-
-    // Attempt to distinguish between the owning groups of A and B both being
-    // subsets of the same viewing communicator, the owning group of A being
-    // the same as the viewing communicator of B (A is the *parent* of B),
-    // and the viewing communicator of A being the owning communicator of B
-    // (B is the *parent* of A).
-    //
-    // TODO(poulson): Decide whether these condition can be simplified.
-    mpi::Comm const& commA = A.Grid().VCComm();
-    mpi::Comm const& commB = B.Grid().VCComm();
-    mpi::Comm const& viewingCommA = A.Grid().ViewingComm();
-    mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
-    const int commSizeA = mpi::Size(commA);
-    const int commSizeB = mpi::Size(commB);
-    const int viewingCommSizeA = mpi::Size(viewingCommA);
-    const int viewingCommSizeB = mpi::Size(viewingCommB);
-    bool usingViewingA=false, usingViewingB=false;
-    //mpi::Comm activeCommA, activeCommB;
-
-    mpi::Comm const& activeCommA = (viewingCommSizeA == viewingCommSizeB) ?
-    						A.Grid().ViewingComm() :
-    							viewingCommSizeA == commSizeB ?
-    							A.Grid().ViewingComm():
-
-    								commSizeA == viewingCommSizeB ?
-    								A.Grid().VCComm() :
-    								A.Grid().VCComm()
-
-
-    						;
-
-    mpi::Comm const& activeCommB = (viewingCommSizeA == viewingCommSizeB) ?
-    						B.Grid().ViewingComm():
-    							viewingCommSizeA == commSizeB ?
-    							B.Grid().VCComm():
-
-    								commSizeA == viewingCommSizeB ?
-    								B.Grid().ViewingComm() :
-    								B.Grid().VCComm()
-
-
-    						;
-
-    usingViewingA = (viewingCommSizeA == viewingCommSizeB) ?
-    						true :
-    							viewingCommSizeA == commSizeB ?
-    							true :
-
-    								commSizeA == viewingCommSizeB ?
-    								false :
-    								false
-
-
-    						;
-
-    usingViewingB = (viewingCommSizeA == viewingCommSizeB) ?
-    						true :
-    							viewingCommSizeA == commSizeB ?
-    							false :
-
-    								commSizeA == viewingCommSizeB ?
-    								true :
-    								false
-
-
-    						;
-
-
-    if(!mpi::Congruent(activeCommA, activeCommB))
-            LogicError("communicators were not congruent");
-
-
-
-    const Int rankA = A.RedundantRank();
-    const Int rankB = B.RedundantRank();
-
-    simple_buffer<T,D1> sendBuffer(rankA == 0 ? height*width : 0);
-    simple_buffer<T,D2> bcastBuffer(B.Participating() ? height*width : 0);
-
-    SyncInfo<D1> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
-    SyncInfo<D2> syncInfoB = SyncInfoFromMatrix(B.LockedMatrix());
-
-    // Send from the root of A to the root of B's matrix's grid
-    mpi::Request<T> sendRequest;
-    if(rankA == 0)
-    {
-        if (sendBuffer.size() != size_t(height*width))
-            RuntimeError("TranslateBetweenGrids: Bad sendBuffer size!");
-
-        util::InterleaveMatrix(
-            height, width,
-            A.LockedBuffer(), 1, A.LDim(),
-            sendBuffer.data(), 1, height, syncInfoA);
-        // TODO(poulson): Use mpi::Translate instead?
-        const Int recvRank = (usingViewingB ? B.Grid().VCToViewing(0) : 0);
-        mpi::ISend(
-            sendBuffer.data(), height*width, recvRank, activeCommB, sendRequest);
-    }
-
-    // Receive on the root of B's matrix's grid and then broadcast
-    // over the owning communicator
-    if(B.Participating())
-    {
-        if (bcastBuffer.size() != size_t(height*width))
-            RuntimeError("TranslateBetweenGrids: Bad bcastBuffer size!");
-        if(rankB == 0)
-        {
-            // TODO(poulson): Use mpi::Translate instead?
-            const Int sendRank =
-              (usingViewingA ? A.Grid().VCToViewing(0) : 0);
-            mpi::Recv(bcastBuffer.data(), height*width, sendRank, activeCommB,
-                      syncInfoB);
-        }
-
-        mpi::Broadcast(bcastBuffer.data(), height*width, 0, B.RedundantComm(),
-                       syncInfoB);
-
-        util::InterleaveMatrix(
-            height, width,
-            bcastBuffer.data(), 1, height,
-            B.Buffer(),  1, B.LDim(), syncInfoB);
-    }
-
-    if(rankA == 0)
-        mpi::Wait(sendRequest);
-//#endif // EL_TRANSLATE_BETWEEN_GRIDS_REENABLE__
-}
-
 } // namespace copy
 } // namespace El
 
 #endif // ifndef EL_BLAS_COPY_TRANSLATEBETWEENGRIDS_HPP
-
-
-
-
-// template TranslateBetweenGridsBroadcast<double, Device::CPU,Device::CPU>;

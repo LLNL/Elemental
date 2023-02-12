@@ -39,6 +39,8 @@ void Ger
                    A.Buffer(), A.LDim() );
 }
 
+#if 0 // TOM
+
 template<typename T>
 void Ger
 ( T alpha,
@@ -139,22 +141,27 @@ void LocalGer
     Ger( alpha, x.LockedMatrix(), y.LockedMatrix(), A.Matrix() );
 }
 
+#endif // 0 TOM
+
 #define PROTO(T) \
   template void Ger \
-  ( T alpha, const Matrix<T>& x, const Matrix<T>& y, Matrix<T>& A ); \
-  template void Ger \
+  ( T alpha, const Matrix<T>& x, const Matrix<T>& y, Matrix<T>& A );
+
+/*
+  template void Ger                                                     \
   ( T alpha, const AbstractDistMatrix<T>& x, const AbstractDistMatrix<T>& y, \
                    AbstractDistMatrix<T>& A ); \
   template void LocalGer \
   ( T alpha, const AbstractDistMatrix<T>& x, const AbstractDistMatrix<T>& y, \
                    AbstractDistMatrix<T>& A );
+*/
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE
 #define EL_ENABLE_QUAD
 #define EL_ENABLE_BIGINT
 #define EL_ENABLE_BIGFLOAT
-#define EL_ENABLE_HALF
+/*#undef EL_ENABLE_HALF*/
 #include <El/macros/Instantiate.h>
 
 } // namespace El

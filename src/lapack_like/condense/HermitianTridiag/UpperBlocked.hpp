@@ -2,14 +2,14 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #ifndef EL_HERMITIANTRIDIAG_UPPER_BLOCKED_HPP
 #define EL_HERMITIANTRIDIAG_UPPER_BLOCKED_HPP
 
-#include "./UpperPanel.hpp"
+// #include "./UpperPanel.hpp"
 
 namespace El {
 namespace herm_tridiag {
@@ -40,7 +40,7 @@ void UpperBlocked( Matrix<F>& A, Matrix<F>& householderScalars )
         auto A00      = A( ind0, ind0 );
         auto a01      = A( ind0, ind1 );
 
-        auto a01T     = A( IR(0,k-1), ind1 ); 
+        auto a01T     = A( IR(0,k-1), ind1 );
         auto alpha01B = A( IR(k-1),   ind1 );
 
         const F tau = LeftReflector( alpha01B, a01T );
@@ -56,6 +56,8 @@ void UpperBlocked( Matrix<F>& A, Matrix<F>& householderScalars )
         alpha01B(0) = epsilon1;
     }
 }
+
+#if 0 // TOM
 
 // TODO(poulson):
 // If there is only a single MPI process, fall down to the sequential
@@ -96,7 +98,7 @@ void UpperBlocked
       householderScalars1_STAR_STAR(g);
     DistMatrix<F,MC,  STAR> APan_MC_STAR(g), WPan_MC_STAR(g);
     DistMatrix<F,MR,  STAR> APan_MR_STAR(g), WPan_MR_STAR(g);
-    
+
     const Int bsize = Blocksize();
     const Int kLast = LastOffset( n, bsize );
     for( Int k=kLast; k>=0; k-=bsize )
@@ -111,7 +113,7 @@ void UpperBlocked
         auto A01 = A( ind0, ind1 );
         auto A11 = A( ind1, ind1 );
         auto ATL = A( indT, indL );
-        
+
         if( k > 0 )
         {
             auto householderScalars1 =
@@ -129,7 +131,7 @@ void UpperBlocked
 
             UpperPanel
             ( ATL, WPan, householderScalars1,
-              APan_MC_STAR, APan_MR_STAR, 
+              APan_MC_STAR, APan_MR_STAR,
               WPan_MC_STAR, WPan_MR_STAR, ctrl );
 
             auto A01_MC_STAR = APan_MC_STAR( ind0, ind1-k );
@@ -159,6 +161,8 @@ void UpperBlocked
     // Redistribute from matrix-diagonal form to fully replicated
     householderScalars = householderScalarsDiag;
 }
+
+#endif // 0 TOM
 
 } // namespace herm_tridiag
 } // namespace El

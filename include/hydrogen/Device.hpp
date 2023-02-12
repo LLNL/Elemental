@@ -42,6 +42,11 @@ enum class Device : unsigned char
 #endif
 };
 
+/** @brief Tagged dispatch. */
+template <Device D> struct DeviceTag
+{
+};
+
 /** @brief Get a string representation of the device type. */
 template <Device D>
 std::string DeviceName();

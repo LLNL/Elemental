@@ -121,8 +121,8 @@ public:
 
     ~SyncTimer()
     {
-        hipEventDestroy(start_);
-        hipEventDestroy(stop_);
+        static_cast<void>(hipEventDestroy(start_));
+        static_cast<void>(hipEventDestroy(stop_));
     }
 
     void Start()

@@ -47,6 +47,8 @@ Base<Ring> SymmetricInfinityNorm( UpperOrLower uplo, const Matrix<Ring>& A )
     return HermitianInfinityNorm( uplo, A );
 }
 
+#if 0 // TOM
+
 template<typename Ring>
 Base<Ring> InfinityNorm( const AbstractDistMatrix<Ring>& A )
 {
@@ -107,6 +109,8 @@ Base<Ring> SymmetricInfinityNorm
     return HermitianInfinityNorm( uplo, A );
 }
 
+#endif // 0 TOM
+
 template<typename Ring>
 Base<Ring> HermitianTridiagInfinityNorm
 ( const Matrix<Base<Ring>>& d, const Matrix<Ring>& e )
@@ -117,23 +121,26 @@ Base<Ring> HermitianTridiagInfinityNorm
 
 #define PROTO(Ring) \
   template Base<Ring> InfinityNorm( const Matrix<Ring>& A ); \
-  template Base<Ring> InfinityNorm ( const AbstractDistMatrix<Ring>& A ); \
   template Base<Ring> HermitianInfinityNorm \
   ( UpperOrLower uplo, const Matrix<Ring>& A ); \
-  template Base<Ring> HermitianInfinityNorm \
-  ( UpperOrLower uplo, const AbstractDistMatrix<Ring>& A ); \
   template Base<Ring> SymmetricInfinityNorm \
   ( UpperOrLower uplo, const Matrix<Ring>& A ); \
-  template Base<Ring> SymmetricInfinityNorm \
-  ( UpperOrLower uplo, const AbstractDistMatrix<Ring>& A ); \
   template Base<Ring> HermitianTridiagInfinityNorm \
   ( const Matrix<Base<Ring>>& d, const Matrix<Ring>& e );
+
+/*
+  template Base<Ring> InfinityNorm ( const AbstractDistMatrix<Ring>& A ); \
+  template Base<Ring> HermitianInfinityNorm \
+  ( UpperOrLower uplo, const AbstractDistMatrix<Ring>& A ); \
+  template Base<Ring> SymmetricInfinityNorm \
+  ( UpperOrLower uplo, const AbstractDistMatrix<Ring>& A ); \
+*/
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE
 #define EL_ENABLE_QUAD
 #define EL_ENABLE_BIGFLOAT
-#define EL_ENABLE_HALF
+/*#undef EL_ENABLE_HALF*/
 #include <El/macros/Instantiate.h>
 
 } // namespace El

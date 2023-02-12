@@ -2,8 +2,8 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #ifndef EL_HERMITIANTRIDIAG_APPLYQ_HPP
@@ -16,7 +16,7 @@ template<typename F>
 void ApplyQ
 ( LeftOrRight side,
   UpperOrLower uplo,
-  Orientation orientation, 
+  Orientation orientation,
   const Matrix<F>& A,
   const Matrix<F>& householderScalars,
         Matrix<F>& B )
@@ -24,7 +24,7 @@ void ApplyQ
     EL_DEBUG_CSE
     const bool normal = (orientation==NORMAL);
     const bool onLeft = (side==LEFT);
-    const ForwardOrBackward direction = 
+    const ForwardOrBackward direction =
         ( (normal==onLeft) ^ (uplo==UPPER) ? BACKWARD : FORWARD );
     const Conjugation conjugation = ( normal ? CONJUGATED : UNCONJUGATED );
     const Int offset = ( uplo==UPPER ? 1 : -1 );
@@ -34,19 +34,21 @@ void ApplyQ
       A, householderScalars, B );
 }
 
+#if 0 // TOM
+
 template<typename F>
 void ApplyQ
 ( LeftOrRight side,
   UpperOrLower uplo,
-  Orientation orientation, 
+  Orientation orientation,
   const AbstractDistMatrix<F>& A,
-  const AbstractDistMatrix<F>& householderScalars, 
+  const AbstractDistMatrix<F>& householderScalars,
         AbstractDistMatrix<F>& B )
 {
     EL_DEBUG_CSE
     const bool normal = (orientation==NORMAL);
     const bool onLeft = (side==LEFT);
-    const ForwardOrBackward direction = 
+    const ForwardOrBackward direction =
         ( (normal==onLeft) ^ (uplo==UPPER) ? BACKWARD : FORWARD );
     const Conjugation conjugation = ( normal ? CONJUGATED : UNCONJUGATED );
     const Int offset = ( uplo==UPPER ? 1 : -1 );
@@ -54,6 +56,8 @@ void ApplyQ
     ( side, uplo, VERTICAL, direction, conjugation, offset,
       A, householderScalars, B );
 }
+
+#endif // 0 TOM
 
 } // namespace herm_tridiag
 } // namespace El

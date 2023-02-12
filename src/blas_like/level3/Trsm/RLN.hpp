@@ -5,8 +5,8 @@
    Copyright (c) 2013, The University of Texas at Austin
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 
@@ -16,27 +16,28 @@ namespace trsm {
 // Right Lower Normal (Non)Unit Trsm
 //   X := X tril(L)^-1, and
 //   X := X trilu(L)^-1
-template<typename F>
+template <typename F, Device D>
 void RLN
-( UnitOrNonUnit diag, 
-  const AbstractDistMatrix<F>& LPre,
-        AbstractDistMatrix<F>& XPre,
-  bool checkIfSingular )
+(UnitOrNonUnit diag,
+ AbstractDistMatrix<F> const& LPre,
+ AbstractDistMatrix<F>& XPre,
+ bool checkIfSingular,
+ DeviceTag<D>)
 {
     EL_DEBUG_CSE
     const Int n = XPre.Width();
     const Int bsize = Blocksize();
     const Grid& g = LPre.Grid();
 
-    DistMatrixReadProxy<F,F,MC,MR> LProx( LPre );
-    DistMatrixReadWriteProxy<F,F,MC,MR> XProx( XPre );
+    DistMatrixReadProxy<F,F,MC,MR,ELEMENT,D> LProx( LPre );
+    DistMatrixReadWriteProxy<F,F,MC,MR,ELEMENT,D> XProx( XPre );
     auto& L = LProx.GetLocked();
     auto& X = XProx.Get();
 
-    DistMatrix<F,MR,  STAR> L10Trans_MR_STAR(g);
-    DistMatrix<F,STAR,STAR> L11_STAR_STAR(g);
-    DistMatrix<F,STAR,MC  > X1Trans_STAR_MC(g);
-    DistMatrix<F,VC,  STAR> X1_VC_STAR(g);
+    DistMatrix<F,MR,  STAR,ELEMENT,D> L10Trans_MR_STAR(g);
+    DistMatrix<F,STAR,STAR,ELEMENT,D> L11_STAR_STAR(g);
+    DistMatrix<F,STAR,MC  ,ELEMENT,D> X1Trans_STAR_MC(g);
+    DistMatrix<F,VC,  STAR,ELEMENT,D> X1_VC_STAR(g);
 
     const Int kLast = LastOffset( n, bsize );
     for( Int k=kLast; k>=0; k-=bsize )
@@ -66,7 +67,7 @@ void RLN
         L10Trans_MR_STAR.AlignWith( X0 );
         Transpose( L10, L10Trans_MR_STAR );
         LocalGemm
-        ( TRANSPOSE, TRANSPOSE, 
+        ( TRANSPOSE, TRANSPOSE,
           F(-1), X1Trans_STAR_MC, L10Trans_MR_STAR, F(1), X0 );
     }
 }

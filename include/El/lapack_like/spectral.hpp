@@ -430,8 +430,8 @@ template<typename Field>
 HermitianEigInfo
 HermitianEig
 (       UpperOrLower uplo,
-        Matrix<Field>& A,
-        Matrix<Base<Field>>& w,
+        Matrix<Field, El::Device::CPU>& A,
+        Matrix<Base<Field>, El::Device::CPU>& w,
   const HermitianEigCtrl<Field>& ctrl=HermitianEigCtrl<Field>() );
 template<typename Field>
 HermitianEigInfo
@@ -447,9 +447,9 @@ template<typename Field>
 HermitianEigInfo
 HermitianEig
 (       UpperOrLower uplo,
-        Matrix<Field>& A,
-        Matrix<Base<Field>>& w,
-        Matrix<Field>& Q,
+        Matrix<Field, El::Device::CPU>& A,
+        Matrix<Base<Field>, El::Device::CPU>& w,
+        Matrix<Field, El::Device::CPU>& Q,
   const HermitianEigCtrl<Field>& ctrl=HermitianEigCtrl<Field>() );
 template<typename Field>
 HermitianEigInfo
@@ -460,6 +460,22 @@ HermitianEig
         AbstractDistMatrix<Field>& Q,
   const HermitianEigCtrl<Field>& ctrl=HermitianEigCtrl<Field>() );
 
+#ifdef HYDROGEN_HAVE_GPU
+template<typename Field>
+HermitianEigInfo
+HermitianEig
+(       UpperOrLower uplo,
+        Matrix<Field, El::Device::GPU>& A,
+        Matrix<Base<Field>, El::Device::GPU>& w,
+  const HermitianEigCtrl<Field>& ctrl=HermitianEigCtrl<Field>() );
+template <typename Field>
+HermitianEigInfo
+HermitianEig(UpperOrLower uplo,
+             Matrix<Field, El::Device::GPU>& A,
+             Matrix<Base<Field>, El::Device::GPU>& w,
+             Matrix<Field, El::Device::GPU>& Q,
+             const HermitianEigCtrl<Field>& ctrl = HermitianEigCtrl<Field>());
+#endif // HDYROGEN_HAVE_GPU
 namespace herm_eig {
 
 template<typename Real,

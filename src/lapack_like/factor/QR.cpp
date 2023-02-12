@@ -102,21 +102,11 @@ void QR
     qr::BusingerGolub( A, householderScalars, signature, Omega, ctrl );
 }
 
-#define PROTO(F) \
-  template void QR \
-  ( Matrix<F>& A, \
-    Matrix<F>& householderScalars, \
-    Matrix<Base<F>>& signature ); \
-  template void QR \
-  ( AbstractDistMatrix<F>& A, \
-    AbstractDistMatrix<F>& householderScalars, \
-    AbstractDistMatrix<Base<F>>& signature ); \
-  template void QR \
-  ( Matrix<F>& A, \
-    Matrix<F>& householderScalars, \
-    Matrix<Base<F>>& signature, \
-    Permutation& Omega, \
-    const QRCtrl<Base<F>>& ctrl ); \
+#if 0 // TOM
+  template void QR
+  ( AbstractDistMatrix<F>& A,
+    AbstractDistMatrix<F>& householderScalars,
+    AbstractDistMatrix<Base<F>>& signature );
   template void QR \
   ( AbstractDistMatrix<F>& A, \
     AbstractDistMatrix<F>& householderScalars, \
@@ -124,27 +114,12 @@ void QR
     DistPermutation& Omega, \
     const QRCtrl<Base<F>>& ctrl ); \
   template void qr::ExplicitTriang \
-  ( Matrix<F>& A, const QRCtrl<Base<F>>& ctrl ); \
-  template void qr::ExplicitTriang \
   ( AbstractDistMatrix<F>& A, const QRCtrl<Base<F>>& ctrl ); \
-  template void qr::ExplicitUnitary \
-  ( Matrix<F>& A, bool thinQR, const QRCtrl<Base<F>>& ctrl ); \
   template void qr::ExplicitUnitary \
   ( AbstractDistMatrix<F>& A, bool thinQR, const QRCtrl<Base<F>>& ctrl ); \
   template void qr::Explicit \
-  ( Matrix<F>& A, \
-    Matrix<F>& R, \
-    bool thinQR, \
-    const QRCtrl<Base<F>>& ctrl ); \
-  template void qr::Explicit \
   ( AbstractDistMatrix<F>& A, \
     AbstractDistMatrix<F>& R, \
-    bool thinQR, \
-    const QRCtrl<Base<F>>& ctrl ); \
-  template void qr::Explicit \
-  ( Matrix<F>& A, \
-    Matrix<F>& R, \
-    Matrix<Int>& Omega, \
     bool thinQR, \
     const QRCtrl<Base<F>>& ctrl ); \
   template void qr::Explicit \
@@ -153,21 +128,6 @@ void QR
     AbstractDistMatrix<Int>& Omega, \
     bool thinQR, \
     const QRCtrl<Base<F>>& ctrl ); \
-  template void qr::NeighborColSwap \
-  (       Matrix<F>& Q, \
-          Matrix<F>& R, \
-    Int j ); \
-  template void qr::DisjointNeighborColSwaps \
-  (       Matrix<F>& Q, \
-          Matrix<F>& R, \
-    const Matrix<Int>& colSwaps ); \
-  template void qr::ApplyQ \
-  ( LeftOrRight side, \
-    Orientation orientation, \
-    const Matrix<F>& A, \
-    const Matrix<F>& householderScalars, \
-    const Matrix<Base<F>>& signature, \
-          Matrix<F>& B ); \
   template void qr::ApplyQ \
   ( LeftOrRight side, \
     Orientation orientation, \
@@ -177,21 +137,11 @@ void QR
           AbstractDistMatrix<F>& B ); \
   template void qr::SolveAfter \
   ( Orientation orientation, \
-    const Matrix<F>& A, \
-    const Matrix<F>& householderScalars, \
-    const Matrix<Base<F>>& signature, \
-    const Matrix<F>& B, \
-          Matrix<F>& X ); \
-  template void qr::SolveAfter \
-  ( Orientation orientation, \
     const AbstractDistMatrix<F>& A, \
     const AbstractDistMatrix<F>& householderScalars, \
     const AbstractDistMatrix<Base<F>>& signature, \
     const AbstractDistMatrix<F>& B, \
           AbstractDistMatrix<F>& X ); \
-  template void qr::Cholesky \
-  ( Matrix<F>& A, \
-    Matrix<F>& R ); \
   template void qr::Cholesky \
   ( AbstractDistMatrix<F>& A, \
     AbstractDistMatrix<F>& R ); \
@@ -207,13 +157,55 @@ void QR
   ( const AbstractDistMatrix<F>& A, TreeData<F>& treeData ); \
   template void qr::ts::Scatter \
   ( AbstractDistMatrix<F>& A, const TreeData<F>& treeData );
+#endif // 0 TOM
+
+#define PROTO(F)                                                               \
+    template void QR(Matrix<F>& A,                                             \
+                     Matrix<F>& householderScalars,                            \
+                     Matrix<Base<F>>& signature);                              \
+    template void QR(Matrix<F>& A,                                             \
+                     Matrix<F>& householderScalars,                            \
+                     Matrix<Base<F>>& signature,                               \
+                     Permutation& Omega,                                       \
+                     const QRCtrl<Base<F>>& ctrl);                             \
+    template void qr::ExplicitTriang(Matrix<F>& A,                             \
+                                     const QRCtrl<Base<F>>& ctrl);             \
+    template void qr::ExplicitUnitary(Matrix<F>& A,                            \
+                                      bool thinQR,                             \
+                                      const QRCtrl<Base<F>>& ctrl);            \
+    template void qr::Explicit(Matrix<F>& A,                                   \
+                               Matrix<F>& R,                                   \
+                               bool thinQR,                                    \
+                               const QRCtrl<Base<F>>& ctrl);                   \
+    template void qr::Explicit(Matrix<F>& A,                                   \
+                               Matrix<F>& R,                                   \
+                               Matrix<Int>& Omega,                             \
+                               bool thinQR,                                    \
+                               const QRCtrl<Base<F>>& ctrl);                   \
+    template void qr::NeighborColSwap(Matrix<F>& Q, Matrix<F>& R, Int j);      \
+    template void qr::DisjointNeighborColSwaps(Matrix<F>& Q,                   \
+                                               Matrix<F>& R,                   \
+                                               const Matrix<Int>& colSwaps);   \
+    template void qr::ApplyQ(LeftOrRight side,                                 \
+                             Orientation orientation,                          \
+                             const Matrix<F>& A,                               \
+                             const Matrix<F>& householderScalars,              \
+                             const Matrix<Base<F>>& signature,                 \
+                             Matrix<F>& B);                                    \
+    template void qr::SolveAfter(Orientation orientation,                      \
+                                 const Matrix<F>& A,                           \
+                                 const Matrix<F>& householderScalars,          \
+                                 const Matrix<Base<F>>& signature,             \
+                                 const Matrix<F>& B,                           \
+                                 Matrix<F>& X);                                \
+    template void qr::Cholesky(Matrix<F>& A, Matrix<F>& R);
 
 #define EL_NO_INT_PROTO
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE
 #define EL_ENABLE_QUAD
 #define EL_ENABLE_BIGFLOAT
-#define EL_ENABLE_HALF
+/*#undef EL_ENABLE_HALF*/
 #include <El/macros/Instantiate.h>
 
 } // namespace El

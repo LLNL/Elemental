@@ -2,10 +2,11 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
+
 #include <El-lite.hpp>
 #include <El/blas_like/level1.hpp>
 #include <El/lapack_like/factor.hpp>
@@ -42,6 +43,8 @@ void HermitianUniformSpectrum
     MakeDiagonalReal(A);
 }
 
+#if 0 // TOM
+
 template<typename F>
 void HermitianUniformSpectrum
 ( ElementalMatrix<F>& APre, Int n, Base<F> lower, Base<F> upper )
@@ -60,7 +63,7 @@ void HermitianUniformSpectrum
     if( grid.Rank() == 0 )
         for( Int j=0; j<n; ++j )
             d[j] = SampleUniform<Real>( lower, upper );
-    mpi::Broadcast( d.data(), n, 0, grid.Comm() );
+    mpi::Broadcast( d.data(), n, 0, grid.Comm(), SyncInfo<El::Device::CPU>{} );
     Diagonal( A, d );
 
     // Apply a Haar matrix from both sides
@@ -76,19 +79,24 @@ void HermitianUniformSpectrum
     // Force the diagonal to be real-valued
     MakeDiagonalReal(A);
 }
+#endif // TOM 0
 
-#define PROTO(F) \
-  template void HermitianUniformSpectrum \
-  ( Matrix<F>& A, Int n, Base<F> lower, Base<F> upper ); \
+#define PROTO(F)                                                               \
+    template void HermitianUniformSpectrum(Matrix<F>& A,                       \
+                                           Int n,                              \
+                                           Base<F> lower,                      \
+                                           Base<F> upper);
+#if 0 // TOM
   template void HermitianUniformSpectrum \
   ( ElementalMatrix<F>& A, Int n, Base<F> lower, Base<F> upper );
+#endif // TOM 0
 
 #define EL_NO_INT_PROTO
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE
 #define EL_ENABLE_QUAD
 #define EL_ENABLE_BIGFLOAT
-#define EL_ENABLE_HALF
+/*#undef EL_ENABLE_HALF*/
 #include <El/macros/Instantiate.h>
 
 } // namespace El

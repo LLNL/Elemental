@@ -1,7 +1,7 @@
 # Add the source files for this directory
 set_full_path(THIS_DIR_SOURCES
   Gemm.cpp
-#  Hemm.cpp
+  Hemm.cpp
 #  Her2k.cpp
   Herk.cpp
 #  HermitianFromEVD.cpp
@@ -10,7 +10,7 @@ set_full_path(THIS_DIR_SOURCES
 #  NormalFromEVD.cpp
 #  QuasiTrsm.cpp
 #  SafeMultiShiftTrsm.cpp
-#  Symm.cpp
+  Symm.cpp
 #  Syr2k.cpp
   Syrk.cpp
 #  Trdtrmm.cpp

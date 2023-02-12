@@ -2,8 +2,8 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #include <El-lite.hpp>
@@ -305,6 +305,7 @@ void LocalRowAccumulate
 
 } // namespace symv
 
+
 #define PROTO(T) \
   template void Symv \
   ( UpperOrLower uplo, \
@@ -314,7 +315,7 @@ void LocalRowAccumulate
     T beta, \
          Matrix<T>& y, \
     bool conjugate ); \
-  template void Symv \
+  template void Symv   \
   ( UpperOrLower uplo, \
     T alpha, \
     const AbstractDistMatrix<T>& A, \
@@ -347,7 +348,7 @@ void LocalRowAccumulate
 #define EL_ENABLE_QUAD
 #define EL_ENABLE_BIGINT
 #define EL_ENABLE_BIGFLOAT
-#define EL_ENABLE_HALF
+/*#undef EL_ENABLE_HALF*/
 #include <El/macros/Instantiate.h>
 
 } // namespace El
