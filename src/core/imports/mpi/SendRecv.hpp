@@ -75,7 +75,7 @@ void SendRecv(T* buf, int count, int to, int from, Comm const& comm,
 
 #ifdef HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV
     Al::SendRecv<Backend>(
-        buf, count, to, buf, count, from,
+        buf, count, to, from,
         comm.template GetComm<Backend>(syncInfo));
 #else
     SafeInPlaceSendRecv(buf, count, to, from, comm, syncInfo,
