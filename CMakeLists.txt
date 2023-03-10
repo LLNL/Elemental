@@ -437,6 +437,12 @@ if (Hydrogen_ENABLE_ALUMINUM)
     else ()
       set(HYDROGEN_HAVE_AL_MPI_CUDA FALSE)
     endif (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
+
+    if (ALUMINUM_VERISON VERSION_GREATER "1.2.3")
+      set(HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV TRUE)
+      message(STATUS "Aluminum detected with in-place SendRecv support.")
+    endif ()
+
   else ()
     message(FATAL_ERROR "Aluminum support requested but not found. "
       "Please set Aluminum_DIR to point to the installation prefix "
