@@ -67,9 +67,15 @@ void Translate(
         const Int maxWidth  = MaxLength(width,  rowStride);
         const Int pkgSize = mpi::Pad(maxHeight*maxWidth);
 
-        simple_buffer<T,D1> buffer;
-        if(crossRank == root || crossRank == B.Root())
-            buffer.allocate(pkgSize);
+        // When crossRank == root, this will be a SEND buffer
+        // (+SendRecv when !aligned), and it should use
+        // syncInfoA. When crossRank == B.Root(), this will be a RECV
+        // buffer, and it should use syncInfoB. Otherwise, this isn't
+        // used.
+        simple_buffer<T,D1> buffer =
+            (crossRank == root || crossRank == B.Root()
+             ? simple_buffer<T,D1>(pkgSize, syncInfoA)
+             : simple_buffer<T,D1>{});
 
         const Int colAlignB = B.ColAlign();
         const Int rowAlignB = B.RowAlign();
