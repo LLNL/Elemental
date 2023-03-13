@@ -439,25 +439,12 @@ if (Hydrogen_ENABLE_ALUMINUM)
     endif (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
 
     # Check for in-place SendRecv.
-    set(_AL_SENDRECV_TEST_SRC "
-#include <Al.hpp>
-using Backend = Al::MPIBackend;  // Always defined
-using CommT = typename Backend::comm_type;
-void check_sendrecv(float* buf, size_t count, int to, int from, CommT& comm)
-{
-    Al::SendRecv<Backend>(buf, count, to, from, comm);
-}
-int main() { return 0; }
-")
-    file(WRITE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.cxx"
-      "${_AL_SENDRECV_TEST_SRC}\n")
-    try_compile(HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV
-      ${CMAKE_BINARY_DIR}
-      ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.cxx
-      LINK_LIBRARIES ${Aluminum_LIBRARIES}
-      CXX_STANDARD 17
-      CXX_STANDARD_REQUIRED TRUE
-    )
+    if (ALUMINUM_VERSION VERSION_GREATER_EQUAL "1.3.0")
+      set(HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV TRUE)
+    else ()
+      set(HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV FALSE)
+    endif ()
+
     if (HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV)
       message(STATUS "Aluminum detected with in-place SendRecv support.")
     else ()
