@@ -20,18 +20,67 @@ void SendRecv(const T* sbuf, int sc, int to,
         comm.template GetComm<Backend>(syncInfo));
 }
 
+namespace {
+
+template <typename B> struct BackendTag {};
+
+template <typename T>
+void do_copy_n(T const* src, int count, T* dst, SyncInfo<Device::CPU> const&)
+{
+    std::copy_n(src, count, dst);
+}
+
+#ifdef HYDROGEN_HAVE_GPU
+template <typename T>
+void do_copy_n(T const* src, int count, T* dst, SyncInfo<Device::GPU> const& si)
+{
+    gpu::Copy1DIntraDevice(src, dst, count, si);
+}
+#endif // HYDROGEN_HAVE_GPU
+
+template <typename T, Device D, typename Backend>
+void SafeInPlaceSendRecv(T* buf, int count, int to, int from, Comm const& comm,
+                         SyncInfo<D> const& syncInfo, BackendTag<Backend>)
+{
+    hydrogen::simple_buffer<T, D> tmp_recv_buf(count, syncInfo);
+    Al::SendRecv<Backend>(
+        buf, count, to, tmp_recv_buf.data(), count, from,
+        comm.template GetComm<Backend>(syncInfo));
+    do_copy_n(tmp_recv_buf.data(), count, buf, syncInfo);
+}
+
+#ifdef HYDROGEN_HAVE_AL_HOST_XFER
+template <typename T, Device D>
+void SafeInPlaceSendRecv(T* buf, int count, int to, int from, Comm const& comm,
+                         SyncInfo<D> const& syncInfo,
+                         BackendTag<Al::HostTransferBackend>)
+{
+    // This is ok due to implementation details of how the
+    // HostTransfer backend works.
+    using Backend = Al::HostTransferBackend;
+    Al::SendRecv<Backend>(
+        buf, count, to, buf, count, from,
+        comm.template GetComm<Backend>(syncInfo));
+}
+#endif
+} // namespace
+
 template <typename T, Device D,
           typename/*=EnableIf<IsAluminumSupported<T,D,COLL>>*/>
 void SendRecv(T* buf, int count, int to, int from, Comm const& comm,
               SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE;
-
     using Backend = BestBackend<T,D,Collective::SENDRECV>;
-    // Not sure if Al is ok with this bit
+
+#ifdef HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV
     Al::SendRecv<Backend>(
-        buf, count, to, buf, count, from,
+        buf, count, to, from,
         comm.template GetComm<Backend>(syncInfo));
+#else
+    SafeInPlaceSendRecv(buf, count, to, from, comm, syncInfo,
+                        BackendTag<Backend>{});
+#endif
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 
