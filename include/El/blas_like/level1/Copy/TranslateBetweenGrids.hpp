@@ -1001,6 +1001,7 @@ void TranslateBetweenGridsScatterOptComm
 
 
     }
+    
 
 
 }
@@ -1197,7 +1198,7 @@ void TranslateBetweenGridsScatterCommParentSmall
 
 
 
-    SyncInfo<D1> syncGeneralMetaData = SyncInfo<D1>();
+    SyncInfo<El::Device::CPU> syncGeneralMetaData = SyncInfo<El::Device::CPU>();
     const bool inAGrid = A.Participating();
 
     Int recvMetaData[4];
@@ -1405,7 +1406,7 @@ void TranslateBetweenGridsSliceGatherParentSmall
                    "Split dimension must be divisible by number of children layers or number of splits");
     }
 
-    SyncInfo<D1> syncGeneralMetaData = SyncInfo<D1>();
+    SyncInfo<El::Device::CPU> syncGeneralMetaData = SyncInfo<El::Device::CPU>();
     const bool inAGrid = A.Participating();
 
     Int recvMetaData[6];
@@ -1605,7 +1606,7 @@ void TranslateBetweenGridsScatterCommSameSizeSubGrids
 
 
 
-    SyncInfo<D1> syncGeneralMetaData = SyncInfo<D1>();
+    SyncInfo<El::Device::CPU> syncGeneralMetaData = SyncInfo<El::Device::CPU>();
     const bool inAGrid = A.Participating();
 
 
@@ -1793,7 +1794,7 @@ void TranslateBetweenGridsSliceBroadcastCommSameSizeSubGrids
 
 
 
-    SyncInfo<D1> syncGeneralMetaData = SyncInfo<D1>();
+    SyncInfo<El::Device::CPU> syncGeneralMetaData = SyncInfo<El::Device::CPU>();
     const bool inAGrid = A.Participating();
 
 
@@ -2099,17 +2100,27 @@ void TranslateBetweenGridsScatter
     // 2: Broadcast
     //
 
+    std::cout<<"B Vector Size:"<<B_Vector.size()<<"\n";
+    std::cout<<"B0 Vector Size:"<<B_Vector.size()<<"\n";
+
     DistMatrix<T,STAR,VC,ELEMENT,D2>* B = dynamic_cast<DistMatrix<T,STAR,VC,ELEMENT,D2>*>( &(*B_Vector[0]));
+    std::cout<<"B1 Vector Size:"<<B_Vector.size()<<"\n";
 
     const Int sizeA = A.Grid().VCSize();
+     std::cout<<"B2 Vector Size:"<<B_Vector.size()<<"\n";
     const Int sizeB = B->Grid().VCSize();
+     std::cout<<"B3 Vector Size:"<<B_Vector.size()<<"\n";
     const Int commSize = El::mpi::Size(ScatterComm);
+    std::cout<<"B4 Vector Size:"<<B_Vector.size()<<"\n";
+
+    std::cout<<"SizeA:"<<sizeA<<" SizeB:"<<sizeB<<" Commsize:"<<commSize<<"\n";
 
     if(sizeA == sizeB)
     {
         //SubGrid VCSizc is equal to Parent Grid
         if(version==0 || version == 3)
         {
+            std::cout<<"Using Scatter Comm\n";
             TranslateBetweenGridsScatterCommSameSizeSubGrids<T, D1, D2>(A,
                                                     B_Vector,
                                                     splitDim,
@@ -2118,6 +2129,7 @@ void TranslateBetweenGridsScatter
         }
         else if (version == 2 || version == 1 )
         {
+          std::cout<<"Using Slice Broadcast Comm\n";
             TranslateBetweenGridsSliceBroadcastCommSameSizeSubGrids<T, D1, D2>(A,
                                                 B_Vector,
                                                 splitDim,
@@ -2180,6 +2192,7 @@ void TranslateBetweenGridsScatter
         }
         else if(version == 1)
         {
+            std::cout<<"ScatterOptComm function\n";
             TranslateBetweenGridsScatterOptComm<T, D1, D2>(A,
                                                 B_Vector,
                                                 splitDim,
@@ -3127,7 +3140,7 @@ void TranslateBetweenGridsBroadcastOptComm
     const Int posInGrid = A.Grid().VCRank();
 
 
-    SyncInfo<D1> syncGeneralMetaData = SyncInfo<D1>();
+    SyncInfo<El::Device::CPU> syncGeneralMetaData = SyncInfo<El::Device::CPU>();
     const bool inAGrid = A.Participating();
 
 
@@ -3302,7 +3315,7 @@ void TranslateBetweenGridsBroadcastBasic
     const Int myLocalRankA = A.Grid().VCRank();
 
 
-    SyncInfo<D1> syncGeneralMetaData = SyncInfo<D1>();
+    SyncInfo<El::Device::CPU> syncGeneralMetaData = SyncInfo<El::Device::CPU>();
 
 
     Int recvMetaData[6];
@@ -3577,7 +3590,7 @@ void TranslateBetweenGridsAsync
     Int rowStrideA = A.RowStride();
     Int colAlignA = A.ColAlign();
     Int rowAlignA = A.RowAlign();
-    SyncInfo<D1> syncGeneral = SyncInfo<D1>();
+    SyncInfo<El::Device::CPU> syncGeneral = SyncInfo<El::Device::CPU>();
 
 
     const bool inAGrid = A.Participating();
@@ -3883,11 +3896,9 @@ void TranslateBetweenGrids(
   */
 
   // Matrix dimensions
-  const Int m = A.Height();
-  const Int n = A.Width();
-  B.Resize(m, n);
-  const Int nLocA = A.LocalWidth();
-  const Int nLocB = B.LocalWidth();
+  Int m = A.Height();
+  Int n = A.Width();
+
 
   // Return immediately if there is no local data
   const bool inAGrid = A.Participating();
@@ -3896,8 +3907,60 @@ void TranslateBetweenGrids(
     return;
   }
 
+  SyncInfo<El::Device::CPU> syncGeneralMetaData = SyncInfo<El::Device::CPU>();
+  mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
+
+
+  Int strideA = A.RowStride();
+  Int nLocA = A.LocalWidth();
+  SyncInfo<D> syncInfoTemp = SyncInfoFromMatrix(A.LockedMatrix());
+  std::cout<<"Start Receving META data:"<<viewingCommB.Rank()<<"\n";
+auto allComm = mpi::AluminumComm(viewingCommB.GetMPIComm());
+  auto alCommMPI = allComm.GetComm<Al::MPIBackend>(syncGeneralMetaData);
+  std::cout<<"Start Receving META data1:"<<viewingCommB.Rank()<<"\n";
+  
+  Al::Barrier<Al::MPIBackend>(alCommMPI);
+  std::cout<<"After Barrier\n";
+
+  
+  Int recvMetaData[4];
+
+    Int metaData[4];
+    if(inAGrid)
+    {
+        metaData[0] = m;
+        metaData[1] = n;
+        metaData[2] = strideA;
+        metaData[3] = nLocA;
+    }
+    else
+    {
+        metaData[0] = 0;
+        metaData[1] = 0;
+        metaData[2] = 0;
+        metaData[3] = 0;
+    }
+
+    const std::vector<Int> sendMetaData (metaData,metaData + 4 );
+
+    mpi::AllReduce( sendMetaData.data(), recvMetaData, 4, mpi::MAX, viewingCommB,syncGeneralMetaData);
+    m = recvMetaData[0];
+    n = recvMetaData[1];
+    strideA = recvMetaData[2];
+    nLocA = recvMetaData[3];
+
+
+  B.Resize(m, n);
+
+  std::cout<<"After Receving META data\n";
+
+
+  const Int nLocB = B.LocalWidth();
+
+  
+
   // Compute the number of messages to send/recv
-  const Int strideA = A.RowStride();
+  
   const Int strideB = B.RowStride();
   const Int strideGCD = GCD(strideA, strideB);
   const Int numSends = Min(strideB/strideGCD, nLocA);
@@ -3913,7 +3976,7 @@ void TranslateBetweenGrids(
   // that we can match send/recv communicators. Since A's VC
   // communicator is not necessarily defined on every process, we
   // instead work with A's owning group.
-  mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
+  
   mpi::Group owningGroupA = A.Grid().OwningGroup();
   const int sizeA = A.Grid().Size();
   vector<int> viewingRanksA(sizeA), owningRanksA(sizeA);
