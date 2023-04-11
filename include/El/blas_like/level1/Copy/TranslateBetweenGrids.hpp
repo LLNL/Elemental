@@ -3913,16 +3913,10 @@ void TranslateBetweenGrids(
 
   Int strideA = A.RowStride();
   Int nLocA = A.LocalWidth();
+  Int ALDim = A.LDim();
   SyncInfo<D> syncInfoTemp = SyncInfoFromMatrix(A.LockedMatrix());
-  std::cout<<"Start Receving META data:"<<viewingCommB.Rank()<<"\n";
-auto allComm = mpi::AluminumComm(viewingCommB.GetMPIComm());
-  auto alCommMPI = allComm.GetComm<Al::MPIBackend>(syncGeneralMetaData);
-  std::cout<<"Start Receving META data1:"<<viewingCommB.Rank()<<"\n";
-  
-  Al::Barrier<Al::MPIBackend>(alCommMPI);
-  std::cout<<"After Barrier\n";
+  std::cout<<"Start Receving META data:"<<viewingCommB.Rank()<<" A Size"<<A.Grid().VCSize()<<" B Size:"<<B.Grid().VCSize()<<"\n";
 
-  
   Int recvMetaData[4];
 
     Int metaData[4];
@@ -3931,7 +3925,7 @@ auto allComm = mpi::AluminumComm(viewingCommB.GetMPIComm());
         metaData[0] = m;
         metaData[1] = n;
         metaData[2] = strideA;
-        metaData[3] = nLocA;
+        metaData[3] = ALDim;
     }
     else
     {
@@ -3947,12 +3941,13 @@ auto allComm = mpi::AluminumComm(viewingCommB.GetMPIComm());
     m = recvMetaData[0];
     n = recvMetaData[1];
     strideA = recvMetaData[2];
-    nLocA = recvMetaData[3];
+    ALDim =recvMetaData[3];
 
 
   B.Resize(m, n);
 
-  std::cout<<"After Receving META data\n";
+  std::cout<<"After Receving META data Height:"<<recvMetaData[0]<<" Width:"<<recvMetaData[1]<<" StrideA:"<<recvMetaData[2]<<" nLocA:"<<recvMetaData[3]<<" ALDim:"<<recvMetaData[4]<<"\n";
+
 
 
   const Int nLocB = B.LocalWidth();
@@ -3985,6 +3980,11 @@ auto allComm = mpi::AluminumComm(viewingCommB.GetMPIComm());
     owningGroupA, sizeA, owningRanksA.data(),
     viewingCommB, viewingRanksA.data());
   const Int viewingRank = viewingCommB.Rank();
+
+  std::string cout_str="ViewRanksA:" ;
+  for(int i=0; i<viewingRanksA.size(); ++i)
+    cout_str +=  std::to_string(i);
+  std::cout<<cout_str<<"\n";
   if (viewingRank < 0 || viewingRank >= viewingCommB.Size()) {
     LogicError(
       "TranslateBetweenGrids: Owning group for matrix A "
@@ -4021,7 +4021,7 @@ auto allComm = mpi::AluminumComm(viewingCommB.GetMPIComm());
     const Int j = message.first;
     const Int sendViewingRank = message.second.first;
     const Int recvViewingRank = message.second.second;
-
+    std::cout<<"send rank:"<<sendViewingRank<<" Recv Rank:"<<recvViewingRank<<"\n";
     // Figure out message size
     Int jLocA = -1;
     Int jLocB = -1;
@@ -4037,17 +4037,19 @@ auto allComm = mpi::AluminumComm(viewingCommB.GetMPIComm());
 
     if (viewingRank == sendViewingRank && viewingRank == recvViewingRank) {
       // Copy data locally
+      std::cout<<"Both Recv and Send Rank:"<<viewingCommB.Rank()<<" jLocA:"<<jLocA<<"\n";
       copy::util::InterleaveMatrix(
         m, messageWidth,
-        A.LockedBuffer(0,jLocA), 1, numSends*A.LDim(),
+        A.LockedBuffer(0,jLocA), 1, numSends*ALDim,
         B.Buffer(0,jLocB), 1, numRecvs*B.LDim(),
         syncInfo);
     }
     else if (viewingRank == sendViewingRank) {
       // Send data to other rank
+      std::cout<<"Send Rank:"<<viewingCommB.Rank()<<" jLocA:"<<jLocA<<"\n";
       copy::util::InterleaveMatrix(
         m, messageWidth,
-        A.LockedBuffer(0,jLocA), 1, numSends*A.LDim(),
+        A.LockedBuffer(0,jLocA), 1, numSends*ALDim,
         messageBuf.data(), 1, m,
         syncInfo);
       mpi::Send(
@@ -4056,6 +4058,7 @@ auto allComm = mpi::AluminumComm(viewingCommB.GetMPIComm());
     }
     else if (viewingRank == recvViewingRank) {
       // Receive data from other rank
+      std::cout<<"Recv Rank:"<<viewingCommB.Rank()<<" jLocA:"<<jLocA<<"\n";
       mpi::Recv(
         messageBuf.data(), m*messageWidth,
         sendViewingRank, viewingCommB, syncInfo);
