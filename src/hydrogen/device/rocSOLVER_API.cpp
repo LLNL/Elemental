@@ -1,7 +1,7 @@
 #include <hydrogen/device/gpu/ROCm.hpp>
 #include <hydrogen/device/gpu/rocm/rocSOLVER.hpp>
 
-#include <rocsolver.h>
+#include <rocsolver/rocsolver.h>
 
 namespace hydrogen {
 namespace rocsolver {

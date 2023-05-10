@@ -6,7 +6,7 @@
 #include <hydrogen/Error.hpp>
 #include <hydrogen/device/gpu/GPUError.hpp>
 
-#include <rocblas.h>
+#include <rocblas/rocblas.h>
 
 // Helper error-checking macro.
 #define H_CHECK_ROCBLAS(cmd)                                            \

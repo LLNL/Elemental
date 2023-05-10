@@ -4,7 +4,7 @@
 #include <El/hydrogen_config.h>
 
 #include "rocBLASManagement.hpp"
-#include <rocsolver.h>
+#include <rocsolver/rocsolver.h>
 
 namespace hydrogen
 {

@@ -7,7 +7,7 @@
 #include <hydrogen/meta/MetaUtilities.hpp>
 #include <hydrogen/utils/HalfPrecision.hpp>
 
-#include <rocblas.h>
+#include <rocblas/rocblas.h>
 
 namespace hydrogen
 {

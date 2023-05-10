@@ -3,7 +3,7 @@
 
 #include <El/hydrogen_config.h>
 
-#include <rocsolver.h>
+#include <rocsolver/rocsolver.h>
 
 namespace hydrogen
 {

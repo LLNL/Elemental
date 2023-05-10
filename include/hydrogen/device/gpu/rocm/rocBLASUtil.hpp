@@ -3,7 +3,7 @@
 
 #include <El/hydrogen_config.h>
 
-#include <rocblas.h>
+#include <rocblas/rocblas.h>
 
 namespace hydrogen
 {

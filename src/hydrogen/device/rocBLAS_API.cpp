@@ -3,7 +3,7 @@
 #include <hydrogen/device/gpu/ROCm.hpp>
 #include <hydrogen/device/gpu/rocm/rocBLAS.hpp>
 
-#include <rocblas.h>
+#include <rocblas/rocblas.h>
 
 namespace hydrogen
 {

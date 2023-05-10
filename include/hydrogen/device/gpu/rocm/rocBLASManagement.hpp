@@ -7,7 +7,7 @@
 #include <hydrogen/SyncInfo.hpp>
 
 #include <hip/hip_runtime.h>
-#include <rocblas.h>
+#include <rocblas/rocblas.h>
 
 namespace hydrogen
 {

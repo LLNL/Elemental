@@ -7,7 +7,7 @@
 #include <hydrogen/meta/MetaUtilities.hpp>
 #include <hydrogen/utils/HalfPrecision.hpp>
 
-#include <rocsolver.h>
+#include <rocsolver/rocsolver.h>
 
 #include "rocBLASMeta.hpp"
 
