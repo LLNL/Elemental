@@ -3,39 +3,55 @@
 
 #include "SyncInfo.hpp"
 
-namespace hydrogen
-{
+namespace hydrogen {
 
 // This synchronizes the additional SyncInfos to the "master". That
 // is, the execution streams described by the "others" will wait
 // for the "master" stream.
-template <Device D, Device... Ds>
-void AddSynchronizationPoint(
-    SyncInfo<D> const& master,
-    SyncInfo<Ds> const&... others)
-{
-    AddSynchronizationPoint(master);
+template <Device D, Device D2, Device... Ds>
+void AddSynchronizationPoint(SyncInfo<D> const &master,
+                             SyncInfo<D2> const &other,
+                             SyncInfo<Ds> const &...others) {
+  if constexpr (D == Device::GPU && D == D2) {
+    // When the streams are the same, there is no need to create
+    // synchronization points. Skip "other" call recursively with the rest.
+    if (master.Stream() == other.Stream()) {
+      AddSynchronizationPoint(master, others...);
+      return;
+    }
+  }
 
-    int dummy[] = { (details::AddSyncPoint(master, others), 0)... };
-    (void) dummy;
+  AddSynchronizationPoint(master);
+  int dummy[] = {(details::AddSyncPoint(master, b),
+                  details::AddSyncPoint(master, others), 0)...};
+  (void)dummy;
+}
+
+// Specialization of the above function for two arguments
+template <Device D, Device D2>
+void AddSynchronizationPoint(SyncInfo<D> const &master,
+                             SyncInfo<D2> const &other) {
+  if constexpr (D == Device::GPU && D == D2) {
+    // When the two streams are the same, there is no need to create
+    // synchronization points.
+    if (master.Stream() == other.Stream()) {
+      return;
+    }
+  }
+
+  AddSynchronizationPoint(master);
 }
 
 template <Device D, Device... Ds>
-void AllWaitOnMaster(
-    SyncInfo<D> const& master, SyncInfo<Ds> const&... others)
-{
-    AddSynchronizationPoint(master, others...);
+void AllWaitOnMaster(SyncInfo<D> const &master, SyncInfo<Ds> const &...others) {
+  AddSynchronizationPoint(master, others...);
 }
 
 template <Device D, Device... Ds>
-void MasterWaitOnAll(
-    SyncInfo<D> const& master,
-    SyncInfo<Ds> const&... others)
-{
-    int dummy[] = {
-        (AddSynchronizationPoint(others, master), 0)...};
-    (void) dummy;
+void MasterWaitOnAll(SyncInfo<D> const &master, SyncInfo<Ds> const &...others) {
+  int dummy[] = {(AddSynchronizationPoint(others, master), 0)...};
+  (void)dummy;
 }
 
-}// namespace hydrogen
+} // namespace hydrogen
 #endif // HYDROGEN_SYNCHRONIZEAPI_HPP_
