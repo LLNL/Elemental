@@ -12,6 +12,7 @@ template <Device D, Device D2, Device... Ds>
 void AddSynchronizationPoint(SyncInfo<D> const &master,
                              SyncInfo<D2> const &other,
                              SyncInfo<Ds> const &...others) {
+#ifdef HYDROGEN_HAVE_GPU
   if constexpr (D == Device::GPU && D == D2) {
     // When the streams are the same, there is no need to create
     // synchronization points. Skip "other" call recursively with the rest.
@@ -20,6 +21,7 @@ void AddSynchronizationPoint(SyncInfo<D> const &master,
       return;
     }
   }
+#endif // HYDROGEN_HAVE_GPU
 
   AddSynchronizationPoint(master);
   int dummy[] = {(details::AddSyncPoint(master, b),
@@ -31,6 +33,7 @@ void AddSynchronizationPoint(SyncInfo<D> const &master,
 template <Device D, Device D2>
 void AddSynchronizationPoint(SyncInfo<D> const &master,
                              SyncInfo<D2> const &other) {
+#ifdef HYDROGEN_HAVE_GPU
   if constexpr (D == Device::GPU && D == D2) {
     // When the two streams are the same, there is no need to create
     // synchronization points.
@@ -38,6 +41,7 @@ void AddSynchronizationPoint(SyncInfo<D> const &master,
       return;
     }
   }
+#endif // HYDROGEN_HAVE_GPU
 
   AddSynchronizationPoint(master);
 }
