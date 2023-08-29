@@ -80,14 +80,10 @@ using hydrogen::gpu_half_type;
 #endif // HYDROGEN_GPU_USE_FP16
 }
 
-#if __cplusplus >= 201402L
-#define H_DEPRECATED(msg) [[deprecated(msg)]]
-#elif defined(__GNUC__)
-// This ^ isn't perfect -- many non-GCC compilers define __GNUC__.
-#define H_DEPRECATED(msg) __attribute__ ((deprecated(msg)))
-#else
+// NOTE: These have not been as inspirational as I had hoped. I'm
+// leaving the notes but preprocessing them away so the compile
+// warnings stop.
 #define H_DEPRECATED(msg)
-#endif
 
 #define EL_UNUSED(expr) (void)(expr)
 
