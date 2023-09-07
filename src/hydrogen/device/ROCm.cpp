@@ -75,7 +75,9 @@ hipStream_t GetNewStream()
 hipEvent_t GetNewEvent()
 {
     hipEvent_t event;
-    H_CHECK_HIP(hipEventCreateWithFlags(&event, hipEventDisableTiming));
+    H_CHECK_HIP(hipEventCreateWithFlags(
+                    &event,
+                    hipEventDisableTiming | hipEventDisableSystemFence));
     return event;
 }
 
