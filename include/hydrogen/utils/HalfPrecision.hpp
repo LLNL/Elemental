@@ -46,7 +46,11 @@ struct is_arithmetic<half_float::half> : true_type {};
 #endif
 
 // Now include the actual Half library.
+#if __has_include(<half/half.hpp>) // E.g., the one that ships with ROCm
+#include <half/half.hpp>
+#else
 #include <half.hpp>
+#endif
 
 // Declare the hydrogen typedef
 namespace hydrogen

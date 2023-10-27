@@ -15,7 +15,11 @@
 */
 
 #ifdef HYDROGEN_HAVE_HALF
+#if __has_include(<half/half.hpp>) // E.g., the one that ships with ROCm
+#include <half/half.hpp>
+#else
 #include <half.hpp>
+#endif
 #endif // HYDROGEN_HAVE_HALF
 
 namespace hydrogen
