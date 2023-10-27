@@ -459,10 +459,10 @@ void GemmStridedBatchedImpl(
         ToNativeTransposeMode(transpA),
         ToNativeTransposeMode(transpB),
         ToSizeT(m), ToSizeT(n), ToSizeT(k),
-        &alpha,
+        reinterpret_cast<CNTP>(&alpha),
         reinterpret_cast<CNTP>(A), ToSizeT(lda), ToSizeT(strideA),
         reinterpret_cast<CNTP>(B), ToSizeT(ldb), ToSizeT(strideB),
-        &beta,
+        reinterpret_cast<CNTP>(&beta),
         reinterpret_cast<NTP>(C), ToSizeT(ldc), ToSizeT(strideC),
         ToSizeT(batchCount));
 }
