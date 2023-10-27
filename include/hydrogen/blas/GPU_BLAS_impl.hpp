@@ -48,6 +48,19 @@ namespace gpu_lapack_impl = hydrogen::cusolver;
 namespace gpu_blas_impl = hydrogen::rocblas;
 namespace gpu_lapack_impl = hydrogen::rocsolver;
 
+#if defined(HYDROGEN_GPU_USE_FP16)
+
+template <>
+struct hydrogen::Caster<__half, rocblas_half>
+{
+    static rocblas_half Cast(__half const& x)
+    {
+        return *(reinterpret_cast<rocblas_half const*>(&x));
+    }
+};
+
+#endif
+
 #else
 #pragma GCC error "LOGIC ERROR: No GPU programming model enabled."
 #endif
@@ -76,13 +89,14 @@ void AxpyImpl(SizeT size, T const& alpha,
               T* Y, SizeT incy,
               SyncInfo<Device::GPU> const& si)
 {
-    using NTP = MakePointer<NativeType<T>>;
-    using CNTP = MakePointerToConst<NativeType<T>>;
+    using NT = NativeType<T>;
+    using NTP = MakePointer<NT>;
+    using CNTP = MakePointerToConst<NT>;
 
     SyncManager mgr(GetLibraryHandle(), si);
     gpu_blas_impl::Axpy(
         GetLibraryHandle(),
-        ToSizeT(size), alpha,
+        ToSizeT(size), hydrogen::To<NT>(alpha),
         reinterpret_cast<CNTP>(X), ToSizeT(incx),
         reinterpret_cast<NTP>(Y), ToSizeT(incy));
 }
@@ -406,8 +420,9 @@ void GemmImpl(
     T* C, SizeT ldc,
     SyncInfo<Device::GPU> const& si)
 {
-    using NTP = MakePointer<NativeType<T>>;
-    using CNTP = MakePointerToConst<NativeType<T>>;
+    using NT = NativeType<T>;
+    using NTP = MakePointer<NT>;
+    using CNTP = MakePointerToConst<NT>;
 
     SyncManager mgr(GetLibraryHandle(), si);
     gpu_blas_impl::Gemm(
@@ -415,10 +430,10 @@ void GemmImpl(
         ToNativeTransposeMode(transA),
         ToNativeTransposeMode(transB),
         ToSizeT(m), ToSizeT(n), ToSizeT(k),
-        alpha,
+        To<NT>(alpha),
         reinterpret_cast<CNTP>(A), ToSizeT(lda),
         reinterpret_cast<CNTP>(B), ToSizeT(ldb),
-        beta,
+        To<NT>(beta),
         reinterpret_cast<NTP>(C), ToSizeT(ldc));
 }
 
@@ -660,8 +675,9 @@ void GemvImpl(
     T* y, SizeT incy,
     SyncInfo<Device::GPU> const& si)
 {
-    using NTP = MakePointer<NativeType<T>>;
-    using CNTP = MakePointerToConst<NativeType<T>>;
+    using NT = NativeType<T>;
+    using NTP = MakePointer<NT>;
+    using CNTP = MakePointerToConst<NT>;
 
     if (incy != SizeT(1))
         throw std::runtime_error("incy must be 1 right now. "
@@ -682,10 +698,10 @@ void GemvImpl(
         GetLibraryHandle(),
         ToNativeTransposeMode(ATrans), ToNativeTransposeMode(BTrans),
         ToSizeT(m), ToSizeT(n), ToSizeT(k),
-        alpha,
+        To<NT>(alpha),
         reinterpret_cast<CNTP>(A), ToSizeT(lda),
         reinterpret_cast<CNTP>(x), ToSizeT(LDB),
-        beta,
+        To<NT>(beta),
         reinterpret_cast<NTP>(y), ToSizeT(LDC));
 }
 

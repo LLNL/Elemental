@@ -68,13 +68,11 @@ struct Caster<F, __half>
 template <>
 struct Caster<__half, double>
 {
-
     static double Cast(__half const& x)
     {
         return float(x);
     }
 };
-
 #endif // HYDROGEN_HAVE_ROCM
 #endif // HYDROGEN_GPU_USE_FP16
 
