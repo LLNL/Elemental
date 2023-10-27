@@ -243,13 +243,47 @@ ADD_AXPY_IMPL(double, d)
 ADD_COPY_IMPL(float, s)
 ADD_COPY_IMPL(double, d)
 
-//ADD_DOT_IMPL(rocblas_half, h)
+ADD_DOT_IMPL(rocblas_half, h)
 ADD_DOT_IMPL(float, s)
 ADD_DOT_IMPL(double, d)
 
-//ADD_NRM2_IMPL(rocblas_half, h)
+// ADD_NRM2_IMPL(rocblas_half, h)
+void Nrm2(rocblas_handle handle,
+          rocblas_int n,
+          rocblas_half const* X,
+          rocblas_int incx,
+          rocblas_half* result)
+{
+    H_CHECK_ROCBLAS(
+        rocblas_nrm2_ex(
+            handle,
+            n,
+            X,
+            rocblas_datatype_f16_r,
+            incx,
+            result,
+            rocblas_datatype_f16_r,
+            rocblas_datatype_f32_r));
+}
+
 ADD_NRM2_IMPL(float, s)
 ADD_NRM2_IMPL(double, d)
+
+void Scale(rocblas_handle handle,
+           rocblas_int n, rocblas_half const& alpha,
+           rocblas_half* X, rocblas_int incx)
+{
+    H_CHECK_ROCBLAS(
+        rocblas_scal_ex(
+            handle,
+            n,
+            &alpha,
+            rocblas_datatype_f16_r,
+            X,
+            rocblas_datatype_f16_r,
+            incx,
+            rocblas_datatype_f32_r));
+}
 
 ADD_SCALE_IMPL(float, s)
 ADD_SCALE_IMPL(double, d)
@@ -320,21 +354,21 @@ ASSERT_SUPPORT(double, BLAS_Op::NRM2);
 ASSERT_SUPPORT(double, BLAS_Op::GEMMSTRIDEDBATCHED);
 
 #ifdef HYDROGEN_GPU_USE_FP16
-ASSERT_SUPPORT(rocblas_half, BLAS_Op::AXPY);
-ASSERT_SUPPORT(rocblas_half, BLAS_Op::GEMM);
-ASSERT_NO_SUPPORT(rocblas_half, BLAS_Op::SCAL);
-ASSERT_NO_SUPPORT(rocblas_half, BLAS_Op::COPY);
-ASSERT_NO_SUPPORT(rocblas_half, BLAS_Op::DGMM);
-ASSERT_NO_SUPPORT(rocblas_half, BLAS_Op::GEAM);
-ASSERT_NO_SUPPORT(rocblas_half, BLAS_Op::GEMV);
-ASSERT_SUPPORT(rocblas_half, BLAS_Op::DOT);
-ASSERT_SUPPORT(rocblas_half, BLAS_Op::NRM2);
-ASSERT_SUPPORT(rocblas_half, BLAS_Op::GEMMSTRIDEDBATCHED);
+ASSERT_SUPPORT(gpu_half_type, BLAS_Op::AXPY);
+ASSERT_SUPPORT(gpu_half_type, BLAS_Op::GEMM);
+ASSERT_SUPPORT(gpu_half_type, BLAS_Op::SCAL);
+ASSERT_NO_SUPPORT(gpu_half_type, BLAS_Op::COPY);
+ASSERT_NO_SUPPORT(gpu_half_type, BLAS_Op::DGMM);
+ASSERT_NO_SUPPORT(gpu_half_type, BLAS_Op::GEAM);
+ASSERT_NO_SUPPORT(gpu_half_type, BLAS_Op::GEMV);
+ASSERT_SUPPORT(gpu_half_type, BLAS_Op::DOT);
+ASSERT_SUPPORT(gpu_half_type, BLAS_Op::NRM2);
+ASSERT_SUPPORT(gpu_half_type, BLAS_Op::GEMMSTRIDEDBATCHED);
 
 #ifdef HYDROGEN_HAVE_HALF
 ASSERT_SUPPORT(cpu_half_type, BLAS_Op::AXPY);
 ASSERT_SUPPORT(cpu_half_type, BLAS_Op::GEMM);
-ASSERT_NO_SUPPORT(cpu_half_type, BLAS_Op::SCAL);
+ASSERT_SUPPORT(cpu_half_type, BLAS_Op::SCAL);
 ASSERT_NO_SUPPORT(cpu_half_type, BLAS_Op::COPY);
 ASSERT_NO_SUPPORT(cpu_half_type, BLAS_Op::DGMM);
 ASSERT_NO_SUPPORT(cpu_half_type, BLAS_Op::GEAM);

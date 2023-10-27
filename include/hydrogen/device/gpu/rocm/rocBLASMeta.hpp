@@ -122,6 +122,9 @@ struct IsSupportedType_Base<rocblas_half, BLAS_Op::GEMMSTRIDEDBATCHED>
 // support via rocblas_nrm2_ex
 template <>
 struct IsSupportedType_Base<rocblas_half, BLAS_Op::NRM2> : std::true_type {};
+// support via rocblas_scal_ex
+template <>
+struct IsSupportedType_Base<rocblas_half, BLAS_Op::SCAL> : std::true_type {};
 #endif // HYDROGEN_GPU_USE_FP16
 
 /** @class IsSupportedType

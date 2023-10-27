@@ -320,10 +320,6 @@ if (Hydrogen_ENABLE_CUDA)
     set(HYDROGEN_GPU_USE_TENSOR_OP_MATH TRUE)
   endif ()
 
-  if (Hydrogen_ENABLE_GPU_FP16)
-    set(HYDROGEN_GPU_USE_FP16 TRUE)
-  endif ()
-
   if (Hydrogen_ENABLE_CUB)
     if (CUDAToolkit_VERSION_MAJOR LESS 11)
       find_package(CUB MODULE REQUIRED)
