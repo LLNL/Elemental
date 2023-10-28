@@ -173,6 +173,15 @@ extern template struct Types<long long int>; // Avoid conflict with Int
 #undef PROTO
 #endif // !defined H_INSTANTIATING_MPI_TYPES_STRUCT
 
+#ifdef HYDROGEN_HAVE_HALF
+extern template struct Types<cpu_half_type>;
+extern template struct Types<Entry<cpu_half_type>>;
+#endif
+#ifdef HYDROGEN_GPU_USE_FP16
+extern template struct Types<gpu_half_type>;
+extern template struct Types<Entry<gpu_half_type>>;
+#endif
+
 template<typename T>
 struct MPIBaseHelper { typedef T value; };
 template<typename T>

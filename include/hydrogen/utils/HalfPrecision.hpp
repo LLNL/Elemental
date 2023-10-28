@@ -127,7 +127,7 @@ struct TypeTraits<gpu_half_type>
 
 }// namespace hydrogen
 
-#if !(defined(__CUDACC__))// || defined(__HIPCC__))
+#if defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)))
 
 /** @brief Enable "update" functionality for __half. */
 template <typename T>
@@ -237,7 +237,7 @@ inline bool operator!=(
     return !(x == y);
 }
 #endif // defined(HYDROGEN_HAVE_ROCM)
-#endif // !(defined(__CUDACC__) || defined(__HIPCC__))
+#endif // defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)))
 
 inline std::ostream& operator<<(std::ostream& os, hydrogen::gpu_half_type const& x)
 {
