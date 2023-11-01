@@ -51,9 +51,15 @@ ADD_AXPY_DECL(double);
 ADD_COPY_DECL(float);
 ADD_COPY_DECL(double);
 
+#ifdef HYDROGEN_GPU_USE_FP16
+ADD_DOT_DECL(rocblas_half);
+#endif // HYDROGEN_GPU_USE_FP16
 ADD_DOT_DECL(float);
 ADD_DOT_DECL(double);
 
+#ifdef HYDROGEN_GPU_USE_FP16
+ADD_NRM2_DECL(rocblas_half);
+#endif // HYDROGEN_GPU_USE_FP16
 ADD_NRM2_DECL(float);
 ADD_NRM2_DECL(double);
 
