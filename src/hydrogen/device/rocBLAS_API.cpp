@@ -75,6 +75,10 @@ public:
                 H_CHECK_HIP(hipFreeAsync(device_, stream));
 #endif // HYDROGEN_HAVE_CUB
 
+                // Sync stream to match cuBLAS behavior (cuBLAS docs here:
+                // https://docs.nvidia.com/cuda/cublas/#scalar-parameters)
+                H_CHECK_HIP(hipStreamSynchronize(stream));
+
                 // Reset pointer mode
                 H_CHECK_ROCBLAS(rocblas_set_pointer_mode(handle_, rocblas_pointer_mode_host));
             }
