@@ -1,5 +1,6 @@
 #include <hydrogen/device/gpu/rocm/rocBLAS_API.hpp>
 
+#include <hydrogen/device/gpu/CUB.hpp>
 #include <hydrogen/device/gpu/ROCm.hpp>
 #include <hydrogen/device/gpu/rocm/rocBLAS.hpp>
 
@@ -9,6 +10,99 @@ namespace hydrogen
 {
 namespace rocblas
 {
+namespace
+{
+/** @brief Manage host-pointer result semantics.
+ *
+ *  If the memory mode on the handle is already set to DEVICE, this is
+ *  just a passthrough. Otherwise, we grab memory from CUB (fallback
+ *  to the HIP stream-aware allocator) and use that.
+ */
+template <typename T>
+class ResultMgr
+{
+public:
+    ResultMgr(rocblas_handle handle, T* result_ptr)
+    : handle_{handle},
+      result_{result_ptr},
+      device_{nullptr}
+    {
+        rocblas_pointer_mode current_ptr_mode;
+        H_CHECK_ROCBLAS(rocblas_get_pointer_mode(handle_, &current_ptr_mode));
+        if (current_ptr_mode == rocblas_pointer_mode_host)
+        {
+            hipStream_t stream;
+            H_CHECK_ROCBLAS(rocblas_get_stream(handle_, &stream));
+#ifdef HYDROGEN_HAVE_CUB
+            H_CHECK_HIP(cub::MemoryPool().DeviceAllocate(
+                            reinterpret_cast<void**>(&device_),
+                            sizeof(T),
+                            stream));
+#else
+            H_CHECK_HIP(hipMallocAsync(
+                            reinterpret_cast<void**>(&device_),
+                            sizeof(T),
+                            stream));
+#endif // HYDROGEN_HAVE_CUB
+
+            // Now set the pointer mode
+            H_CHECK_ROCBLAS(
+                rocblas_set_pointer_mode(handle_,
+                                         rocblas_pointer_mode_device));
+        }
+    }
+
+    ~ResultMgr()
+    {
+        try
+        {
+            if (device_)
+            {
+                hipStream_t stream;
+                H_CHECK_ROCBLAS(rocblas_get_stream(handle_, &stream));
+
+                // Copy asyncly to host
+                H_CHECK_HIP(hipMemcpyAsync(result_,
+                                           device_,
+                                           sizeof(T),
+                                           hipMemcpyDeviceToHost,
+                                           stream));
+
+                // Clean up device memory
+#ifdef HYDROGEN_HAVE_CUB
+                H_CHECK_HIP(cub::MemoryPool().DeviceFree(device_));
+#else
+                H_CHECK_HIP(hipFreeAsync(device_, stream));
+#endif // HYDROGEN_HAVE_CUB
+
+                // Reset pointer mode
+                H_CHECK_ROCBLAS(rocblas_set_pointer_mode(handle_, rocblas_pointer_mode_host));
+            }
+        }
+        catch (std::exception const& e)
+        {
+            std::cerr << "Caught exception in dtor:\n\n  " << e.what() << "\n\nTerminating."
+                      << std::endl;
+            std::terminate();
+        }
+    }
+
+    T* get() noexcept { return (device_ ? device_ : result_); }
+private:
+    rocblas_handle handle_ = nullptr;
+    T* result_ = nullptr;
+    T* device_ = nullptr;
+}; // struct ResultMgr
+
+template <typename T>
+auto manage_result(rocblas_handle handle, T* result_ptr)
+{
+    if (!result_ptr)
+        throw GPUError("result_ptr cannot be null");
+    return ResultMgr<T>{handle, result_ptr};
+};
+
+}
 
 //
 // BLAS 1
@@ -42,23 +136,25 @@ namespace rocblas
              rocblas_int n,                             \
              ScalarType const* X, rocblas_int incx,     \
              ScalarType const* Y, rocblas_int incy,     \
-             ScalarType* result)                        \
+             ScalarType* result_in)                     \
     {                                                   \
+        auto result = manage_result(handle, result_in); \
         H_CHECK_ROCBLAS(                                \
             rocblas_ ## TypeChar ## dot(                \
                 handle,                                 \
-                n, X, incx, Y, incy, result));          \
+                n, X, incx, Y, incy, result.get()));    \
     }
 
 #define ADD_NRM2_IMPL(ScalarType, TypeChar)                             \
     void Nrm2(rocblas_handle handle,                                    \
               rocblas_int n, ScalarType const* X, rocblas_int incx,     \
-              ScalarType* result)                                       \
+              ScalarType* result_in)                                    \
     {                                                                   \
+        auto result = manage_result(handle, result_in);                 \
         H_CHECK_ROCBLAS(                                                \
             rocblas_ ## TypeChar ## nrm2(                               \
                 handle,                                                 \
-                n, X, incx, result));                                   \
+                n, X, incx, result.get()));                             \
     }
 
 #define ADD_SCALE_IMPL(ScalarType, TypeChar)            \
@@ -252,8 +348,9 @@ void Nrm2(rocblas_handle handle,
           rocblas_int n,
           rocblas_half const* X,
           rocblas_int incx,
-          rocblas_half* result)
+          rocblas_half* result_in)
 {
+    auto result = manage_result(handle, result_in);
     H_CHECK_ROCBLAS(
         rocblas_nrm2_ex(
             handle,
@@ -261,7 +358,7 @@ void Nrm2(rocblas_handle handle,
             X,
             rocblas_datatype_f16_r,
             incx,
-            result,
+            result.get(),
             rocblas_datatype_f16_r,
             rocblas_datatype_f32_r));
 }
