@@ -341,6 +341,11 @@ void Finalize()
 
     if( mpi::Finalized() )
         cerr << "Warning: MPI was finalized before Elemental." << endl;
+
+    // Reset the global comms
+    const_cast<El::mpi::Comm&>(El::mpi::COMM_SELF).Reset();
+    const_cast<El::mpi::Comm&>(El::mpi::COMM_WORLD).Reset();
+
     if( ::numElemInits == 0 )
     {
         delete ::args;
