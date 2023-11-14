@@ -7,6 +7,7 @@ if (HYDROGEN_HAVE_GPU)
     gpu_combine_test.cu
     gpu_entrywise_map_test.cu
     copy_cpu_gpu_test.cpp
+    pool_allocator_test.cpp
     )
   if (HYDROGEN_HAVE_HALF AND HYDROGEN_GPU_USE_FP16)
     list(APPEND HYDROGEN_CATCH2_TEST_FILES
