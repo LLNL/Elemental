@@ -227,7 +227,7 @@ struct PooledDeviceAllocator {
     void *d_ptr;                   // Device pointer
     size_t bytes;                  // Size of allocation in bytes
     size_t requested_bytes;        // Size of true allocation in bytes
-    unsigned int bin;              // Bin enumeration
+    bool binned;                   // Whether the block is part of the pool bins
     int device;                    // device ordinal
     gpuStream_t associated_stream; // Associated associated_stream
     gpuEvent_t ready_event; // Signal when associated stream has run to the
@@ -236,13 +236,13 @@ struct PooledDeviceAllocator {
     // Constructor (suitable for searching maps for a specific block, given its
     // pointer and device)
     BlockDescriptor(void *d_ptr, int device)
-        : d_ptr(d_ptr), bytes(0), requested_bytes(0), bin(INVALID_BIN),
+        : d_ptr(d_ptr), bytes(0), requested_bytes(0), binned(false),
           device(device), associated_stream(0), ready_event(0) {}
 
     // Constructor (suitable for searching maps for a range of suitable blocks,
     // given a device)
     BlockDescriptor(int device)
-        : d_ptr(NULL), bytes(0), requested_bytes(0), bin(INVALID_BIN),
+        : d_ptr(NULL), bytes(0), requested_bytes(0), binned(false),
           device(device), associated_stream(0), ready_event(0) {}
 
     // Comparison functor for comparing device pointers
@@ -328,6 +328,16 @@ struct PooledDeviceAllocator {
     return ((value + mult - 1) / mult) * mult;
   }
 
+  unsigned int ComputeLinearBinIndex(unsigned int bin_growth,
+                                     unsigned int bin_mult_threshold) {
+    if (bin_mult_threshold == INVALID_BIN || bin_growth == 0 ||
+        bin_mult_threshold == 0)
+      return INVALID_BIN;
+
+    return static_cast<unsigned int>(std::log(bin_mult_threshold) /
+                                     std::log(bin_growth));
+  }
+
   //---------------------------------------------------------------------
   // Fields
   //---------------------------------------------------------------------
@@ -345,9 +355,11 @@ struct PooledDeviceAllocator {
   size_t max_bin_alloc_size;       /// Maximal binned allocation size
   std::set<size_t> bin_sizes;      /// Explicit control over bin sizes
 
-  size_t min_bin_bytes;    /// Minimum bin size
-  size_t max_bin_bytes;    /// Maximum bin size
-  size_t max_cached_bytes; /// Maximum aggregate cached bytes per device
+  unsigned int linear_bin_index; /// Geometric bin to consider linear binning
+                                 /// from (computed)
+  size_t min_bin_bytes;          /// Minimum bin size
+  size_t max_bin_bytes;          /// Maximum bin size
+  size_t max_cached_bytes;       /// Maximum aggregate cached bytes per device
 
   const bool
       skip_cleanup; /// Whether or not to skip a call to FreeAllCached() when
@@ -355,6 +367,7 @@ struct PooledDeviceAllocator {
                     /// shut down for statically declared allocators)
   bool debug;       /// Whether or not to print (de)allocation events to stdout
 
+  std::set<size_t> actual_bin_sizes; /// Bin sizes used by the allocator
   GpuCachedBytes cached_bytes; /// Map of device ordinal to aggregate cached
                                /// bytes on that device
   CachedBlocks
@@ -390,7 +403,9 @@ struct PooledDeviceAllocator {
       std::set<size_t> bin_sizes = {}) ///< Explicit control over bin )
       : bin_growth(bin_growth), min_bin(min_bin), max_bin(max_bin),
         bin_mult_threshold(bin_mult_threshold), bin_mult(bin_mult),
-        bin_sizes(bin_sizes), min_bin_bytes(IntPow(bin_growth, min_bin)),
+        bin_sizes(bin_sizes),
+        linear_bin_index(ComputeLinearBinIndex(bin_growth, bin_mult_threshold)),
+        min_bin_bytes(IntPow(bin_growth, min_bin)),
         max_bin_bytes(max_bin_alloc_size != INVALID_SIZE
                           ? std::min(size_t(IntPow(bin_growth, max_bin)),
                                      max_bin_alloc_size)
@@ -415,7 +430,7 @@ struct PooledDeviceAllocator {
    */
   PooledDeviceAllocator(bool skip_cleanup = false, bool debug = false)
       : bin_growth(8), min_bin(3), max_bin(7), bin_mult_threshold(INVALID_BIN),
-        bin_mult(INVALID_BIN), bin_sizes{},
+        bin_mult(INVALID_BIN), bin_sizes{}, linear_bin_index(INVALID_BIN),
         min_bin_bytes(IntPow(bin_growth, min_bin)),
         max_bin_bytes(IntPow(bin_growth, max_bin)),
         max_cached_bytes((max_bin_bytes * 3) - 1), skip_cleanup(skip_cleanup),
@@ -443,6 +458,56 @@ struct PooledDeviceAllocator {
     mutex.unlock();
 
     return gpuSuccess;
+  }
+
+  /**
+   * \brief Implements the bin-finding algorithm described in the class
+   * documentation. Returns true if a bin was found, or false otherwise.
+   */
+  bool FindBin(BlockDescriptor &search_key) {
+    size_t bytes = search_key.requested_bytes;
+    search_key.bytes = bytes;
+
+    if (bytes > max_bin_bytes) {
+      // Size is greater than our preconfigured maximum: allocate the request
+      // exactly and give out-of-bounds bin.  It will not be cached
+      // for reuse when returned.
+      return false;
+    }
+
+    // If a custom bin histogram is given, use that
+    auto it = bin_sizes.lower_bound(bytes);
+    if (it != bin_sizes.end()) {
+      search_key.bytes = *it;
+      return true;
+    }
+
+    // Find geometric bin
+    unsigned int geobin;
+    NearestPowerOf(geobin, search_key.bytes, bin_growth, bytes);
+    // Minimum bin
+    if (geobin < min_bin) {
+      // Bin is less than minimum bin: round up
+      search_key.bytes = min_bin_bytes;
+      return true;
+    }
+
+    // Test for linear binning; if so, find linear bin
+    if (linear_bin_index != INVALID_BIN && geobin >= linear_bin_index) {
+      search_key.bytes = NearestMultOf(bin_mult, bytes);
+      return true;
+    }
+
+    // Otherwise, use geometric bin
+    if (geobin > max_bin) {
+      // Bin is greater than our maximum bin: allocate the request
+      // exactly and give out-of-bounds bin.  It will not be cached
+      // for reuse when returned.
+      return false;
+    }
+
+    // search_key.bytes was set above by NearestPowerOf
+    return true;
   }
 
   /**
@@ -476,30 +541,22 @@ struct PooledDeviceAllocator {
     BlockDescriptor search_key(device);
     search_key.associated_stream = active_stream;
     search_key.requested_bytes = bytes;
-    NearestPowerOf(search_key.bin, search_key.bytes, bin_growth, bytes);
+    bool binned = FindBin(search_key);
+    search_key.binned = binned;
 
-    if (search_key.bin > max_bin) {
-      // Bin is greater than our maximum bin: allocate the request
-      // exactly and give out-of-bounds bin.  It will not be cached
-      // for reuse when returned.
-      search_key.bin = INVALID_BIN;
-      search_key.bytes = bytes;
-    } else {
+    if (binned) {
       // Search for a suitable cached allocation: lock
       mutex.lock();
 
-      if (search_key.bin < min_bin) {
-        // Bin is less than minimum bin: round up
-        search_key.bin = min_bin;
-        search_key.bytes = min_bin_bytes;
-      }
+      // Add bin size to created bin sizes
+      actual_bin_sizes.insert(search_key.bytes);
 
       // Iterate through the range of cached blocks on the same device in the
       // same bin
       CachedBlocks::iterator block_itr = cached_blocks.lower_bound(search_key);
       while ((block_itr != cached_blocks.end()) &&
              (block_itr->device == device) &&
-             (block_itr->bin == search_key.bin)) {
+             (block_itr->bytes == search_key.bytes)) {
         // To prevent races with reusing blocks returned by the host but still
         // in use by the device, only consider cached blocks that are
         // either (from the active stream) or (from an idle stream)
@@ -706,7 +763,7 @@ struct PooledDeviceAllocator {
 
       // Keep the returned allocation if bin is valid and we won't exceed the
       // max cached threshold
-      if ((search_key.bin != INVALID_BIN) &&
+      if (search_key.binned &&
           (cached_bytes[device].free + search_key.bytes <= max_cached_bytes)) {
         // Insert returned allocation into free blocks
         recached = true;
@@ -878,6 +935,18 @@ struct PooledDeviceAllocator {
     return result;
   }
 
+  size_t GetBinFreeMemory(int device = INVALID_DEVICE_ORDINAL,
+                          size_t bin_size = INVALID_SIZE) const {
+    size_t result = 0;
+    for (BlockDescriptor const &desc : cached_blocks) {
+      if (device != INVALID_DEVICE_ORDINAL && desc.device != device)
+        continue;
+      if (desc.bytes == bin_size)
+        result += desc.bytes;
+    }
+    return result;
+  }
+
   size_t LiveMemory(int device = INVALID_DEVICE_ORDINAL) const {
     size_t result = 0;
     for (auto const &[dev, totals] : cached_bytes) {
@@ -888,20 +957,36 @@ struct PooledDeviceAllocator {
     return result;
   }
 
-  size_t NonbinnedMemory(int device = INVALID_DEVICE_ORDINAL) const {
+  size_t GetBinLiveMemory(int device = INVALID_DEVICE_ORDINAL,
+                          size_t bin_size = INVALID_SIZE) const {
     size_t result = 0;
-    for (auto const &[dev, totals] : cached_bytes) {
-      if (device != INVALID_DEVICE_ORDINAL && device != dev)
+    for (BlockDescriptor const &desc : live_blocks) {
+      if (device != INVALID_DEVICE_ORDINAL && desc.device != device)
         continue;
-      // TODO
+      if (desc.bytes == bin_size)
+        result += desc.bytes;
     }
     return result;
   }
 
-  size_t ExtraneousMemory(int device = INVALID_DEVICE_ORDINAL) const {
+  size_t NonbinnedMemory(int device = INVALID_DEVICE_ORDINAL) const {
     size_t result = 0;
     for (BlockDescriptor const &desc : live_blocks) {
       if (device != INVALID_DEVICE_ORDINAL && desc.device != device)
+        continue;
+      if (!desc.binned)
+        result += desc.bytes;
+    }
+    return result;
+  }
+
+  size_t ExcessMemory(int device = INVALID_DEVICE_ORDINAL,
+                      size_t bin_size = INVALID_SIZE) const {
+    size_t result = 0;
+    for (BlockDescriptor const &desc : live_blocks) {
+      if (device != INVALID_DEVICE_ORDINAL && desc.device != device)
+        continue;
+      if (bin_size != INVALID_SIZE && desc.bytes != bin_size)
         continue;
       result += desc.bytes - desc.requested_bytes;
     }
@@ -939,22 +1024,25 @@ struct PooledDeviceAllocator {
       os << ", free: ";
       HumanReadableSize(totals.free, os);
       os << "). Buffers: " << GetNumBuffers() << std::endl;
-      os << "Total extraneous memory due to binning: ";
-      HumanReadableSize(ExtraneousMemory(dev), os);
+      os << "Total excess memory due to binning: ";
+      HumanReadableSize(ExcessMemory(dev), os);
       os << std::endl;
 
       if (report_bins) {
         os << "Detailed bin report:" << std::endl;
-        /*
-        for (auto const& bin : bins) {
-            os << "  "; HumanReadableSize(BinSize(bin), os);
-            os << ": Allocated = "; HumanReadableSize(GetBinAllocated(bin), os);
-            os << ", Free = "; HumanReadableSize(GetBinFree(bin), os);
-            os << ", Extraneous = "; HumanReadableSize(GetExtraneousMemory(bin),
-        os); os << std::endl;
+        for (auto const &bin : actual_bin_sizes) {
+          os << "  ";
+          HumanReadableSize(bin, os);
+          os << ": Live = ";
+          HumanReadableSize(GetBinLiveMemory(dev, bin), os);
+          os << ", Free = ";
+          HumanReadableSize(GetBinFreeMemory(dev, bin), os);
+          os << ", Excess = ";
+          HumanReadableSize(ExcessMemory(dev, bin), os);
+          os << std::endl;
         }
-        os << "  Non-binned: "; HumanReadableSize(GetDirectAllocated(bin), os);
-        */
+        os << "  Non-binned: ";
+        HumanReadableSize(NonbinnedMemory(dev), os);
         os << std::endl;
       }
     }
