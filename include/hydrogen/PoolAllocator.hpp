@@ -142,7 +142,7 @@ __host__ __device__ __forceinline__ gpuError_t Debug(gpuError_t error,
  * Prints human-readable size (for reporting)
  */
 static inline void HumanReadableSize(size_t bytes, std::ostream &os) {
-  const std::string sizes[] = {"  B", "KiB", "MiB", "GiB", "TiB"};
+  const std::string sizes[] = {"B", "KiB", "MiB", "GiB", "TiB"};
   int unit = 0;
   float size = bytes;
   while (size > 1024) {
