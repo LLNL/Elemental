@@ -362,10 +362,11 @@ struct PooledDeviceAllocator {
   size_t max_cached_bytes;       /// Maximum aggregate cached bytes per device
 
   const bool
-      skip_cleanup; /// Whether or not to skip a call to FreeAllCached() when
-                    /// destructor is called.  (The runtime may have already
-                    /// shut down for statically declared allocators)
-  bool debug;       /// Whether or not to print (de)allocation events to stdout
+      skip_cleanup;  /// Whether or not to skip a call to FreeAllCached() when
+                     /// destructor is called.  (The runtime may have already
+                     /// shut down for statically declared allocators)
+  bool debug;        /// Whether or not to print (de)allocation events to stdout
+  bool malloc_async; /// Use {cuda,hip}MallocAsync
 
   std::set<size_t> actual_bin_sizes; /// Bin sizes used by the allocator
   GpuCachedBytes cached_bytes; /// Map of device ordinal to aggregate cached
@@ -400,7 +401,8 @@ struct PooledDeviceAllocator {
       unsigned int bin_mult = INVALID_BIN, ///< Linear bin scaling size
       size_t max_bin_alloc_size =
           INVALID_SIZE,                ///< Maximal binned allocation size
-      std::set<size_t> bin_sizes = {}) ///< Explicit control over bin )
+      std::set<size_t> bin_sizes = {}, ///< Explicit control over bin size
+      bool use_malloc_async = false)   ///< Use asynchronous malloc/free calls
       : bin_growth(bin_growth), min_bin(min_bin), max_bin(max_bin),
         bin_mult_threshold(bin_mult_threshold), bin_mult(bin_mult),
         bin_sizes(bin_sizes),
@@ -411,7 +413,8 @@ struct PooledDeviceAllocator {
                                      max_bin_alloc_size)
                           : IntPow(bin_growth, max_bin)),
         max_cached_bytes(max_cached_bytes), skip_cleanup(skip_cleanup),
-        debug(debug), cached_blocks(BlockDescriptor::SizeCompare),
+        debug(debug), malloc_async(use_malloc_async),
+        cached_blocks(BlockDescriptor::SizeCompare),
         live_blocks(BlockDescriptor::PtrCompare) {}
 
   /**
@@ -434,7 +437,8 @@ struct PooledDeviceAllocator {
         min_bin_bytes(IntPow(bin_growth, min_bin)),
         max_bin_bytes(IntPow(bin_growth, max_bin)),
         max_cached_bytes((max_bin_bytes * 3) - 1), skip_cleanup(skip_cleanup),
-        debug(debug), cached_blocks(BlockDescriptor::SizeCompare),
+        debug(debug), malloc_async(false),
+        cached_blocks(BlockDescriptor::SizeCompare),
         live_blocks(BlockDescriptor::PtrCompare) {}
 
   /**
@@ -612,7 +616,8 @@ struct PooledDeviceAllocator {
       }
 
       // Attempt to allocate
-      if (gpuDebug(error = gpuMalloc(&search_key.d_ptr, search_key.bytes)) ==
+      if (gpuDebug(error = MallocInternal(&search_key.d_ptr, search_key.bytes,
+                                          active_stream)) ==
           gpuErrorMemoryAllocation) {
         // The allocation attempt failed: free all cached blocks on device and
         // retry
@@ -639,7 +644,8 @@ struct PooledDeviceAllocator {
           // on the current device
 
           // Free device memory and destroy stream event.
-          if (gpuDebug(error = gpuFree(block_itr->d_ptr)))
+          if (gpuDebug(error = FreeInternal(block_itr->d_ptr,
+                                            block_itr->associated_stream)))
             break;
           if (gpuDebug(error = gpuEventDestroy(block_itr->ready_event)))
             break;
@@ -668,9 +674,12 @@ struct PooledDeviceAllocator {
           return error;
 
         // Try to allocate again
-        if (gpuDebug(error = gpuMalloc(&search_key.d_ptr, search_key.bytes)))
+        if (gpuDebug(error = MallocInternal(&search_key.d_ptr, search_key.bytes,
+                                            active_stream)))
           return error;
       }
+
+      search_key.associated_stream = active_stream;
 
       // Create ready event
       if (gpuDebug(error = gpuEventCreateWithFlags(&search_key.ready_event,
@@ -805,7 +814,7 @@ struct PooledDeviceAllocator {
 
     if (!recached) {
       // Free the allocation from the runtime and cleanup the event.
-      if (gpuDebug(error = gpuFree(d_ptr)))
+      if (gpuDebug(error = FreeInternal(d_ptr, active_stream)))
         return error;
       if (gpuDebug(error = gpuEventDestroy(search_key.ready_event)))
         return error;
@@ -873,7 +882,8 @@ struct PooledDeviceAllocator {
       }
 
       // Free device memory
-      if (gpuDebug(error = gpuFree(begin->d_ptr)))
+      if (gpuDebug(error =
+                       FreeInternal(begin->d_ptr, begin->associated_stream)))
         break;
       if (gpuDebug(error = gpuEventDestroy(begin->ready_event)))
         break;
@@ -1045,6 +1055,24 @@ struct PooledDeviceAllocator {
         HumanReadableSize(NonbinnedMemory(dev), os);
         os << std::endl;
       }
+    }
+  }
+
+private:
+  gpuError_t MallocInternal(void **ptr, size_t size,
+                            gpuStream_t active_stream) {
+    if (malloc_async) {
+      return gpuMallocAsync(ptr, size, active_stream);
+    } else {
+      return gpuMalloc(ptr, size);
+    }
+  }
+
+  gpuError_t FreeInternal(void *ptr, gpuStream_t active_stream) {
+    if (malloc_async) {
+      return gpuFreeAsync(ptr, active_stream);
+    } else {
+      return gpuFree(ptr);
     }
   }
 };
