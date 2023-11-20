@@ -162,7 +162,7 @@ G* New( size_t size, unsigned int mode, SyncInfo<Device::GPU> const& syncInfo_ )
 }
 
 template <typename G>
-void Delete( G*& ptr, unsigned int mode, SyncInfo<Device::GPU> const& )
+void Delete( G*& ptr, unsigned int mode, SyncInfo<Device::GPU> const& si)
 {
     switch (mode) {
 #if defined(HYDROGEN_HAVE_CUDA)
@@ -174,10 +174,10 @@ void Delete( G*& ptr, unsigned int mode, SyncInfo<Device::GPU> const& )
     case 1:
 #if defined HYDROGEN_HAVE_CUDA
         H_CHECK_CUDA(
-            hydrogen::cub::MemoryPool().DeviceFree(ptr));
+            hydrogen::cub::MemoryPool().DeviceFree(ptr, si.Stream()));
 #elif defined HYDROGEN_HAVE_ROCM
         H_CHECK_HIP(
-            hydrogen::cub::MemoryPool().DeviceFree(ptr));
+            hydrogen::cub::MemoryPool().DeviceFree(ptr, si.Stream()));
 #endif
         break;
 #endif // HYDROGEN_HAVE_CUB
