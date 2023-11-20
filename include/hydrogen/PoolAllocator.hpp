@@ -338,6 +338,18 @@ struct PooledDeviceAllocator {
                                      std::log(bin_growth));
   }
 
+  size_t ComputeMaxBinBytes(unsigned int bin_growth, unsigned int max_bin,
+                            size_t max_bin_alloc_size) {
+    size_t result = INVALID_SIZE;
+    if (max_bin != INVALID_BIN) {
+      result = IntPow(bin_growth, max_bin);
+    }
+    if (max_bin_alloc_size != INVALID_SIZE) {
+      result = std::min(result, max_bin_alloc_size);
+    }
+    return result;
+  }
+
   //---------------------------------------------------------------------
   // Fields
   //---------------------------------------------------------------------
@@ -408,10 +420,8 @@ struct PooledDeviceAllocator {
         bin_sizes(bin_sizes),
         linear_bin_index(ComputeLinearBinIndex(bin_growth, bin_mult_threshold)),
         min_bin_bytes(IntPow(bin_growth, min_bin)),
-        max_bin_bytes(max_bin_alloc_size != INVALID_SIZE
-                          ? std::min(size_t(IntPow(bin_growth, max_bin)),
-                                     max_bin_alloc_size)
-                          : IntPow(bin_growth, max_bin)),
+        max_bin_bytes(
+            ComputeMaxBinBytes(bin_growth, max_bin, max_bin_alloc_size)),
         max_cached_bytes(max_cached_bytes), skip_cleanup(skip_cleanup),
         debug(debug), malloc_async(use_malloc_async),
         cached_blocks(BlockDescriptor::SizeCompare),
@@ -579,6 +589,7 @@ struct PooledDeviceAllocator {
           // Reuse existing cache block.  Insert into live blocks.
           found = true;
           search_key = *block_itr;
+          search_key.requested_bytes = bytes;
           search_key.associated_stream = active_stream;
           live_blocks.insert(search_key);
 
@@ -776,7 +787,6 @@ struct PooledDeviceAllocator {
           (cached_bytes[device].free + search_key.bytes <= max_cached_bytes)) {
         // Insert returned allocation into free blocks
         recached = true;
-        search_key.requested_bytes = 0;
         cached_blocks.insert(search_key);
         cached_bytes[device].free += search_key.bytes;
 
@@ -1024,24 +1034,53 @@ struct PooledDeviceAllocator {
   }
 
   void Report(std::ostream &os, bool report_bins = true) const {
+    os << "Memory pool configuration:" << std::endl;
+    os << "  Geometric bins - " << bin_growth << " ^ (" << min_bin << "-"
+       << ((max_bin == INVALID_BIN) ? "inf" : std::to_string(max_bin))
+       << ")" << std::endl;
+    if (bin_mult_threshold == INVALID_BIN) {
+      os << "  Linear bins - DISABLED" << std::endl;
+    } else {
+      os << "  Linear bins - when geometric bin difference > "
+         << bin_mult_threshold << ", allocate in multiples of " << bin_mult
+         << std::endl;
+    }
+
+    if (bin_sizes.size() == 0) {
+      os << "  Custom bins - NONE" << std::endl;
+    } else {
+      os << "  Custom bins - ";
+      bool first = true;
+      for (auto const &bin : bin_sizes) {
+        if (!first)
+          os << ", ";
+        HumanReadableSize(bin, os);
+        first = false;
+      }
+      os << std::endl;
+    }
+    os << "  mallocAsync: " << (malloc_async ? "enabled" : "disabled")
+       << ", debug: " << (debug ? "enabled" : "disabled")
+       << ", skip cleanup: " << (skip_cleanup ? "yes" : "no") << std::endl;
+
     for (auto const &[dev, totals] : cached_bytes) {
       os << "Memory pool allocation report (Device " << dev
          << "):" << std::endl;
-      os << "Allocated memory: ";
+      os << "  Allocated memory: ";
       HumanReadableSize(totals.live + totals.free, os);
       os << " (Live: ";
       HumanReadableSize(totals.live, os);
       os << ", free: ";
       HumanReadableSize(totals.free, os);
       os << "). Buffers: " << GetNumBuffers() << std::endl;
-      os << "Total excess memory due to binning: ";
+      os << "  Total excess memory due to binning: ";
       HumanReadableSize(ExcessMemory(dev), os);
       os << std::endl;
 
       if (report_bins) {
-        os << "Detailed bin report:" << std::endl;
+        os << "  Detailed bin report:" << std::endl;
         for (auto const &bin : actual_bin_sizes) {
-          os << "  ";
+          os << "    ";
           HumanReadableSize(bin, os);
           os << ": Live = ";
           HumanReadableSize(GetBinLiveMemory(dev, bin), os);
@@ -1051,7 +1090,7 @@ struct PooledDeviceAllocator {
           HumanReadableSize(ExcessMemory(dev, bin), os);
           os << std::endl;
         }
-        os << "  Non-binned: ";
+        os << "    Non-binned: ";
         HumanReadableSize(NonbinnedMemory(dev), os);
         os << std::endl;
       }
