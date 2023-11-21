@@ -61,6 +61,7 @@
 #define gpuEventCreateWithFlags cudaEventCreateWithFlags
 #define gpuEventDisableTiming cudaEventDisableTiming
 #define gpuEventRecord cudaEventRecord
+#define gpuGetErrorString cudaGetErrorString
 
 #define gpuStream_t cudaStream_t
 #define gpuEvent_t cudaEvent_t
@@ -85,12 +86,15 @@
 #define gpuMalloc hipMalloc
 #define gpuFreeAsync hipFreeAsync
 #define gpuFree hipFree
+#define gpuSetDevice hipSetDevice
+#define gpuGetDevice hipGetDevice
 #define gpuEventQuery hipEventQuery
 #define gpuGetLastError hipGetLastError
 #define gpuEventDestroy hipEventDestroy
 #define gpuEventCreateWithFlags hipEventCreateWithFlags
 #define gpuEventDisableTiming hipEventDisableTiming
 #define gpuEventRecord hipEventRecord
+#define gpuGetErrorString hipGetErrorString
 
 #define gpuStream_t hipStream_t
 #define gpuEvent_t hipEvent_t
@@ -118,11 +122,11 @@ __host__ __device__ __forceinline__ gpuError_t Debug(gpuError_t error,
                                                      int line) {
   if (error) {
 #if (GPU_PTX_ARCH == 0)
-    fprintf(stderr, "CUDA error %d [%s, %d]: %s\n", error, filename, line,
-            cudaGetErrorString(error));
+    fprintf(stderr, "GPU error %d [%s, %d]: %s\n", error, filename, line,
+            gpuGetErrorString(error));
     fflush(stderr);
 #else
-    printf("CUDA error %d [block (%d,%d,%d) thread (%d,%d,%d), %s, %d]\n",
+    printf("GPU error %d [block (%d,%d,%d) thread (%d,%d,%d), %s, %d]\n",
            error, blockIdx.z, blockIdx.y, blockIdx.x, threadIdx.z, threadIdx.y,
            threadIdx.x, filename, line);
 #endif
@@ -1129,6 +1133,7 @@ private:
 #undef gpuEventCreateWithFlags
 #undef gpuEventDisableTiming
 #undef gpuEventRecord
+#undef gpuGetErrorString
 #undef gpuStream_t
 #undef gpuEvent_t
 #undef gpuError_t
