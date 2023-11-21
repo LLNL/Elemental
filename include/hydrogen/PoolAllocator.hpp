@@ -181,8 +181,8 @@ namespace hydrogen {
  * - (EXTENDED) Bin limits have a combined geometric/linear progression; or can
  *   be given as a set of sizes. It behaves as follows:
  *     - If a set of sizes is given in \p bin_sizes, they are used to construct
- * the allocation bins. If an allocation is larger than the largest bin, the
- * behavior matches the rest of the algorithm. Allocations in [0, bin_min] are
+ *       the allocation bins. If an allocation is larger than the largest bin, the
+ *       behavior matches the rest of the algorithm. Allocations in [0, bin_min]
  *       will allocate ``bin_min`` bytes.
  *     - Bin limits progress geometrically in accordance with the (integer)
  *       growth factor \p bin_growth provided during construction. Unused device
@@ -194,8 +194,8 @@ namespace hydrogen {
  *       \p bin_mult is given, a linear binning scheme is created where bins
  *       follow \p bin_growth ^ some_bin + \p bin_mult * n
  *     - Allocations above min( \p bin_growth ^ \p max_bin , \p
- * max_bin_alloc_size ) are not rounded up to the nearest bin and are simply
- * freed when they are deallocated instead of being returned to a bin-cache.
+ *       max_bin_alloc_size ) are not rounded up to the nearest bin and are simply
+ *       freed when they are deallocated instead of being returned to a bin-cache.
  * - If the total storage of cached allocations on a given device will exceed
  *   \p max_cached_bytes, allocations for that device are simply freed when they
  *   are deallocated instead of being returned to their bin-cache.
