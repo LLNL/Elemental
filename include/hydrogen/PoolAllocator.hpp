@@ -757,8 +757,7 @@ struct PooledDeviceAllocator {
    * and it becomes available for reuse within other streams when all prior work
    * submitted to \p active_stream has completed.
    */
-  gpuError_t DeviceFree(int device, void *d_ptr,
-                        gpuStream_t active_stream = 0) {
+  gpuError_t DeviceFree(int device, void *d_ptr) {
     int entrypoint_device = INVALID_DEVICE_ORDINAL;
     gpuError_t error = gpuSuccess;
 
@@ -824,7 +823,7 @@ struct PooledDeviceAllocator {
 
     if (!recached) {
       // Free the allocation from the runtime and cleanup the event.
-      if (gpuDebug(error = FreeInternal(d_ptr, active_stream)))
+      if (gpuDebug(error = FreeInternal(d_ptr, search_key.associated_stream)))
         return error;
       if (gpuDebug(error = gpuEventDestroy(search_key.ready_event)))
         return error;
@@ -860,8 +859,8 @@ struct PooledDeviceAllocator {
    * and it becomes available for reuse within other streams when all prior work
    * submitted to \p active_stream has completed.
    */
-  gpuError_t DeviceFree(void *d_ptr, gpuStream_t active_stream = 0) {
-    return DeviceFree(INVALID_DEVICE_ORDINAL, d_ptr, active_stream);
+  gpuError_t DeviceFree(void *d_ptr) {
+    return DeviceFree(INVALID_DEVICE_ORDINAL, d_ptr);
   }
 
   /**
