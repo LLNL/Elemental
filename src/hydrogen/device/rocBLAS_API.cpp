@@ -70,7 +70,7 @@ public:
 
                 // Clean up device memory
 #ifdef HYDROGEN_HAVE_CUB
-                H_CHECK_HIP(cub::MemoryPool().DeviceFree(device_, stream));
+                H_CHECK_HIP(cub::MemoryPool().DeviceFree(device_));
 #else
                 H_CHECK_HIP(hipFreeAsync(device_, stream));
 #endif // HYDROGEN_HAVE_CUB
