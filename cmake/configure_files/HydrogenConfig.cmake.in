@@ -27,13 +27,14 @@ set(MPI_CXX_COMPILER "${HYDROGEN_MPI_CXX_COMPILER}"
   CACHE FILEPATH "The MPI CXX compiler.")
 
 set(_HYDROGEN_HAVE_OPENMP @EL_HAVE_OPENMP@)
-if (_HYDROGEN_HAVE_OPENMP)
+set(HYDROGEN_HAVE_OPENMP @EL_HAVE_OPENMP@)
+if (HYDROGEN_HAVE_OPENMP)
   set(_OpenMP_DIR "@OpenMP_DIR@")
   if (NOT OpenMP_DIR)
     set(OpenMP_DIR "${_OpenMP_DIR}")
   endif ()
   include (FindAndVerifyOpenMP)
-endif (_HYDROGEN_HAVE_OPENMP)
+endif (HYDROGEN_HAVE_OPENMP)
 # FIXME: I should do verification to make sure all found features are
 #   the same.
 include (FindAndVerifyMPI)
@@ -43,8 +44,14 @@ set(_HYDROGEN_HAVE_ALUMINUM @HYDROGEN_HAVE_ALUMINUM@)
 set(_HYDROGEN_HAVE_NCCL2 @HYDROGEN_HAVE_NCCL2@)
 set(_HYDROGEN_HAVE_AL_MPI_CUDA @HYDROGEN_HAVE_AL_MPI_CUDA@)
 set(_HYDROGEN_HAVE_AL_HOST_XFER @HYDROGEN_HAVE_AL_HOST_XFER@)
-if (_HYDROGEN_HAVE_ALUMINUM)
+set(HYDROGEN_HAVE_ALUMINUM @HYDROGEN_HAVE_ALUMINUM@)
+set(HYDROGEN_HAVE_NCCL2 @HYDROGEN_HAVE_NCCL2@)
+set(HYDROGEN_HAVE_AL_MPI_CUDA @HYDROGEN_HAVE_AL_MPI_CUDA@)
+set(HYDROGEN_HAVE_AL_HOST_XFER @HYDROGEN_HAVE_AL_HOST_XFER@)
+
+if (HYDROGEN_HAVE_ALUMINUM)
   set(_HYDROGEN_MIN_AL_VERSION @ALUMINUM_VERSION@)
+  set(HYDROGEN_MIN_AL_VERSION @ALUMINUM_VERSION@)
   find_dependency(Aluminum "${HYDROGEN_MIN_AL_VERSION}")
 
   # This makes the assumption that there are no inter-backend
@@ -53,51 +60,60 @@ if (_HYDROGEN_HAVE_ALUMINUM)
   # backend should depend on any of the other backends). This checks
   # that AT LEAST the backend set available when building Hydrogen is
   # available now.
-  if (_HYDROGEN_HAVE_NCCL2 AND NOT AL_HAS_NCCL)
+  if (HYDROGEN_HAVE_NCCL2 AND NOT AL_HAS_NCCL)
     set(Hydrogen_NOT_FOUND_MESSAGE
       "Hydrogen expects NCCL2 support "
       "but found Aluminum does not have NCCL2 support.")
     set(Hydrogen_FOUND FALSE)
   endif ()
-  if (_HYDROGEN_HAVE_AL_HOST_XFER AND NOT AL_HAS_HOST_TRANSFER)
+  if (HYDROGEN_HAVE_AL_HOST_XFER AND NOT AL_HAS_HOST_TRANSFER)
     set(Hydrogen_NOT_FOUND_MESSAGE
       "Hydrogen expects HostTransfer support "
       "but Aluminum does not have HostTransfer support.")
     set(Hydrogen_FOUND FALSE)
   endif ()
-  if (_HYDROGEN_HAVE_AL_MPI_CUDA AND NOT AL_HAS_MPI_CUDA)
+  if (HYDROGEN_HAVE_AL_MPI_CUDA AND NOT AL_HAS_MPI_CUDA)
     set(Hydrogen_NOT_FOUND_MESSAGE
       "Hydrogen expects MPI-CUDA support "
       "but Aluminum does not have MPI-CUDA support.")
     set(Hydrogen_FOUND FALSE)
   endif ()
-endif (_HYDROGEN_HAVE_ALUMINUM)
+endif (HYDROGEN_HAVE_ALUMINUM)
 
 # CUDA!
 set(_HYDROGEN_HAVE_CUDA @HYDROGEN_HAVE_CUDA@)
 set(_HYDROGEN_HAVE_CUB @HYDROGEN_HAVE_CUB@)
-if (_HYDROGEN_HAVE_CUDA)
+set(HYDROGEN_HAVE_CUDA @HYDROGEN_HAVE_CUDA@)
+set(HYDROGEN_HAVE_CUB @HYDROGEN_HAVE_CUB@)
+
+if (HYDROGEN_HAVE_CUDA)
   set(_HYDROGEN_EXTERNAL_CUB @H_EXTERNAL_CUB@)
   set(_HYDROGEN_EXTERNAL_NVTX @H_EXTERNAL_NVTX@)
+  set(HYDROGEN_EXTERNAL_CUB @H_EXTERNAL_CUB@)
+  set(HYDROGEN_EXTERNAL_NVTX @H_EXTERNAL_NVTX@)
 
   find_dependency(CUDAToolkit)
 
-  if (_HYDROGEN_EXTERNAL_CUB)
+  if (HYDROGEN_EXTERNAL_CUB)
     find_dependency(CUB MODULE)
   endif ()
 
-  if (_HYDROGEN_EXTERNAL_NVTX)
+  if (HYDROGEN_EXTERNAL_NVTX)
     find_dependency(NVTX MODULE)
   endif ()
 endif ()
 
+# ROCm!
 set(_HYDROGEN_HAVE_ROCM @HYDROGEN_HAVE_ROCM@)
 set(_HYDROGEN_HAVE_ROCTRACER @HYDROGEN_HAVE_ROCTRACER@)
-if (_HYDROGEN_HAVE_ROCM)
+set(HYDROGEN_HAVE_ROCM @HYDROGEN_HAVE_ROCM@)
+set(HYDROGEN_HAVE_ROCTRACER @HYDROGEN_HAVE_ROCTRACER@)
+
+if (HYDROGEN_HAVE_ROCM)
 
   find_dependency(hip CONFIG)
 
-  if (_HYDROGEN_HAVE_CUB)
+  if (HYDROGEN_HAVE_CUB)
     find_dependency(hipcub)
     set(HYDROGEN_HAVE_CUB TRUE)
   else ()
@@ -108,7 +124,7 @@ if (_HYDROGEN_HAVE_ROCM)
   find_dependency(rocsolver CONFIG)
   find_dependency(rocthrust CONFIG)
 
-  if (_HYDROGEN_HAVE_ROCTRACER)
+  if (HYDROGEN_HAVE_ROCTRACER)
     find_dependency(Roctracer MODULE COMPONENTS roctx)
   endif ()
 
@@ -116,26 +132,32 @@ if (_HYDROGEN_HAVE_ROCM)
   h_clean_hip_targets()
 
   set(HYDROGEN_HAVE_ROCM TRUE)
-endif (_HYDROGEN_HAVE_ROCM)
+endif (HYDROGEN_HAVE_ROCM)
 
 set(HYDROGEN_HAVE_HALF @HYDROGEN_HAVE_HALF@)
 if (HYDROGEN_HAVE_HALF)
   find_dependency(HALF)
 endif ()
 
-if (_HYDROGEN_HAVE_CUDA OR _HYDROGEN_HAVE_ROCM)
+if (HYDROGEN_HAVE_CUDA OR HYDROGEN_HAVE_ROCM)
   set(HYDROGEN_GPU_USE_FP16 @HYDROGEN_GPU_USE_FP16@)
 endif ()
 
 # Math libraries
+# FIXME: Hydrogen doesn't really support these; we should drop all this.
 set(_HYDROGEN_HAVE_QUADMATH "@HYDROGEN_HAVE_QUADMATH@")
 set(_HYDROGEN_HAVE_QD "@HYDROGEN_HAVE_QD@")
 set(_HYDROGEN_HAVE_MPC "@HYDROGEN_HAVE_MPC@")
 set(_HYDROGEN_HAVE_MKL "@HYDROGEN_HAVE_MKL@")
 set(_HYDROGEN_HAVE_MKL_GEMMT "@HYDROGEN_HAVE_MKL_GEMMT@")
+set(HYDROGEN_HAVE_QUADMATH "@HYDROGEN_HAVE_QUADMATH@")
+set(HYDROGEN_HAVE_QD "@HYDROGEN_HAVE_QD@")
+set(HYDROGEN_HAVE_MPC "@HYDROGEN_HAVE_MPC@")
+set(HYDROGEN_HAVE_MKL "@HYDROGEN_HAVE_MKL@")
+set(HYDROGEN_HAVE_MKL_GEMMT "@HYDROGEN_HAVE_MKL_GEMMT@")
 
 # Quadmath
-if (_HYDROGEN_HAVE_QUADMATH)
+if (HYDROGEN_HAVE_QUADMATH)
   set(${PROJECT_NAME}_ENABLE_QUADMATH TRUE)
   if (NOT QUADMATH_LIBRARY)
     set(QUADMATH_LIBRARY "@QUADMATH_LIBRARY@")
@@ -146,7 +168,7 @@ if (_HYDROGEN_HAVE_QUADMATH)
 endif ()
 
 # QD
-if (_HYDROGEN_HAVE_QD)
+if (HYDROGEN_HAVE_QD)
   set(${PROJECT_NAME}_ENABLE_QUADMATH TRUE)
   if (NOT QD_LIBRARY)
     set(QD_LIBRARY "@QD_LIBRARY@")
@@ -157,7 +179,7 @@ if (_HYDROGEN_HAVE_QD)
 endif ()
 
 # MPC
-if (_HYDROGEN_HAVE_MPC)
+if (HYDROGEN_HAVE_MPC)
   set(${PROJECT_NAME}_ENABLE_MPC TRUE)
   if (NOT GMP_LIBRARY)
     set(GMP_LIBRARY "@GMP_LIBRARY@" CACHE FILEPATH "The GMP library" FORCE)
@@ -180,13 +202,16 @@ if (_HYDROGEN_HAVE_MPC)
     set(MPC_INCLUDE_DIR "@MPC_INCLUDE_DIR@"
       CACHE FILEPATH "The MPC include directory" FORCE)
   endif ()
-endif (_HYDROGEN_HAVE_MPC)
+endif (HYDROGEN_HAVE_MPC)
 
 include("FindAndVerifyExtendedPrecision")
 
 # LAPACK
+# TODO: This should be cleaned up to better support a consistent view
+# of BLAS/LAPACK across multiple packages.
 set(_HYDROGEN_HAVE_OPENBLAS @HYDROGEN_HAVE_OPENBLAS@)
-if (_HYDROGEN_HAVE_OPENBLAS)
+set(HYDROGEN_HAVE_OPENBLAS @HYDROGEN_HAVE_OPENBLAS@)
+if (HYDROGEN_HAVE_OPENBLAS)
   set(BLAS_openblas_LIBRARY "@BLAS_openblas_LIBRARY@"
     CACHE PATH "Path to a library")
   set(LAPACK_openblas_LIBRARY "@LAPACK_openblas_LIBRARY@"
@@ -217,10 +242,10 @@ if (NOT TARGET H::Hydrogen)
   add_library(H::Hydrogen IMPORTED INTERFACE)
   target_link_libraries(H::Hydrogen INTERFACE H::Hydrogen_CXX
     $<TARGET_NAME_IF_EXISTS:H::Hydrogen_CUDA>
-    $<TARGET_NAME_IF_EXISTS:H::Hydrogen_ROCM>
-    )
+    $<TARGET_NAME_IF_EXISTS:H::Hydrogen_ROCM>)
 endif (NOT TARGET H::Hydrogen)
 
 check_required_components(Hydrogen)
 
+set(Hydrogen_LIBRARIES H::Hydrogen)
 set(HYDROGEN_LIBRARIES H::Hydrogen)

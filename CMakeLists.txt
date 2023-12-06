@@ -1,43 +1,45 @@
 cmake_minimum_required(VERSION 3.21)
 cmake_policy(VERSION 3.21)
 
-project(Hydrogen CXX)
+option(
+  Hydrogen_ALUMINUM_AS_SUBMODULE
+  "Build Aluminum as a submodule."
+  ON)
 
 # Setup version information
-find_program(__GIT_EXECUTABLE git)
-mark_as_advanced(__GIT_EXECUTABLE)
-if (__GIT_EXECUTABLE)
+find_package(Git)
+if (Git_FOUND)
 
   execute_process(
-    COMMAND ${__GIT_EXECUTABLE} rev-parse --is-inside-work-tree
-    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    COMMAND ${GIT_EXECUTABLE} rev-parse --is-inside-work-tree
+    WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
     OUTPUT_VARIABLE __BUILDING_FROM_GIT_SOURCES
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
   if (__BUILDING_FROM_GIT_SOURCES)
     execute_process(
-      COMMAND ${__GIT_EXECUTABLE} rev-parse --show-toplevel
-      WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+      COMMAND ${GIT_EXECUTABLE} rev-parse --show-toplevel
+      WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
       OUTPUT_VARIABLE __GIT_TOPLEVEL_DIR
       OUTPUT_STRIP_TRAILING_WHITESPACE)
     execute_process(
-      COMMAND ${__GIT_EXECUTABLE} rev-parse --git-dir
+      COMMAND ${GIT_EXECUTABLE} rev-parse --git-dir
       WORKING_DIRECTORY "${__GIT_TOPLEVEL_DIR}"
       OUTPUT_VARIABLE __GIT_GIT_DIR
       OUTPUT_STRIP_TRAILING_WHITESPACE)
     execute_process(
-      COMMAND ${__GIT_EXECUTABLE} --git-dir "${__GIT_GIT_DIR}" describe
+      COMMAND ${GIT_EXECUTABLE} --git-dir "${__GIT_GIT_DIR}" describe
       --abbrev=7 --always --dirty --tags
       WORKING_DIRECTORY "${__GIT_TOPLEVEL_DIR}"
       OUTPUT_VARIABLE __GIT_DESCRIBE_VERSION
       OUTPUT_STRIP_TRAILING_WHITESPACE)
     execute_process(
-      COMMAND ${__GIT_EXECUTABLE} rev-list HEAD --max-count=1 --date-order
+      COMMAND ${GIT_EXECUTABLE} rev-list HEAD --max-count=1 --date-order
       WORKING_DIRECTORY "${__GIT_TOPLEVEL_DIR}"
       OUTPUT_VARIABLE __GIT_LATEST_COMMIT
       OUTPUT_STRIP_TRAILING_WHITESPACE)
     execute_process(
-      COMMAND ${__GIT_EXECUTABLE} rev-list hydrogen --max-count=1 --date-order
+      COMMAND ${GIT_EXECUTABLE} rev-list hydrogen --max-count=1 --date-order
       WORKING_DIRECTORY "${__GIT_TOPLEVEL_DIR}"
       OUTPUT_VARIABLE __GIT_LATEST_HYDROGEN_COMMIT
       OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -46,7 +48,7 @@ if (__GIT_EXECUTABLE)
     set(HYDROGEN_LATEST_SHA "${__GIT_LATEST_COMMIT}")
     set(HYDROGEN_LATEST_HYDROGEN_SHA "${__GIT_LATEST_HYDROGEN_COMMIT}")
   endif (__BUILDING_FROM_GIT_SOURCES)
-endif (__GIT_EXECUTABLE)
+endif (Git_FOUND)
 
 # This must be set because version tags
 set(HYDROGEN_VERSION_MAJOR 1)
@@ -56,6 +58,12 @@ set(HYDROGEN_VERSION_MAJOR_MINOR
     "${HYDROGEN_VERSION_MAJOR}.${HYDROGEN_VERSION_MINOR}")
 set(HYDROGEN_VERSION
   "${HYDROGEN_VERSION_MAJOR_MINOR}.${HYDROGEN_VERSION_PATCH}")
+
+project(Hydrogen
+  VERSION "${HYDROGEN_VERSION}"
+  DESCRIPTION "Distributed linear algebra supporting LBANN."
+  HOMEPAGE_URL "https://github.com/LLNL/Hydrogen.git"
+  LANGUAGES CXX) # CUDA or HIP will be enabled later on.
 
 # Back-compatibility, until it's all sorted out
 set(EL_VERSION_MAJOR ${HYDROGEN_VERSION_MAJOR})
@@ -78,8 +86,8 @@ if (PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
 endif ()
 
 # Set the module path
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
 
 # Add warning flags
 include(CheckCompilerFlag)
@@ -102,10 +110,6 @@ endif ()
 
 # Feature-related options
 include(CMakeDependentOption)
-
-option(Hydrogen_ENABLE_ALUMINUM
-  "Enable the Aluminum package for improved device-side communication."
-  OFF)
 
 option(Hydrogen_ENABLE_CUDA
   "Search for CUDA support and enable related features if found."
@@ -393,7 +397,63 @@ if (HYDROGEN_HAVE_CUDA OR HYDROGEN_HAVE_ROCM)
   endif ()
 endif ()
 
-if (Hydrogen_ENABLE_ALUMINUM)
+if (Hydrogen_ALUMINUM_AS_SUBMODULE)
+  if (Git_FOUND AND __BUILDING_FROM_GIT_SOURCES)
+    execute_process(
+      COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+      OUTPUT_VARIABLE __SUBMOD_UPDATE_STDOUTERR
+      ERROR_VARIABLE __SUBMOD_UPDATE_STDOUTERR
+      RESULT_VARIABLE __SUBMOD_UPDATE_RESULT)
+    if (NOT __SUBMOD_UPDATE_RESULT EQUAL "0")
+      message(
+        FATAL_ERROR
+        "Command failed: ${GIT_EXECUTABLE} submodule update --init --recursive.\n"
+        "Output:\n${__SUBMOD_UPDATE_STDOUTERR}\n")
+    endif ()
+  endif ()
+
+  if (NOT EXISTS "${PROJECT_SOURCE_DIR}/submodules/aluminum/CMakeLists.txt")
+    message(FATAL_ERROR
+      "Specified Hydrogen_ALUMINUM_AS_SUBMODULE=ON but the submodule cannot "
+      "be found. Check out submodules.")
+  endif ()
+
+  # Forward HIP/CUDA settings. The user will still have to specify
+  # whatever subset of `ALUMINUM_ENABLE_{NCCL,HOST_TRANSFER,...}`.
+  set(ALUMINUM_ENABLE_CUDA ${Hydrogen_ENABLE_CUDA}
+    CACHE BOOL "Enable CUDA support in Aluminum.")
+  set(ALUMINUM_ENABLE_ROCM ${Hydrogen_ENABLE_ROCM}
+    CACHE BOOL "Enable ROCm support in Aluminum.")
+
+  # Add the project
+  add_subdirectory(submodules/aluminum)
+
+  # Retrieve the relevant bits from the subproject.
+  set(Aluminum_LIBRARIES Al)
+  set(Aluminum_DIR "${PROJECT_SOURCE_DIR}/submodules/aluminum")
+
+  get_directory_property(ALUMINUM_VERSION
+    DIRECTORY submodules/aluminum
+    DEFINITION ALUMINUM_VERSION)
+  get_directory_property(AL_HAS_NCCL
+    DIRECTORY submodules/aluminum
+    DEFINITION AL_HAS_NCCL)
+  get_directory_property(AL_HAS_HOST_TRANSFER
+    DIRECTORY submodules/aluminum
+    DEFINITION AL_HAS_HOST_TRANSFER)
+  get_directory_property(AL_HAS_MPI_CUDA
+    DIRECTORY submodules/aluminum
+    DEFINITION AL_HAS_MPI_CUDA)
+
+  # I don't care to support old versions of Aluminum as submodules.
+  if (ALUMINUM_VERSION VERSION_LESS 1.4.0)
+    message(FATAL_ERROR
+      "Bad Aluminum version. "
+      "Checkout a version of Aluminum that reports at least v1.4")
+  endif ()
+else ()
+
   find_package(Aluminum 1.0.0 CONFIG QUIET)
   if (NOT Aluminum_FOUND AND Aluminum_NOT_FOUND_MESSAGE)
     message(STATUS
@@ -411,52 +471,50 @@ if (Hydrogen_ENABLE_ALUMINUM)
         "  ${Aluminum_NOT_FOUND_MESSAGE}")
     endif ()
   endif ()
+  if (NOT Aluminum_FOUND)
+    message(FATAL_ERROR "Aluminum not found.")
+  endif ()
 
-  if (Aluminum_FOUND)
-    set(HYDROGEN_HAVE_ALUMINUM TRUE)
-    message(STATUS
-      "Found Aluminum@${ALUMINUM_VERSION}: ${Aluminum_DIR}")
+endif ()
 
-    if (HYDROGEN_HAVE_GPU AND AL_HAS_NCCL)
-      set(HYDROGEN_HAVE_NCCL2 TRUE)
-      message(STATUS "Aluminum detected with NCCL2 backend support.")
-    else ()
-      set(HYDROGEN_HAVE_NCCL2 FALSE)
-    endif (HYDROGEN_HAVE_GPU AND AL_HAS_NCCL)
+# Finish verifying Aluminum features
+set(HYDROGEN_HAVE_ALUMINUM TRUE)
+message(STATUS
+  "Found Aluminum@${ALUMINUM_VERSION}: ${Aluminum_DIR}")
 
-    if (HYDROGEN_HAVE_GPU AND AL_HAS_HOST_TRANSFER)
-      set(HYDROGEN_HAVE_AL_HOST_XFER TRUE)
-      message(STATUS "Aluminum detected with HostTransfer backend support.")
-    else ()
-      set(HYDROGEN_HAVE_AL_HOST_XFER FALSE)
-    endif (HYDROGEN_HAVE_GPU AND AL_HAS_HOST_TRANSFER)
+if (HYDROGEN_HAVE_GPU AND AL_HAS_NCCL)
+  set(HYDROGEN_HAVE_NCCL2 TRUE)
+  message(STATUS "Aluminum detected with NCCL2 backend support.")
+else ()
+  set(HYDROGEN_HAVE_NCCL2 FALSE)
+endif (HYDROGEN_HAVE_GPU AND AL_HAS_NCCL)
 
-    if (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
-      set(HYDROGEN_HAVE_AL_MPI_CUDA TRUE)
-      message(STATUS "Aluminum detected with MPI-CUDA backend support.")
-    else ()
-      set(HYDROGEN_HAVE_AL_MPI_CUDA FALSE)
-    endif (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
+if (HYDROGEN_HAVE_GPU AND AL_HAS_HOST_TRANSFER)
+  set(HYDROGEN_HAVE_AL_HOST_XFER TRUE)
+  message(STATUS "Aluminum detected with HostTransfer backend support.")
+else ()
+  set(HYDROGEN_HAVE_AL_HOST_XFER FALSE)
+endif (HYDROGEN_HAVE_GPU AND AL_HAS_HOST_TRANSFER)
 
-    # Check for in-place SendRecv.
-    if (ALUMINUM_VERSION VERSION_GREATER_EQUAL "1.3.0")
-      set(HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV TRUE)
-    else ()
-      set(HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV FALSE)
-    endif ()
+if (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
+  set(HYDROGEN_HAVE_AL_MPI_CUDA TRUE)
+  message(STATUS "Aluminum detected with MPI-CUDA backend support.")
+else ()
+  set(HYDROGEN_HAVE_AL_MPI_CUDA FALSE)
+endif (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
 
-    if (HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV)
-      message(STATUS "Aluminum detected with in-place SendRecv support.")
-    else ()
-      message(STATUS "Aluminum detected WITHOUT in-place SendRecv support.")
-    endif ()
+# Check for in-place SendRecv.
+if (ALUMINUM_VERSION VERSION_GREATER_EQUAL "1.3.0")
+  set(HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV TRUE)
+else ()
+  set(HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV FALSE)
+endif ()
 
-  else ()
-    message(FATAL_ERROR "Aluminum support requested but not found. "
-      "Please set Aluminum_DIR to point to the installation prefix "
-      "for Aluminum.")
-  endif (Aluminum_FOUND)
-endif (Hydrogen_ENABLE_ALUMINUM)
+if (HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV)
+  message(STATUS "Aluminum detected with in-place SendRecv support.")
+else ()
+  message(STATUS "Aluminum detected WITHOUT in-place SendRecv support.")
+endif ()
 
 # Sets up EL_RESTRICT and EL_HAVE_PRETTY_FUNCTION
 include(detect/CXX)
@@ -473,12 +531,14 @@ endif ()
 if (Hydrogen_ENABLE_OPENMP)
   include(FindAndVerifyOpenMP)
   if (OpenMP_FOUND)
+    set(HYDROGEN_HAVE_OPENMP ON)
     set(EL_HYBRID ON)
   else ()
     message(WARNING "Requested OpenMP support but OpenMP support was either "
       "not found or not functional.")
     set(EL_HYBRID OFF)
     set(Hydrogen_ENABLE_OPENMP OFF)
+    set(HYDROGEN_HAVE_OPENMP OFF)
   endif ()
 endif (Hydrogen_ENABLE_OPENMP)
 
@@ -660,20 +720,20 @@ include (CMakePackageConfigHelpers)
 
 # Write the version file for both the build and the install tree
 configure_file(
-  "${CMAKE_SOURCE_DIR}/cmake/configure_files/HydrogenConfigVersion.cmake.in"
-  "${CMAKE_BINARY_DIR}/HydrogenConfigVersion.cmake"
+  "${PROJECT_SOURCE_DIR}/cmake/configure_files/HydrogenConfigVersion.cmake.in"
+  "${PROJECT_BINARY_DIR}/HydrogenConfigVersion.cmake"
   @ONLY)
 
 # Write the configure file for the build tree
-set(INCLUDE_INSTALL_DIRS "${CMAKE_SOURCE_DIR}/include"
-  "${CMAKE_SOURCE_DIR}/include"
-  "${CMAKE_SOURCE_DIR}/include/El"
-  "${CMAKE_BINARY_DIR}/include/El")
-set(LIB_INSTALL_DIR "${CMAKE_BINARY_DIR}")
-set(EXTRA_CMAKE_MODULE_DIR "${CMAKE_SOURCE_DIR}/cmake/modules")
+set(INCLUDE_INSTALL_DIRS "${PROJECT_SOURCE_DIR}/include"
+  "${PROJECT_SOURCE_DIR}/include"
+  "${PROJECT_SOURCE_DIR}/include/El"
+  "${PROJECT_BINARY_DIR}/include/El")
+set(LIB_INSTALL_DIR "${PROJECT_BINARY_DIR}")
+set(EXTRA_CMAKE_MODULE_DIR "${PROJECT_SOURCE_DIR}/cmake/modules")
 configure_package_config_file(cmake/configure_files/HydrogenConfig.cmake.in
-  "${CMAKE_BINARY_DIR}/HydrogenConfig.cmake"
-  INSTALL_DESTINATION "${CMAKE_BINARY_DIR}"
+  "${PROJECT_BINARY_DIR}/HydrogenConfig.cmake"
+  INSTALL_DESTINATION "${PROJECT_BINARY_DIR}"
   PATH_VARS INCLUDE_INSTALL_DIRS LIB_INSTALL_DIR)
 
 # Build tree export
@@ -686,7 +746,7 @@ set(CMAKE_INSTALL_DIR ${LIB_INSTALL_DIR}/cmake/hydrogen)
 set(EXTRA_CMAKE_MODULE_DIR)
 configure_package_config_file(
   cmake/configure_files/HydrogenConfig.cmake.in
-  "${CMAKE_BINARY_DIR}/cmake/HydrogenConfig.cmake"
+  "${PROJECT_BINARY_DIR}/cmake/HydrogenConfig.cmake"
   INSTALL_DESTINATION ${CMAKE_INSTALL_DIR}
   PATH_VARS INCLUDE_INSTALL_DIRS LIB_INSTALL_DIR)
 
@@ -729,8 +789,8 @@ if (NOT __dont_print_summary)
     CMAKE_CUDA_HOST_COMPILER
     MPI_CXX_COMPILER
     CMAKE_INSTALL_PREFIX
-    CMAKE_SOURCE_DIR
-    CMAKE_BINARY_DIR
+    PROJECT_SOURCE_DIR
+    PROJECT_BINARY_DIR
 
     STRING_VARIABLES
     CMAKE_BUILD_TYPE
@@ -749,6 +809,7 @@ if (NOT __dont_print_summary)
     HYDROGEN_HAVE_MPC
     HYDROGEN_HAVE_ALUMINUM
     HYDROGEN_HAVE_NCCL2
+    HYDROGEN_HAVE_AL_HOST_XFER
     HYDROGEN_HAVE_AL_MPI_CUDA
     HYDROGEN_HAVE_CUDA
     HYDROGEN_HAVE_ROCM
