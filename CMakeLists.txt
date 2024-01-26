@@ -515,7 +515,7 @@ add_subdirectory(src)
 # docs (which has the advantage that preprocessing will take
 # "{,hydrogen_}config.h" into consideration).
 configure_file("${PROJECT_SOURCE_DIR}/cmake/configure_files/config.h.in"
-  "${PROJECT_BINARY_DIR}/include/El/config.h")
+  "${PROJECT_BINARY_DIR}/include/El/config.h" ESCAPE_QUOTES)
 configure_file("${PROJECT_SOURCE_DIR}/cmake/configure_files/hydrogen_config.h.in"
   "${PROJECT_BINARY_DIR}/include/El/hydrogen_config.h")
 configure_file("${PROJECT_SOURCE_DIR}/doxy/Doxyfile.in"
