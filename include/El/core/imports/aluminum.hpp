@@ -31,9 +31,9 @@ enum class Collective
     REDUCE,
     REDUCESCATTER,
     SCATTER,
-    SENDRECV,
 
     // Not collectives, but what can you do
+    SENDRECV,
     SEND,
     RECV,
 };// enum class Collective
