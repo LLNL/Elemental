@@ -10,10 +10,71 @@
 #define EL_BLAS_COPY_TRANSLATEBETWEENGRIDS_HPP
 
 #include "core/environment/decl.hpp"
+
 namespace El
 {
 namespace copy
 {
+namespace internal
+{
+
+inline constexpr auto AlSend = El::Collective::SEND;
+inline constexpr auto AlRecv = El::Collective::RECV;
+
+template <typename T, Device D, El::Collective Op>
+using IsOk = IsAluminumSupported<T, D, Op>;
+
+template <typename T, Device D, El::Collective Op>
+using GetBE = BestBackend<T, D, Op>;
+
+template <typename T, Device D>
+EnableWhen<IsOk<T, D, AlSend>>
+do_send(T const* sbuf,
+             El::Int sc,
+             int to,
+             mpi::Comm const& comm,
+             SyncInfo<D> const& si)
+{
+  using Backend = GetBE<T, D, AlSend>;
+  Al::Send<Backend>(sbuf, sc, to, comm.template GetComm<Backend>(si));
+}
+
+template <typename T, Device D>
+EnableUnless<IsOk<T, D, AlSend>>
+do_send(T const* sbuf,
+        El::Int sc,
+        int to,
+        mpi::Comm const& comm,
+        SyncInfo<D> const& si)
+{
+  mpi::Send(sbuf, sc, to, comm, si);
+}
+
+template <typename T, Device D>
+EnableWhen<IsOk<T, D, AlRecv>>
+do_recv(T* rbuf,
+             El::Int rc,
+             int from,
+             mpi::Comm const& comm,
+             SyncInfo<D> const& si)
+{
+  using Backend = GetBE<T, D, AlRecv>;
+  Al::Recv<Backend>(rbuf, rc, from, comm.template GetComm<Backend>(si));
+}
+
+template <typename T, Device D>
+EnableUnless<IsOk<T, D, AlRecv>>
+do_recv(T* rbuf,
+        El::Int rc,
+        int from,
+        mpi::Comm const& comm,
+        SyncInfo<D> const& si)
+{
+  mpi::Recv(rbuf, rc, from, comm, si);
+}
+
+
+} // namespace internal
 
 template<typename T,Dist U,Dist V,Device D1,Device D2>
 void TranslateBetweenGrids(
@@ -247,13 +308,13 @@ void TranslateBetweenGrids(
           A.LockedBuffer(iLocA,jLocA), numColSends, numRowSends*A.LDim(),
           messageBuf.data(), 1, messageHeight,
           syncInfo);
-        mpi::Send(
+        internal::do_send(
           messageBuf.data(), messageHeight*messageWidth,
           recvViewingRank, viewingCommB, syncInfo);
       }
       else if (viewingRank == recvViewingRank) {
         // Receive data from other rank
-        mpi::Recv(
+        internal::do_recv(
           messageBuf.data(), messageHeight*messageWidth,
           sendViewingRank, viewingCommB, syncInfo);
         copy::util::InterleaveMatrix(
@@ -4019,13 +4080,13 @@ void TranslateBetweenGrids(
         A.LockedBuffer(0,jLocA), 1, numSends*ALDim,
         messageBuf.data(), 1, m,
         syncInfo);
-      mpi::Send(
+      internal::do_send(
         messageBuf.data(), m*messageWidth,
         recvViewingRank, viewingCommB, syncInfo);
     }
     else if (viewingRank == recvViewingRank) {
       // Receive data from other rank
-      mpi::Recv(
+      internal::do_recv(
         messageBuf.data(), m*messageWidth,
         sendViewingRank, viewingCommB, syncInfo);
       copy::util::InterleaveMatrix(

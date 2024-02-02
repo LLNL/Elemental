@@ -31,7 +31,11 @@ enum class Collective
     REDUCE,
     REDUCESCATTER,
     SCATTER,
-    SENDRECV
+    SENDRECV,
+
+    // Not collectives, but what can you do
+    SEND,
+    RECV,
 };// enum class Collective
 
 #ifndef HYDROGEN_HAVE_ALUMINUM
@@ -115,6 +119,8 @@ ADD_ALUMINUM_COLLECTIVE(       Collective::REDUCE, Al::MPIBackend);
 ADD_ALUMINUM_COLLECTIVE(Collective::REDUCESCATTER, Al::MPIBackend);
 ADD_ALUMINUM_COLLECTIVE(      Collective::SCATTER, Al::MPIBackend);
 ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::MPIBackend);
+ADD_ALUMINUM_COLLECTIVE(     Collective::SEND, Al::MPIBackend);
+ADD_ALUMINUM_COLLECTIVE(     Collective::RECV, Al::MPIBackend);
 
 #ifdef HYDROGEN_HAVE_NCCL2
 // NCCL backend supports these
@@ -127,6 +133,8 @@ ADD_ALUMINUM_COLLECTIVE(       Collective::REDUCE, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(Collective::REDUCESCATTER, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(      Collective::SCATTER, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::NCCLBackend);
+ADD_ALUMINUM_COLLECTIVE(     Collective::SEND, Al::NCCLBackend);
+ADD_ALUMINUM_COLLECTIVE(     Collective::RECV, Al::NCCLBackend);
 #endif // HYDROGEN_HAVE_NCCL2
 
 #ifdef HYDROGEN_HAVE_AL_HOST_XFER
@@ -140,6 +148,8 @@ ADD_ALUMINUM_COLLECTIVE(       Collective::REDUCE, Al::HostTransferBackend);
 ADD_ALUMINUM_COLLECTIVE(Collective::REDUCESCATTER, Al::HostTransferBackend);
 ADD_ALUMINUM_COLLECTIVE(      Collective::SCATTER, Al::HostTransferBackend);
 ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::HostTransferBackend);
+ADD_ALUMINUM_COLLECTIVE(     Collective::SEND, Al::HostTransferBackend);
+ADD_ALUMINUM_COLLECTIVE(     Collective::RECV, Al::HostTransferBackend);
 #endif // HYDROGEN_HAVE_AL_HOST_XFER
 
 template <Device D>
