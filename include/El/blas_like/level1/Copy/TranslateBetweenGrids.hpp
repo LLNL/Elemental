@@ -10,71 +10,12 @@
 #define EL_BLAS_COPY_TRANSLATEBETWEENGRIDS_HPP
 
 #include "core/environment/decl.hpp"
+#include <optional>
 
 namespace El
 {
 namespace copy
 {
-namespace internal
-{
-
-inline constexpr auto AlSend = El::Collective::SEND;
-inline constexpr auto AlRecv = El::Collective::RECV;
-
-template <typename T, Device D, El::Collective Op>
-using IsOk = IsAluminumSupported<T, D, Op>;
-
-template <typename T, Device D, El::Collective Op>
-using GetBE = BestBackend<T, D, Op>;
-
-template <typename T, Device D>
-EnableWhen<IsOk<T, D, AlSend>>
-do_send(T const* sbuf,
-             El::Int sc,
-             int to,
-             mpi::Comm const& comm,
-             SyncInfo<D> const& si)
-{
-  using Backend = GetBE<T, D, AlSend>;
-  Al::Send<Backend>(sbuf, sc, to, comm.template GetComm<Backend>(si));
-}
-
-template <typename T, Device D>
-EnableUnless<IsOk<T, D, AlSend>>
-do_send(T const* sbuf,
-        El::Int sc,
-        int to,
-        mpi::Comm const& comm,
-        SyncInfo<D> const& si)
-{
-  mpi::Send(sbuf, sc, to, comm, si);
-}
-
-template <typename T, Device D>
-EnableWhen<IsOk<T, D, AlRecv>>
-do_recv(T* rbuf,
-             El::Int rc,
-             int from,
-             mpi::Comm const& comm,
-             SyncInfo<D> const& si)
-{
-  using Backend = GetBE<T, D, AlRecv>;
-  Al::Recv<Backend>(rbuf, rc, from, comm.template GetComm<Backend>(si));
-}
-
-template <typename T, Device D>
-EnableUnless<IsOk<T, D, AlRecv>>
-do_recv(T* rbuf,
-        El::Int rc,
-        int from,
-        mpi::Comm const& comm,
-        SyncInfo<D> const& si)
-{
-  mpi::Recv(rbuf, rc, from, comm, si);
-}
-
-
-} // namespace internal
 
 template<typename T,Dist U,Dist V,Device D1,Device D2>
 void TranslateBetweenGrids(
@@ -308,13 +249,13 @@ void TranslateBetweenGrids(
           A.LockedBuffer(iLocA,jLocA), numColSends, numRowSends*A.LDim(),
           messageBuf.data(), 1, messageHeight,
           syncInfo);
-        internal::do_send(
+        mpi::Send(
           messageBuf.data(), messageHeight*messageWidth,
           recvViewingRank, viewingCommB, syncInfo);
       }
       else if (viewingRank == recvViewingRank) {
         // Receive data from other rank
-        internal::do_recv(
+        mpi::Recv(
           messageBuf.data(), messageHeight*messageWidth,
           sendViewingRank, viewingCommB, syncInfo);
         copy::util::InterleaveMatrix(
@@ -3623,7 +3564,6 @@ void TranslateBetweenGridsAsync
     const Int mLocA = A.LocalHeight();
     const Int nLocA = A.LocalWidth();
 
-
     mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
     mpi::Group owningGroupA = A.Grid().OwningGroup();
 
@@ -3950,43 +3890,15 @@ void TranslateBetweenGrids(
   Int strideA = A.RowStride();
   Int ALDim = A.LDim();
 
-  // Create A metadata
-  Int recvMetaData[4];
-  Int metaData[4];
-
-  SyncInfo<El::Device::CPU> syncGeneralMetaData = SyncInfo<El::Device::CPU>();
   mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
-
-  const bool inAGrid = A.Participating();
-  const bool inBGrid = B.Participating();
-
-  if(inAGrid)
-  {
-    metaData[0] = m;
-    metaData[1] = n;
-    metaData[2] = strideA;
-    metaData[3] = ALDim;
-  }
-  else
-  {
-    metaData[0] = 0;
-    metaData[1] = 0;
-    metaData[2] = 0;
-    metaData[3] = 0;
-  }
-  const std::vector<Int> sendMetaData (metaData, metaData + 4);
-  mpi::AllReduce( sendMetaData.data(), recvMetaData, 4, mpi::MAX, viewingCommB, syncGeneralMetaData);
-  m = recvMetaData[0];
-  n = recvMetaData[1];
-  strideA = recvMetaData[2];
-  ALDim =recvMetaData[3];
-
 
   B.Resize(m, n);
   const Int nLocA = A.LocalWidth();
   const Int nLocB = B.LocalWidth();
 
   // Return immediately if there is no local data
+  const bool inAGrid = A.Participating();
+  const bool inBGrid = B.Participating();
   if (!inAGrid && !inBGrid) {
     return;
   }
@@ -4000,8 +3912,15 @@ void TranslateBetweenGrids(
   // Synchronize compute streams
   SyncInfo<D> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
   SyncInfo<D> syncInfoB = SyncInfoFromMatrix(B.Matrix());
-  auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
-  const SyncInfo<D>& syncInfo = syncHelper;
+
+  std::optional<MultiSync<D, D>> maybeMultiSync;
+  if (inAGrid && inBGrid)
+      maybeMultiSync.emplace(syncInfoB, syncInfoA);
+
+  SyncInfo<D> const syncInfo =
+      (maybeMultiSync.has_value()
+       ? *maybeMultiSync
+       : (inAGrid ? syncInfoA : syncInfoB));
 
   // Translate the ranks from A's VC communicator to B's viewing so
   // that we can match send/recv communicators. Since A's VC
@@ -4080,13 +3999,13 @@ void TranslateBetweenGrids(
         A.LockedBuffer(0,jLocA), 1, numSends*ALDim,
         messageBuf.data(), 1, m,
         syncInfo);
-      internal::do_send(
+      mpi::Send(
         messageBuf.data(), m*messageWidth,
         recvViewingRank, viewingCommB, syncInfo);
     }
     else if (viewingRank == recvViewingRank) {
       // Receive data from other rank
-      internal::do_recv(
+      mpi::Recv(
         messageBuf.data(), m*messageWidth,
         sendViewingRank, viewingCommB, syncInfo);
       copy::util::InterleaveMatrix(
