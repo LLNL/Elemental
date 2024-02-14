@@ -595,15 +595,24 @@ EL_NO_RELEASE_EXCEPT
 {
     EL_DEBUG_CSE;
 
+    if constexpr (IsAluminumSupported<Real, D, Collective::SEND>::value)
+    {
+        (void) tag; // Al doesn't use tags.
+        using BE = BestBackend<Real, D, Collective::SEND>;
+        Al::Send<BE>(buf, count, to, comm.template GetComm<BE>(syncInfo));
+    }
+    else
+    {
 #ifdef HYDROGEN_ENSURE_HOST_MPI_BUFFERS
-    ENSURE_HOST_SEND_BUFFER(buf, count, syncInfo);
+        ENSURE_HOST_SEND_BUFFER(buf, count, syncInfo);
 #endif // HYDROGEN_ENSURE_HOST_MPI_BUFFERS
 
-    Synchronize(syncInfo);
+        Synchronize(syncInfo);
 
-    EL_CHECK_MPI_CALL(
-        MPI_Send(
-            buf, count, TypeMap<Real>(), to, tag, comm.GetMPIComm()));
+        EL_CHECK_MPI_CALL(
+            MPI_Send(
+                buf, count, TypeMap<Real>(), to, tag, comm.GetMPIComm()));
+    }
 }
 
 template <typename Real, Device D,
@@ -614,21 +623,36 @@ void TaggedSend(
 EL_NO_RELEASE_EXCEPT
 {
     EL_DEBUG_CSE;
-
+    using CT = std::complex<Real>;
+    if constexpr (IsAluminumSupported<CT, D, Collective::SEND>::value)
+    {
+        (void) tag; // Al doesn't use tags.
+        using BE = BestBackend<CT, D, Collective::SEND>;
+        Al::Send<BE>(buf, count, to, comm.template GetComm<BE>(syncInfo));
+    }
+    else if constexpr (IsAluminumSupported<Real, D, Collective::SEND>::value)
+    {
+        (void) tag; // Al doesn't use tags.
+        using BE = BestBackend<Real, D, Collective::SEND>;
+        Al::Send<BE>((Real*)buf, 2*count, to,
+                 comm.template GetComm<BE>(syncInfo));
+    }
+    else {
 #ifdef HYDROGEN_ENSURE_HOST_MPI_BUFFERS
-    ENSURE_HOST_SEND_BUFFER(buf, count, syncInfo);
+        ENSURE_HOST_SEND_BUFFER(buf, count, syncInfo);
 #endif // HYDROGEN_ENSURE_HOST_MPI_BUFFERS
 
-    Synchronize(syncInfo);
+        Synchronize(syncInfo);
 #ifdef EL_AVOID_COMPLEX_MPI
-    EL_CHECK_MPI_CALL(
-        MPI_Send(
-            buf, 2*count, TypeMap<Real>(), to, tag, comm.GetMPIComm()));
+        EL_CHECK_MPI_CALL(
+            MPI_Send(
+                buf, 2*count, TypeMap<Real>(), to, tag, comm.GetMPIComm()));
 #else
-    EL_CHECK_MPI_CALL(
-        MPI_Send(
-            buf, count, TypeMap<Complex<Real>>(), to, tag, comm.GetMPIComm()));
+        EL_CHECK_MPI_CALL(
+            MPI_Send(
+                buf, count, TypeMap<Complex<Real>>(), to, tag, comm.GetMPIComm()));
 #endif
+    }
 }
 
 template <typename T, Device D,
@@ -864,15 +888,24 @@ void TaggedRecv( Real* buf, int count, int from, int tag, Comm const& comm,
 {
     EL_DEBUG_CSE;
 
+    if constexpr (IsAluminumSupported<Real, D, Collective::RECV>::value)
+    {
+        (void) tag; // Al doesn't use tags.
+        using BE = BestBackend<Real, D, Collective::RECV>;
+        Al::Recv<BE>(buf, count, from, comm.template GetComm<BE>(syncInfo));
+    }
+    else
+    {
 #ifdef HYDROGEN_ENSURE_HOST_MPI_BUFFERS
-    ENSURE_HOST_RECV_BUFFER(buf, count, syncInfo);
+        ENSURE_HOST_RECV_BUFFER(buf, count, syncInfo);
 #endif // HYDROGEN_ENSURE_HOST_MPI_BUFFERS
 
-    Synchronize(syncInfo);
-    Status status;
-    EL_CHECK_MPI_CALL(
-        MPI_Recv(
-            buf, count, TypeMap<Real>(), from, tag, comm.GetMPIComm(), &status));
+        Synchronize(syncInfo);
+        Status status;
+        EL_CHECK_MPI_CALL(
+            MPI_Recv(
+                buf, count, TypeMap<Real>(), from, tag, comm.GetMPIComm(), &status));
+    }
 }
 
 template <typename Real, Device D,
@@ -882,24 +915,41 @@ void TaggedRecv( Complex<Real>* buf, int count, int from, int tag, Comm const& c
 EL_NO_RELEASE_EXCEPT
 {
     EL_DEBUG_CSE;
+    using CT = std::complex<Real>;
 
+    if constexpr (IsAluminumSupported<CT, D, Collective::RECV>::value)
+    {
+        (void) tag; // Al doesn't use tags.
+        using BE = BestBackend<CT, D, Collective::RECV>;
+        Al::Recv<BE>(buf, count, from, comm.template GetComm<BE>(syncInfo));
+    }
+    else if constexpr (IsAluminumSupported<Real, D, Collective::RECV>::value)
+    {
+        (void) tag; // Al doesn't use tags.
+        using BE = BestBackend<Real, D, Collective::RECV>;
+        Al::Recv<BE>((Real*) buf, 2*count, from,
+                     comm.template GetComm<BE>(syncInfo));
+    }
+    else
+    {
 #ifdef HYDROGEN_ENSURE_HOST_MPI_BUFFERS
-    ENSURE_HOST_RECV_BUFFER(buf, count, syncInfo);
+        ENSURE_HOST_RECV_BUFFER(buf, count, syncInfo);
 #endif // HYDROGEN_ENSURE_HOST_MPI_BUFFERS
 
-    Synchronize(syncInfo);
+        Synchronize(syncInfo);
 
-    Status status;
+        Status status;
 #ifdef EL_AVOID_COMPLEX_MPI
-    EL_CHECK_MPI_CALL(
-        MPI_Recv(
-            buf, 2*count, TypeMap<Real>(), from, tag, comm.GetMPIComm(), &status));
+        EL_CHECK_MPI_CALL(
+            MPI_Recv(
+                buf, 2*count, TypeMap<Real>(), from, tag, comm.GetMPIComm(), &status));
 #else
-    EL_CHECK_MPI_CALL(
-        MPI_Recv(
-            buf, count, TypeMap<Complex<Real>>(),
-            from, tag, comm.GetMPIComm(), &status));
+        EL_CHECK_MPI_CALL(
+            MPI_Recv(
+                buf, count, TypeMap<Complex<Real>>(),
+                from, tag, comm.GetMPIComm(), &status));
 #endif
+    }
 }
 
 template <typename T, Device D,
