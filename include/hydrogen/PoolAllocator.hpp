@@ -584,7 +584,7 @@ struct PooledDeviceAllocator {
         } else {
           const gpuError_t event_status = gpuEventQuery(block_itr->ready_event);
           if (event_status != gpuErrorNotReady) {
-            gpuDebug(event_status);
+            static_cast<void>(gpuDebug(event_status));
             is_reusable = true;
           }
         }
@@ -643,7 +643,7 @@ struct PooledDeviceAllocator {
                  (long long)search_key.associated_stream);
 
         error = gpuSuccess; // Reset the error we will return
-        gpuGetLastError();  // Reset error
+        static_cast<void>(gpuGetLastError());  // Reset error
 
         // Lock
         mutex.lock();
@@ -933,7 +933,7 @@ struct PooledDeviceAllocator {
    */
   virtual ~PooledDeviceAllocator() {
     if (!skip_cleanup)
-      FreeAllCached();
+      static_cast<void>(FreeAllCached());
   }
 
   /* Inspection and reporting methods */
