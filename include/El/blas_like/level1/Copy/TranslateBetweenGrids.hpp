@@ -3891,14 +3891,43 @@ void TranslateBetweenGrids(
   Int ALDim = A.LDim();
 
   mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
+  bool const inAGrid = A.Participating();
+  bool const inBGrid = B.Participating();
+
+  Int recvMetaData[4];
+  Int metaData[4];
+  if(inAGrid)
+  {
+    metaData[0] = m;
+    metaData[1] = n;
+    metaData[2] = strideA;
+    metaData[3] = ALDim;
+  }
+  else
+  {
+    metaData[0] = 0;
+    metaData[1] = 0;
+    metaData[2] = 0;
+    metaData[3] = 0;
+  }
+  const std::vector<Int> sendMetaData (metaData, metaData + 4);
+  mpi::AllReduce(sendMetaData.data(),
+                 recvMetaData,
+                 4,
+                 mpi::MAX,
+                 viewingCommB,
+                 SyncInfo<El::Device::CPU>{});
+
+  m = recvMetaData[0];
+  n = recvMetaData[1];
+  strideA = recvMetaData[2];
+  ALDim =recvMetaData[3];
 
   B.Resize(m, n);
   const Int nLocA = A.LocalWidth();
   const Int nLocB = B.LocalWidth();
 
   // Return immediately if there is no local data
-  const bool inAGrid = A.Participating();
-  const bool inBGrid = B.Participating();
   if (!inAGrid && !inBGrid) {
     return;
   }
