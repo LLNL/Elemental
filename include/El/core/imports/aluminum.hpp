@@ -369,6 +369,7 @@ template <typename BackendT>
 SyncInfo<DeviceForBackend<BackendT>()> const& BackendSyncInfo()
 {
     constexpr Device D = DeviceForBackend<BackendT>();
+#ifdef HYDROGEN_HAVE_GPU
     if constexpr (D == El::Device::GPU)
     {
         static bool const use_separate_stream = use_separate_comm_stream();
@@ -377,7 +378,7 @@ SyncInfo<DeviceForBackend<BackendT>()> const& BackendSyncInfo()
             return El::gpu::DefaultSyncInfo();
         }
     }
-
+#endif // HYDROGEN_HAVE_GPU
     static SyncInfoManager<D> si_mgr_(BackendT::Name());
     return si_mgr_.si_;
 }
