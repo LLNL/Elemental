@@ -35,7 +35,10 @@ using std::ostream;
 using std::ostringstream;
 
 using std::exception;
-using std::uncaught_exception;
+inline bool uncaught_exception() noexcept
+{
+  return std::uncaught_exceptions() > 0;
+}
 
 void PrintVersion( ostream& os=cout );
 void PrintConfig( ostream& os=cout );
