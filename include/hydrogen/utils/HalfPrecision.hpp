@@ -129,7 +129,7 @@ struct TypeTraits<gpu_half_type>
 
 }// namespace hydrogen
 
-#if defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
+#if (defined(HYDROGEN_HAVE_ROCM) && defined(__clang__) && __clang__ && __clang_major__ < 19) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
 
 /** @brief Enable "update" functionality for __half. */
 template <typename T>
