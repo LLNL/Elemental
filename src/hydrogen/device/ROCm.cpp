@@ -75,13 +75,7 @@ hipStream_t GetNewStream()
 hipEvent_t GetNewEvent()
 {
     hipEvent_t event;
-#if HIP_VERSION < 50600000
     H_CHECK_HIP(hipEventCreateWithFlags(&event, hipEventDisableTiming));
-#else
-    H_CHECK_HIP(hipEventCreateWithFlags(
-                    &event,
-                    hipEventDisableTiming | hipEventDisableSystemFence));
-#endif
     return event;
 }
 
